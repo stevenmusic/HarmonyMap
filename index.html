@@ -141,16 +141,19 @@ main{
 }
 .col-pick,.col-view{display:flex;flex-direction:column;gap:12px;min-width:0}
 /* 窄螢幕:兩欄的包裝層退開(display:contents),讓卡片自己排順序——
-   鍵盤釘在頂欄下方不會捲走,一邊滑和弦清單一邊看得到琴鍵亮在哪裡;
-   答案(和弦名/組成音)緊接在鍵盤下面,挑選用的卡片再放後面 */
+   鍵盤釘在頂欄下方不會捲走,一邊滑和弦清單一邊看得到琴鍵亮在哪裡。
+   關鍵是順序:挑選用的卡片(根音、和弦清單)排在結果面板「前面」。
+   結果面板的說明文字長度會隨和弦不同而變(有的兩行有的四行),把它放在清單上面的話,
+   每換一個和弦、下面整排按鈕就會被推得上下亂跳,手指會點錯。
+   放到清單後面之後,按鈕的位置從頭到尾固定不動,結果則由釘住的那行摘要即時反映 */
 @media (max-width:999px){
   main{display:flex;flex-direction:column}
   .col-pick,.col-view{display:contents}
   .tabs{order:0}
   .kb-wrap{order:1;position:sticky;top:var(--header-h, 56px);z-index:10;box-shadow:var(--shadow-md)}
-  #readout{order:2}
-  #rootCard,#findCard{order:3}
-  #typeCard{order:4}
+  #rootCard,#findCard{order:2}
+  #typeCard{order:3}
+  #readout{order:4}
   #extraCard{order:5}
 }
 
@@ -210,15 +213,20 @@ main{
   font-size:var(--fs-2xs);letter-spacing:.12em;color:var(--muted);font-weight:700;
   margin-bottom:8px;position:sticky;top:0;background:var(--panel);padding:4px 0;z-index:1;
 }
-.chips{display:flex;flex-wrap:wrap;gap:6px}
+/* 等寬格線排列。原本用 flex 讓晶片各自照文字長度決定寬度,每一列的數量與寬度都不一樣,
+   整片看起來參差不齊;改成固定欄寬的 grid,行列自然對齊,長短名稱都排得整整齊齊 */
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+.chips.wide{grid-template-columns:repeat(auto-fill,minmax(152px,1fr))} /* 音階名稱長,欄位加寬 */
 .chip{
-  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   border:1px solid var(--line);background:var(--surface-inset);color:var(--ivory);
-  border-radius:var(--radius-sm);padding:7px 11px;cursor:pointer;
-  font-family:inherit;text-align:left;transition:border-color .15s,background .15s;
+  border-radius:var(--radius-sm);padding:8px 8px;cursor:pointer;
+  font-family:inherit;text-align:center;transition:border-color .15s,background .15s;
 }
-.chip b{font-size:var(--fs-sm);font-weight:700;line-height:1.2;white-space:nowrap}
-.chip i{font-size:var(--fs-2xs);font-style:normal;color:var(--muted);line-height:1.2;white-space:nowrap}
+.chip b{font-size:var(--fs-sm);font-weight:700;line-height:1.25;white-space:nowrap}
+.chip i{font-size:var(--fs-2xs);font-style:normal;color:var(--muted);line-height:1.25;white-space:nowrap}
+/* 音階的中文名稱長度差很多(「多利安」到「烏克蘭小調(多利安♯4)」),允許換行才不會被截掉 */
+.chips.wide .chip b,.chips.wide .chip i{white-space:normal}
 .chip:hover{border-color:var(--gold)}
 .chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
 .chip[aria-pressed="true"] i{color:rgba(0,0,0,.62)}
@@ -226,11 +234,29 @@ main{
 
 /* ── 鍵盤 ── */
 .kb-wrap{
+  position:relative; /* 讓載入提示可以絕對定位貼在上面(窄螢幕改成 sticky 一樣能當定位基準) */
   border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;
   background:
     radial-gradient(ellipse 120% 80% at 50% 0%, var(--stage-glow) 0%, var(--bg) 60%);
 }
 #keyboardCanvas{display:block;width:100%;height:150px;background:transparent;touch-action:manipulation;cursor:pointer}
+/* 釘在鍵盤下方的一行摘要:和弦名 + 組成音。
+   刻意限制成「絕對只有一行」(nowrap + 超出用省略號),因為這一塊在手機上是釘住的,
+   高度只要會隨內容變化,底下整排和弦按鈕就會跟著上下跳 */
+.kb-summary{
+  display:flex;align-items:baseline;gap:10px;
+  padding:9px 12px 0;white-space:nowrap;overflow:hidden;
+}
+.kb-summary b{
+  font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:700;
+  color:var(--gold-bright);flex:none;
+}
+.kb-summary .zh{font-size:var(--fs-xs);color:var(--muted);flex:none}
+.kb-summary .tones{
+  font-size:var(--fs-sm);color:var(--ivory);letter-spacing:.06em;
+  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;
+}
+@media (min-width:1000px){ .kb-summary{display:none} } /* 桌機右欄本來就看得到完整結果,不用重複 */
 .kb-bar{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   padding:8px 12px;border-top:1px solid var(--line);background:var(--panel);
@@ -239,7 +265,15 @@ main{
 .kb-legend{display:flex;gap:12px;font-size:var(--fs-2xs);color:var(--muted)}
 .kb-legend span{display:inline-flex;align-items:center;gap:5px}
 .kb-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
-.audio-status{font-size:var(--fs-2xs);color:var(--muted-bright);white-space:nowrap}
+/* 載入提示是暫時的,絕對定位浮在鍵盤左上角。
+   放進工具列的話,它出現與消失會把那排選單擠成兩行再收回去,整個版面跳一下 */
+.audio-status{
+  position:absolute;top:8px;left:8px;z-index:2;
+  font-size:var(--fs-2xs);color:var(--muted-bright);white-space:nowrap;
+  background:var(--surface-glass);border:1px solid var(--line);
+  border-radius:var(--radius-pill);padding:3px 10px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+}
 select.mini{
   background:var(--surface-inset);color:var(--ivory);border:1px solid var(--line);
   border-radius:var(--radius-pill);padding:0 10px;height:32px;font-family:inherit;font-size:var(--fs-sm);
@@ -257,7 +291,9 @@ select.mini:focus{outline:none;border-color:var(--gold)}
 .rt-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .rt-name{font-family:"Noto Serif TC",serif;font-size:var(--fs-2xl);font-weight:700;color:var(--gold-bright);line-height:1.1}
 .rt-sub{font-size:var(--fs-sm);color:var(--muted-bright)}
-.note-strip{display:flex;flex-wrap:wrap;gap:8px}
+/* align-items:stretch(預設值,寫出來提醒別動它):有的音要標八度、有的不用,
+   同一列的格子必須等高,不然高低參差 */
+.note-strip{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
 .note-cell{
   min-width:64px;flex:0 0 auto;text-align:center;
   border:1px solid var(--line);border-radius:var(--radius-sm);
@@ -325,10 +361,6 @@ footer{
     <span class="tagline">和弦與音階地圖</span>
   </div>
   <div class="header-right">
-    <button class="btn" id="playBtn" title="播放目前的和弦/音階">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-      <span class="btn-label">播放</span>
-    </button>
     <button class="btn ghost" id="themeToggle" aria-pressed="false" aria-label="切換淺色/深色主題" title="切換主題">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-16 2.4 2.4L12 4.8 9.6 4.4 12 2zm0 20-2.4-2.4 2.4.4 2.4-.4L12 22zM2 12l2.4-2.4-.4 2.4.4 2.4L2 12zm20 0-2.4 2.4.4-2.4-.4-2.4L22 12z"/></svg>
     </button>
@@ -376,12 +408,13 @@ footer{
   <div class="col-view">
     <div class="kb-wrap">
       <canvas id="keyboardCanvas"></canvas>
+      <span id="audioStatus" class="audio-status" hidden></span>
+      <div class="kb-summary" id="kbSummary"></div>
       <div class="kb-bar">
         <div class="kb-legend">
           <span><i style="background:var(--gold)"></i>根音</span>
           <span><i style="background:var(--teal)"></i>組成音</span>
         </div>
-        <span id="audioStatus" class="audio-status" hidden></span>
         <div class="spacer"></div>
         <select class="mini" id="octaveSel" title="起始八度"></select>
         <select class="mini" id="labelSel" title="琴鍵上要標音名(C D E)、唱名(Do Re Mi)還是級數(1 ♭3 5)">
@@ -406,7 +439,8 @@ footer{
 <footer>
   HarmonyMap · 鍵盤渲染沿用 ScrollScore 的繪製邏輯<br>
   和弦與音階的音名皆依樂理正規拼寫推導(同一個級數只用一個字母),所以會出現 B♭♭、G♯♯ 這類重降重升音<br>
-  快捷鍵:↑↓ 換和弦/音階 · ←→ 換根音 · 空白鍵播放 · 點琴鍵可單獨試聽
+  點和弦或音階名稱就會直接發聲(再點一次重播),點琴鍵可單獨試聽<br>
+  快捷鍵:↑↓ 換和弦/音階 · ←→ 換根音 · 空白鍵播放
 </footer>
 
 <script>
@@ -872,7 +906,22 @@ function ensureAudio(){
     masterLimiter.ratio.value = 12;
     masterLimiter.attack.value = 0.001;
     masterLimiter.release.value = 0.25;
-    masterGain.connect(masterLimiter);
+    /* 響度壓縮(loudnessComp):完全保留鋼琴原始力度動態的話,只有在真正逼近削波的瞬間才被
+       限幅器煞車,平均音量自然遠低於一般影片(影片後製都會做母帶壓縮,把安靜段落墊高、
+       整體塞到接近上限),使用者要開到 80~90% 音量才聽得清楚。
+       這裡加一段真正的響度壓縮,門檻降到 -18dB、壓縮比 3:1,把較大聲的部分先壓掉一截,
+       空出來的餘裕再用 makeupGain 補回音量,把平均音量墊高。參數與 ScrollScore 相同。 */
+    const loudnessComp = audioCtx.createDynamicsCompressor();
+    loudnessComp.threshold.value = -18;
+    loudnessComp.knee.value = 8;
+    loudnessComp.ratio.value = 3;
+    loudnessComp.attack.value = 0.008;
+    loudnessComp.release.value = 0.18;
+    const makeupGain = audioCtx.createGain();
+    makeupGain.gain.value = 1.6; // 補回響度壓縮讓出來的餘裕,數值來自實測而非估算
+    masterGain.connect(loudnessComp);
+    loudnessComp.connect(makeupGain);
+    makeupGain.connect(masterLimiter);
     masterLimiter.connect(audioCtx.destination);
 
     reverbBus = audioCtx.createGain();
@@ -1237,7 +1286,7 @@ function buildTypeList(){
     title.textContent = g.name;
     wrap.appendChild(title);
     const chips = document.createElement("div");
-    chips.className = "chips";
+    chips.className = isChord ? "chips" : "chips wide";
     for (const it of g.items) {
       const b = document.createElement("button");
       b.className = "chip";
@@ -1245,9 +1294,11 @@ function buildTypeList(){
       b.innerHTML = "<b></b><i></i>";
       b.querySelector("b").textContent = isChord ? rootName() + it.sym : it.zh;
       b.querySelector("i").textContent = isChord ? it.zh : it.en;
+      // 點名稱就直接發聲。已經選中的再點一次就是重播,不需要另外一顆播放鈕
       b.onclick = () => {
         if (isChord) STATE.chordId = it.id; else STATE.scaleId = it.id;
         render();
+        playCurrent();
       };
       chips.appendChild(b);
     }
@@ -1324,17 +1375,17 @@ function renderReadout(){
     html += '<div class="note-cell' + (n.deg === 1 && !n.octaveTop ? " is-root" : "") + '" data-midi="' + n.midi + '">' +
               '<div class="deg">' + (n.deg === 1 && !n.octaveTop ? "根音 1" : n.tok) + '</div>' +
               '<div class="nm">' + (STATE.label === "do" ? toSolfege(n.name) : n.name) + '</div>' +
-              '<div class="oct">' + (octLabel || "&nbsp;") + '</div>' +
+              (octLabel ? '<div class="oct">' + octLabel + '</div>' : "") +
             '</div>';
   }
   html += '</div>';
 
+  // 只留「公式」與「半音間隔」:音數看得出來、音級集合上面那排音名已經寫過了,
+  // 重複的資訊只是把面板撐長、讓版面變亂
   const steps = intervalSteps(notes);
   html += '<div class="meta-row">' +
             '<span>公式 <b>' + def.t.join("  ") + '</b></span>' +
             '<span>半音間隔 <b>' + steps.join("–") + '</b></span>' +
-            '<span>' + (isChord ? "組成音數" : "音數") + ' <b>' + notes.length + '</b></span>' +
-            '<span>音級集合 <b>' + [...new Set(notes.map(n => n.name))].join(" ") + '</b></span>' +
           '</div>';
   html += '<div class="desc">' + def.d + '</div>';
   ro.innerHTML = html;
@@ -1509,7 +1560,6 @@ function render(){
   $("typeCard").hidden = findMode;
   $("findCard").hidden = !findMode;
   $("typeCardTitle").textContent = STATE.tab === "chord" ? "和弦類型" : "音階類型";
-  $("playBtn").disabled = findMode && !STATE.findSel.size;
 
   if (!findMode) {
     buildRootPicker();
@@ -1527,7 +1577,32 @@ function render(){
   }
   resizeKeyboardCanvas();
   drawKeyboardLive();
+  renderSummary();
   renderReadout();
+}
+
+/* 釘在鍵盤下的那一行:名稱 + 組成音,固定一行高度 */
+function renderSummary(){
+  const el = $("kbSummary");
+  let name = "", zh = "", tones = "";
+  if (STATE.tab === "find") {
+    const an = findAnalysis();
+    const seen = new Set();
+    tones = an.sel.map(m => ((m % 12) + 12) % 12).filter(p => !seen.has(p) && seen.add(p))
+              .map(p => an.nameByPc.get(p)).join(" ");
+    if (an.results.length) { name = simpleName(an.results[0].rootPc, STATE.findSpell) + an.results[0].chord.sym; zh = an.results[0].chord.zh; }
+    else { name = an.sel.length ? "?" : "選音"; zh = an.sel.length ? "沒有完全符合的和弦" : "點琴鍵開始"; }
+  } else {
+    const isChord = STATE.tab === "chord";
+    const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
+    name = isChord ? rootName() + def.sym : rootName() + " " + def.zh;
+    zh = isChord ? def.zh : def.en;
+    tones = currentNotes().map(n => STATE.label === "do" ? toSolfege(n.name) : n.name).join(" ");
+  }
+  el.innerHTML = '<b></b><span class="zh"></span><span class="tones"></span>';
+  el.querySelector("b").textContent = name;
+  el.querySelector(".zh").textContent = zh;
+  el.querySelector(".tones").textContent = tones;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1574,18 +1649,20 @@ $("labelSel").addEventListener("change", e => { STATE.label = e.target.value; re
 $("playModeSel").addEventListener("change", e => { STATE.playMode = e.target.value; });
 $("findClear").onclick = () => { STATE.findSel.clear(); render(); };
 $("findSpell").addEventListener("change", e => { STATE.findSpell = e.target.value; render(); });
-$("playBtn").onclick = () => {
+/* 播放目前選的和弦/音階。由「點和弦名稱」與空白鍵觸發,沒有獨立的播放按鈕 */
+function playCurrent(){
   const midis = STATE.tab === "find"
     ? [...STATE.findSel].sort((a, b) => a - b)
     : displayNotes().map(n => n.midi);
   if (!midis.length) return;
   playNotes(midis, STATE.playMode);
-};
+}
+$("kbSummary").onclick = () => playCurrent(); // 釘在上面的摘要點一下就重播
 
 /* 鍵盤快捷鍵:上下切換類型、左右移動根音,方便一路瀏覽完整個字典 */
 document.addEventListener("keydown", ev => {
   if (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT") return;
-  if (ev.key === " ") { ev.preventDefault(); $("playBtn").click(); return; }
+  if (ev.key === " ") { ev.preventDefault(); playCurrent(); return; }
   if (STATE.tab === "find") return;
   const isChord = STATE.tab === "chord";
   const list = isChord ? CHORDS : SCALES;
