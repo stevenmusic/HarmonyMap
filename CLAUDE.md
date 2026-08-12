@@ -25,9 +25,8 @@ prefers-reduced-motion:reduce
 ```
 - 這一組是 ScrollScore / SightScore / LoudNorm / HarmonyMap **四個專案共用**的,
   任何一邊要動都要四邊一起看。各專案只用得到的子集,但值一定要落在這組上
-- 共 9 條,值與 ScrollScore 逐項相同。SightScore 用的是另一組(560 / 680 / 1024
-  + reduced-motion + 橫向特例),那是它自己的版面結構;兩組混用會變成 7 個寬度階,
-  反而更亂,所以 HarmonyMap 一律跟 ScrollScore 走(頁首、鍵盤、音源本來就都照抄它)
+- SightScore 原本用 560 / 680 / 1024、LoudNorm 原本用 480 / 768 / 1200 / 1400,
+  已經全部收斂到上面這一組;四個專案裡不會再出現這組以外的數字
 - 需要「隨尺寸連續變化」的東西一律用 clamp / vh 算,不要為它新增斷點
   (例如釘住的鍵盤高度上限是 `min(KB_MAX_H, innerHeight * 0.22)`)
 - `min-width:900px` 的兩欄版面必須放在整份樣式表的**最後**。寬度剛好 900px 時
