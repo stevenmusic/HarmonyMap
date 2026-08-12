@@ -362,6 +362,16 @@ footer{
   .btn{min-width:clamp(38px, 10.5vw, 44px)}
 }
 
+/* ── 使用者在系統關掉動態效果時,一律不要有轉場與動畫 ──────────────
+   四個專案(ScrollScore / SightScore / LoudNorm / HarmonyMap)共用同一組斷點,
+   這條是其中之一 */
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important;scroll-behavior:auto !important;
+  }
+}
+
 /* ── 平板/桌機:左右兩欄 ──────────────────────────────────────
    放在整份樣式表的最後(跟 ScrollScore 一樣),寬度剛好等於 900px 時
    才會贏過上面那些 max-width:900px 的規則,不會兩套版面打架 */

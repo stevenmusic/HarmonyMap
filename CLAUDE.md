@@ -21,7 +21,10 @@
 ```
 max-width:900 / 600 / 380 / 340    max-height:420    min-width:900
 pointer:coarse ×3(單獨、+max-height:420、+max-width:420)
+prefers-reduced-motion:reduce
 ```
+- 這一組是 ScrollScore / SightScore / LoudNorm / HarmonyMap **四個專案共用**的,
+  任何一邊要動都要四邊一起看。各專案只用得到的子集,但值一定要落在這組上
 - 共 9 條,值與 ScrollScore 逐項相同。SightScore 用的是另一組(560 / 680 / 1024
   + reduced-motion + 橫向特例),那是它自己的版面結構;兩組混用會變成 7 個寬度階,
   反而更亂,所以 HarmonyMap 一律跟 ScrollScore 走(頁首、鍵盤、音源本來就都照抄它)
