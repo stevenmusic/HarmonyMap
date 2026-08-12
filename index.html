@@ -98,7 +98,7 @@ header h1 span{color:var(--ivory);font-weight:600}
 /* 副標是 HarmonyMap 自己多出來的東西,獨立成一個元素,不寫進 h1 裡面,
    免得動到照抄過來的品牌名字級 */
 .tagline{color:var(--muted);font-size:var(--fs-xs);letter-spacing:.04em;white-space:nowrap}
-@media (max-width:700px){ .tagline{display:none} }
+@media (max-width:600px){ .tagline{display:none} }
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1;
   border:1px solid var(--gold);background:transparent;color:var(--gold);
@@ -122,39 +122,32 @@ header h1 span{color:var(--ivory);font-weight:600}
 }
 @media (max-width:380px){ .btn{padding:0 8px;height:32px} }
 @media (max-width:340px){ .btn{padding:0 5px} }
+
+/* ── 版面:上半部釘住不動,只有下半部捲動 ──────────────────────
+   .topbar(分頁 + 鍵盤 + 根音)整塊 position:sticky,選下面的和弦時鍵盤與 C D E F G
+   一直看得到。刻意做成「一個」sticky 區塊而不是三個各自釘住的元素:三個分開釘的話,
+   它們中間的間距是透明的,底下的內容會從縫隙穿出來,而且每個元素的 top 偏移量都要
+   靠 JS 量前一個的高度。包成一塊就只有一個偏移量、一個不透明底色,不會有縫。
+   .lower(和弦清單 + 結果面板)是唯一會捲動的區域。 */
+main{
+  flex:1;display:flex;flex-direction:column;gap:14px;
+  padding:14px;max-width:1400px;width:100%;margin:0 auto;
+}
+.topbar{
+  position:sticky;top:var(--header-h, 56px);z-index:15;
+  background:var(--bg); /* 必須不透明:捲上來的內容要被擋在後面 */
+  display:flex;flex-direction:column;gap:10px;padding-bottom:8px;
+}
+.lower{display:flex;flex-direction:column;gap:14px;min-width:0}
+.info{display:flex;flex-direction:column;gap:14px;min-width:0}
+
 /* 手機橫向 / 螢幕高度極矮:頂欄整體收扁,品牌名也降一階 */
 @media (max-height:420px){
   header{padding:5px 10px;gap:4px 8px}
   header h1{font-size:var(--fs-sm)}
   .btn{padding:0 10px;height:28px;font-size:var(--fs-xs)}
-}
-
-/* ── 版面:寬螢幕左右兩欄(左邊挑、右邊看),窄螢幕上下堆疊 ── */
-main{
-  flex:1;display:grid;gap:14px;
-  grid-template-columns:1fr;
-  padding:14px;max-width:1400px;width:100%;margin:0 auto;
-}
-@media (min-width:1000px){
-  main{grid-template-columns:minmax(360px,420px) 1fr;align-items:start}
-  .col-view{position:sticky;top:calc(var(--header-h, 60px) + 14px)}
-}
-.col-pick,.col-view{display:flex;flex-direction:column;gap:12px;min-width:0}
-/* 窄螢幕:兩欄的包裝層退開(display:contents),讓卡片自己排順序——
-   鍵盤釘在頂欄下方不會捲走,一邊滑和弦清單一邊看得到琴鍵亮在哪裡。
-   關鍵是順序:挑選用的卡片(根音、和弦清單)排在結果面板「前面」。
-   結果面板的說明文字長度會隨和弦不同而變(有的兩行有的四行),把它放在清單上面的話,
-   每換一個和弦、下面整排按鈕就會被推得上下亂跳,手指會點錯。
-   放到清單後面之後,按鈕的位置從頭到尾固定不動,結果則由釘住的那行摘要即時反映 */
-@media (max-width:999px){
-  main{display:flex;flex-direction:column}
-  .col-pick,.col-view{display:contents}
-  .tabs{order:0}
-  .kb-wrap{order:1;position:sticky;top:var(--header-h, 56px);z-index:10;box-shadow:var(--shadow-md)}
-  #rootCard,#findCard{order:2}
-  #typeCard{order:3}
-  #readout{order:4}
-  #extraCard{order:5}
+  /* 螢幕矮到這個程度(手機橫向),再把上半部釘住就沒有空間捲清單了,整頁一起捲 */
+  .topbar{position:static}
 }
 
 .card{
@@ -188,6 +181,15 @@ main{
 .key-btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
 .acc-row{display:flex;gap:6px;margin-top:6px}
 .acc-row .key-btn{flex:1;height:36px;font-size:var(--fs-md)}
+/* 手機:根音卡片是釘住的,每省下一點高度就是清單多看到一排。
+   「根音」這個標題可以省——底下就是 C D E F G A B 七顆按鈕,不會看不懂 */
+@media (max-width:900px){
+  #rootCard{padding:10px 12px}
+  #rootCard .card-title{display:none}
+  .root-row.letters .key-btn{height:40px}
+  .acc-row .key-btn{height:32px}
+  .topbar{gap:8px}
+}
 
 /* ── 類型清單:搜尋 + 分組晶片 ── */
 .search-wrap{position:relative;margin-bottom:10px}
@@ -198,20 +200,12 @@ main{
 }
 .search-wrap input:focus{outline:none;border-color:var(--gold)}
 .search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.6}
-.type-scroll{max-height:min(46vh,460px);overflow-y:auto;padding-right:4px}
-@media (min-width:1000px){ .type-scroll{max-height:min(58vh,620px)} }
-/* 窄螢幕的清單不自己捲(交給頁面捲就好),避免出現「捲軸裡還有捲軸」。
-   放在這裡而不是上面的版面區塊,是因為同權重的規則要寫在後面才蓋得過去 */
-@media (max-width:999px){
-  .type-scroll{max-height:none;overflow:visible}
-  /* 清單不自己捲之後,分組標題會改成黏在整個視窗頂端,滑到一半就躲進釘住的鍵盤底下,
-     看起來像破圖。窄螢幕直接讓標題跟著內容捲走 */
-  .type-group-title{position:static}
-}
+/* 清單本身不再自己捲(上半部已經釘住了,交給頁面捲就好),
+   否則會出現「捲軸裡還有捲軸」,手機上很難操作 */
 .type-group + .type-group{margin-top:14px}
 .type-group-title{
   font-size:var(--fs-2xs);letter-spacing:.12em;color:var(--muted);font-weight:700;
-  margin-bottom:8px;position:sticky;top:0;background:var(--panel);padding:4px 0;z-index:1;
+  margin-bottom:8px;padding:4px 0;
 }
 /* 等寬格線排列。原本用 flex 讓晶片各自照文字長度決定寬度,每一列的數量與寬度都不一樣,
    整片看起來參差不齊;改成固定欄寬的 grid,行列自然對齊,長短名稱都排得整整齊齊 */
@@ -256,7 +250,6 @@ main{
   font-size:var(--fs-sm);color:var(--ivory);letter-spacing:.06em;
   flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;
 }
-@media (min-width:1000px){ .kb-summary{display:none} } /* 桌機右欄本來就看得到完整結果,不用重複 */
 .kb-bar{
   display:flex;align-items:center;gap:8px;flex-wrap:wrap;
   padding:8px 12px;border-top:1px solid var(--line);background:var(--panel);
@@ -351,6 +344,38 @@ footer{
   padding:16px 14px calc(18px + env(safe-area-inset-bottom));
   text-align:center;color:var(--muted);font-size:var(--fs-2xs);line-height:1.8;
 }
+/* ── 觸控裝置:點擊目標放大(照抄 ScrollScore 的 pointer:coarse 三條規則)────────── */
+@media (pointer:coarse){
+  .btn{height:44px;min-width:44px}
+  select.mini{min-height:38px}
+}
+/* 手機橫向:螢幕高度本來就很吃緊,44px 的按鈕會再吃掉寶貴的高度。
+   這裡取 36px 折衷——比純高度斷點的 28px 好按,又不會把清單壓得更小。
+   必須放在 pointer:coarse 之後,否則會被上面的 44px 蓋掉 */
+@media (pointer:coarse) and (max-height:420px){
+  .btn{height:36px}
+}
+/* 觸控目標寬度連續縮放:320px 只放得下 38px(仍遠高於 WCAG 2.2 AA 2.5.8 要求的 24px,
+   而且高度維持 44px),400px 以上就回到 Apple HIG 建議的 44px。
+   必須放在 pointer:coarse 之後才不會被上面的 min-width:44px 蓋掉 */
+@media (pointer:coarse) and (max-width:420px){
+  .btn{min-width:clamp(38px, 10.5vw, 44px)}
+}
+
+/* ── 平板/桌機:左右兩欄 ──────────────────────────────────────
+   放在整份樣式表的最後(跟 ScrollScore 一樣),寬度剛好等於 900px 時
+   才會贏過上面那些 max-width:900px 的規則,不會兩套版面打架 */
+@media (min-width:900px){
+  /* 釘住的那塊裡面:左邊放分頁與根音、右邊放鍵盤;下半部左邊清單、右邊說明 */
+  .topbar{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:10px 14px;align-items:start}
+  .topbar .tabs{grid-column:1;grid-row:1}
+  .topbar #rootCard,.topbar #findCard{grid-column:1;grid-row:2}
+  .topbar .kb-wrap{grid-column:2;grid-row:1 / span 2}
+  .lower{display:grid;grid-template-columns:minmax(340px,420px) 1fr;align-items:start}
+  /* 右邊的說明欄也跟著釘住。不然左邊清單很長、右邊說明很短,清單一往下捲,
+     右半邊就整片空著。--topbar-h 由 JS 量出來(鍵盤高度會隨音域變,寫死會對不齊) */
+  .info{position:sticky;top:calc(var(--header-h, 60px) + var(--topbar-h, 250px) + 10px)}
+}
 </style>
 </head>
 <body>
@@ -371,44 +396,14 @@ footer{
 </header>
 
 <main>
-  <!-- ── 左欄:挑選 ─────────────────────────── -->
-  <div class="col-pick">
+  <!-- ══ 釘在上方的區塊:分頁 / 鍵盤 / 根音,捲動時不會離開畫面 ══ -->
+  <div class="topbar">
     <div class="tabs" role="tablist">
       <button role="tab" id="tabChord" aria-selected="true">和弦</button>
       <button role="tab" id="tabScale" aria-selected="false">音階</button>
       <button role="tab" id="tabFind"  aria-selected="false">反查</button>
     </div>
 
-    <div class="card" id="rootCard">
-      <div class="card-title">根音</div>
-      <div class="root-row letters" id="letterRow"></div>
-      <div class="acc-row" id="accRow"></div>
-    </div>
-
-    <div class="card" id="typeCard">
-      <div class="card-title" id="typeCardTitle">和弦類型</div>
-      <div class="search-wrap">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="typeSearch" type="search" placeholder="搜尋名稱、符號或公式(如 m7、Dorian、♭9)" autocomplete="off">
-      </div>
-      <div class="type-scroll" id="typeList"></div>
-    </div>
-
-    <div class="card" id="findCard" hidden>
-      <div class="card-title">反查和弦</div>
-      <div class="desc" style="margin-top:0">直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音會被當成低音來排序。</div>
-      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-        <button class="btn small ghost" id="findClear">清除選音</button>
-        <select class="mini" id="findSpell">
-          <option value="sharp">拼寫偏好:升記號 ♯</option>
-          <option value="flat">拼寫偏好:降記號 ♭</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── 右欄:鍵盤 + 說明 ───────────────────── -->
-  <div class="col-view">
     <div class="kb-wrap">
       <canvas id="keyboardCanvas"></canvas>
       <span id="audioStatus" class="audio-status" hidden></span>
@@ -434,8 +429,40 @@ footer{
       </div>
     </div>
 
-    <div class="card" id="readout"></div>
-    <div class="card" id="extraCard" hidden></div>
+    <div class="card" id="rootCard">
+      <div class="card-title">根音</div>
+      <div class="root-row letters" id="letterRow"></div>
+      <div class="acc-row" id="accRow"></div>
+    </div>
+
+    <div class="card" id="findCard" hidden>
+      <div class="card-title">反查和弦</div>
+      <div class="desc" style="margin-top:0">直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音會被當成低音來排序。</div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn small ghost" id="findClear">清除選音</button>
+        <select class="mini" id="findSpell">
+          <option value="sharp">拼寫偏好:升記號 ♯</option>
+          <option value="flat">拼寫偏好:降記號 ♭</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 只有這一區會捲動:和弦/音階清單 + 結果說明 ══ -->
+  <div class="lower">
+    <div class="card" id="typeCard">
+      <div class="card-title" id="typeCardTitle">和弦類型</div>
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="typeSearch" type="search" placeholder="搜尋名稱、符號或公式(如 m7、Dorian、♭9)" autocomplete="off">
+      </div>
+      <div class="type-scroll" id="typeList"></div>
+    </div>
+
+    <div class="info">
+      <div class="card" id="readout"></div>
+      <div class="card" id="extraCard" hidden></div>
+    </div>
   </div>
 </main>
 
@@ -840,7 +867,12 @@ function resizeKeyboardCanvas(){
   const cv = $("keyboardCanvas");
   if (!cv) return;
   const w = cv.getBoundingClientRect().width;
-  cv.style.height = computeKeyboardHeight(w) + "px";
+  /* 鍵盤是釘住的,螢幕越矮它就越該收斂,否則上半部佔滿整個畫面、下面的清單沒空間捲。
+     用「視窗高度的 22%」當上限而不是再開一個高度斷點:斷點會在某個高度突然跳一階,
+     連續縮放則是一路平滑收斂,而且直向手機與桌機(844/900px 高)算出來仍是原本的 170px 上限,
+     外觀完全沒變,只有真的很矮的畫面才會收 */
+  const maxH = Math.min(KB_MAX_H, window.innerHeight * 0.22);
+  cv.style.height = computeKeyboardHeight(w, KB_MIN_H, Math.max(KB_MIN_H, maxH)) + "px";
   const rect = cv.getBoundingClientRect();
   // ScrollScore 的畫布是要拿去錄影的,所以用 CSS px;這裡是給人盯著看音名的,
   // 乘上 devicePixelRatio 讓文字在高解析螢幕上不糊(繪圖座標仍維持 CSS px)
@@ -861,13 +893,16 @@ function drawKeyboardLive(){
   drawKeyboard(ctx, 0, 0, cv._cssW, cv._cssH, view.activeMap);
   if (STATE.label !== "off") drawKeyLabels(ctx, 0, 0, cv._cssW, cv._cssH, view.labelMap);
 }
-/* 頂欄高度餵給 CSS:手機版的鍵盤要黏在頂欄正下方,桌機版的右欄也要對齊,
-   而頂欄高度會隨字級與換行改變,寫死數字遲早會對不齊 */
-function syncHeaderHeight(){
+/* 把頂欄與釘住區塊的實際高度餵給 CSS。兩個高度都是會變的:頂欄隨字級與換行改變,
+   釘住區塊的高度隨鍵盤音域(白鍵數)改變,寫死數字遲早會對不齊 */
+function syncStickyMetrics(){
+  const root = document.documentElement.style;
   const h = document.querySelector("header");
-  if (h) document.documentElement.style.setProperty("--header-h", h.offsetHeight + "px");
+  if (h) root.setProperty("--header-h", h.offsetHeight + "px");
+  const t = document.querySelector(".topbar");
+  if (t) root.setProperty("--topbar-h", t.offsetHeight + "px");
 }
-window.addEventListener("resize", () => { syncHeaderHeight(); resizeKeyboardCanvas(); drawKeyboardLive(); });
+window.addEventListener("resize", () => { syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); syncStickyMetrics(); });
 
 /* ══════════════════════════════════════════════════════════════
    7. 音訊:與 ScrollScore 同一套音源
@@ -1582,6 +1617,7 @@ function render(){
   drawKeyboardLive();
   renderSummary();
   renderReadout();
+  syncStickyMetrics(); // 鍵盤音域一變,釘住區塊的高度就變,右欄的 sticky 偏移量要跟著更新
 }
 
 /* 釘在鍵盤下的那一行:名稱 + 組成音,固定一行高度 */
@@ -1704,7 +1740,7 @@ $("themeToggle").onclick = () => {
   applyTheme();
 };
 
-syncHeaderHeight();
+syncStickyMetrics();
 applyTheme();
 render();
 </script>
