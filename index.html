@@ -1,0 +1,1632 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<!-- 手機瀏覽器的網址列/狀態列會吃這個顏色。切換淺色主題時 applyTheme() 會一起改,
+     不然頁面變白了、上面那條還是黑的,看起來像沒對齊 -->
+<meta name="theme-color" content="#0C0A07">
+<title>HarmonyMap — 和弦與音階地圖</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ══ 設計代幣:與 ScrollScore 同一套語意變數,兩個工具放在一起看是同一個產品 ══ */
+:root{
+  --bg:#0C0A07;
+  --panel:#161209;
+  --panel-2:#201A0F;
+  --gold:#C9A24B;
+  --gold-bright:#EFD48A;
+  --teal:#3FBFAE;          /* 鍵盤上「和弦內音(非根音)」的顏色,沿用 ScrollScore 左右手的第二色 */
+  --teal-bright:#8FFFF0;
+  --ivory:#F4ECDA;
+  --muted:#8A7D5F;
+  --muted-bright:#B6A576;
+  --line:#2A2415;
+  --shadow-sm:0 4px 14px rgba(0,0,0,.35);
+  --shadow-md:0 10px 26px rgba(0,0,0,.5);
+  --shadow-lg:0 18px 44px rgba(0,0,0,.6);
+  --radius-sm:8px;
+  --radius-md:14px;
+  --radius-lg:18px;
+  --radius-pill:999px;
+  --fs-2xs:11px;
+  --fs-xs:12px;
+  --fs-sm:13px;
+  --fs-md:14px;
+  --fs-lg:16px;
+  --fs-xl:19px;
+  --fs-2xl:26px;
+  --surface-glass:rgba(32,26,15,.88);
+  --surface-inset:rgba(22,18,9,.55);
+  --card-tint:rgba(255,255,255,.035);
+  --stage-glow:#171208;
+  color-scheme:dark;
+}
+/* ══ 淺色主題:同一組語意變數換一套值,版面與元件完全不用改寫 ══ */
+body.light{
+  --bg:#FBF7EE;
+  --panel:#F4EEE0;
+  --panel-2:#EDE6D4;
+  --gold:#856418;
+  --gold-bright:#6B5115;
+  --teal:#0F5F56;
+  --teal-bright:#0B463F;
+  --ivory:#241E12;
+  --muted:#6F6450;
+  --muted-bright:#544B3B;
+  --line:#D8CDB2;
+  --shadow-sm:0 4px 14px rgba(90,72,30,.10);
+  --shadow-md:0 10px 26px rgba(90,72,30,.14);
+  --shadow-lg:0 18px 44px rgba(90,72,30,.18);
+  --surface-glass:rgba(252,249,241,.92);
+  --surface-inset:rgba(255,255,255,.7);
+  --card-tint:rgba(133,100,24,.05);
+  --stage-glow:#FFFDF6;
+  color-scheme:light;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{height:100%}
+body{
+  min-height:100%;
+  background:var(--bg);color:var(--ivory);
+  font-family:"Noto Sans TC",sans-serif;
+  display:flex;flex-direction:column;
+}
+/* ── 頂欄 ───────────────────────── */
+header{
+  display:flex;align-items:center;flex-wrap:wrap;
+  gap:8px 14px;justify-content:space-between;
+  padding:10px 14px;border-bottom:1px solid var(--line);
+  background:var(--panel);
+  position:sticky;top:0;z-index:20;
+}
+.header-left,.header-right{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px}
+/* 品牌名用流體字級(clamp)而不是斷點階梯。用斷點的話,430px 的 Pro Max 跟 320px 的 SE
+   會拿到同一個字級,大螢幕明明放得下卻被迫用小字,看起來就是「字太小」。
+   改成跟著視窗寬度連續縮放:窄機收到剛好放得下,寬機自然長回原本的大小。
+   下限 12px 是頂欄單排放得下的極限,上限 var(--fs-lg) 維持桌機原本的大小不變
+   ── 這一組數值與 ScrollScore 完全相同,兩個工具的品牌名要長得一模一樣 */
+header h1{
+  font-family:"Noto Serif TC",serif;
+  font-size:clamp(12px, 3.7vw, var(--fs-lg));
+  letter-spacing:clamp(.02em, .55vw, .12em);
+  font-weight:700;color:var(--gold);white-space:nowrap;
+  flex:none;
+}
+header h1 span{color:var(--ivory);font-weight:600}
+/* 副標是 HarmonyMap 自己多出來的東西,獨立成一個元素,不寫進 h1 裡面,
+   免得動到照抄過來的品牌名字級 */
+.tagline{color:var(--muted);font-size:var(--fs-xs);letter-spacing:.04em;white-space:nowrap}
+@media (max-width:700px){ .tagline{display:none} }
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1;
+  border:1px solid var(--gold);background:transparent;color:var(--gold);
+  font-family:inherit;font-size:var(--fs-md);font-weight:500;
+  padding:8px 16px;height:38px;border-radius:var(--radius-pill);cursor:pointer;
+  transition:background .2s,color .2s;white-space:nowrap;
+}
+.btn svg{flex:none}
+.btn:active{background:var(--gold);color:var(--bg)}
+.btn.primary{background:var(--gold);color:var(--bg);font-weight:700}
+.btn.ghost{border-color:var(--line);color:var(--muted-bright)}
+.btn.small{height:32px;padding:0 12px;font-size:var(--fs-sm)}
+#themeToggle[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
+/* 頂欄的內距與間距同樣跟著寬度連續縮放,不用斷點硬切(照 ScrollScore 的值) */
+@media (max-width:600px){
+  header{padding:8px clamp(6px, 2.2vw, 10px);gap:clamp(4px, 1.4vw, 6px);flex-wrap:nowrap}
+  .header-left,.header-right{gap:clamp(4px, 1.4vw, 6px)}
+  .btn{padding:0 10px;height:34px;font-size:var(--fs-sm)}
+  .btn-label{display:none}
+  .header-left .btn svg{margin:0}
+}
+@media (max-width:380px){ .btn{padding:0 8px;height:32px} }
+@media (max-width:340px){ .btn{padding:0 5px} }
+/* 手機橫向 / 螢幕高度極矮:頂欄整體收扁,品牌名也降一階 */
+@media (max-height:420px){
+  header{padding:5px 10px;gap:4px 8px}
+  header h1{font-size:var(--fs-sm)}
+  .btn{padding:0 10px;height:28px;font-size:var(--fs-xs)}
+}
+
+/* ── 版面:寬螢幕左右兩欄(左邊挑、右邊看),窄螢幕上下堆疊 ── */
+main{
+  flex:1;display:grid;gap:14px;
+  grid-template-columns:1fr;
+  padding:14px;max-width:1400px;width:100%;margin:0 auto;
+}
+@media (min-width:1000px){
+  main{grid-template-columns:minmax(360px,420px) 1fr;align-items:start}
+  .col-view{position:sticky;top:calc(var(--header-h, 60px) + 14px)}
+}
+.col-pick,.col-view{display:flex;flex-direction:column;gap:12px;min-width:0}
+/* 窄螢幕:兩欄的包裝層退開(display:contents),讓卡片自己排順序——
+   鍵盤釘在頂欄下方不會捲走,一邊滑和弦清單一邊看得到琴鍵亮在哪裡;
+   答案(和弦名/組成音)緊接在鍵盤下面,挑選用的卡片再放後面 */
+@media (max-width:999px){
+  main{display:flex;flex-direction:column}
+  .col-pick,.col-view{display:contents}
+  .tabs{order:0}
+  .kb-wrap{order:1;position:sticky;top:var(--header-h, 56px);z-index:10;box-shadow:var(--shadow-md)}
+  #readout{order:2}
+  #rootCard,#findCard{order:3}
+  #typeCard{order:4}
+  #extraCard{order:5}
+}
+
+.card{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius-md);padding:14px 16px;
+}
+.card-title{
+  font-size:var(--fs-2xs);letter-spacing:.14em;color:var(--muted);
+  text-transform:uppercase;font-weight:700;margin-bottom:10px;
+}
+
+/* ── 分頁(和弦 / 音階 / 反查)── */
+.tabs{display:flex;gap:6px;background:var(--surface-inset);border:1px solid var(--line);
+      border-radius:var(--radius-pill);padding:4px}
+.tabs button{
+  flex:1;border:none;background:transparent;color:var(--muted-bright);
+  font-family:inherit;font-size:var(--fs-md);font-weight:500;
+  padding:9px 8px;border-radius:var(--radius-pill);cursor:pointer;transition:background .2s,color .2s;
+}
+.tabs button[aria-selected="true"]{background:var(--gold);color:var(--bg);font-weight:700}
+
+/* ── 根音:字母列 + 升降記號 ── */
+.root-row{display:flex;gap:6px;flex-wrap:wrap}
+.root-row.letters button{flex:1 1 0;min-width:38px}
+.key-btn{
+  border:1px solid var(--line);background:var(--surface-inset);color:var(--ivory);
+  font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:600;
+  height:44px;border-radius:var(--radius-sm);cursor:pointer;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.key-btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.acc-row{display:flex;gap:6px;margin-top:6px}
+.acc-row .key-btn{flex:1;height:36px;font-size:var(--fs-md)}
+
+/* ── 類型清單:搜尋 + 分組晶片 ── */
+.search-wrap{position:relative;margin-bottom:10px}
+.search-wrap input{
+  width:100%;height:38px;padding:0 12px 0 34px;
+  background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-pill);
+  color:var(--ivory);font-family:inherit;font-size:var(--fs-sm);
+}
+.search-wrap input:focus{outline:none;border-color:var(--gold)}
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.6}
+.type-scroll{max-height:min(46vh,460px);overflow-y:auto;padding-right:4px}
+@media (min-width:1000px){ .type-scroll{max-height:min(58vh,620px)} }
+/* 窄螢幕的清單不自己捲(交給頁面捲就好),避免出現「捲軸裡還有捲軸」。
+   放在這裡而不是上面的版面區塊,是因為同權重的規則要寫在後面才蓋得過去 */
+@media (max-width:999px){
+  .type-scroll{max-height:none;overflow:visible}
+  /* 清單不自己捲之後,分組標題會改成黏在整個視窗頂端,滑到一半就躲進釘住的鍵盤底下,
+     看起來像破圖。窄螢幕直接讓標題跟著內容捲走 */
+  .type-group-title{position:static}
+}
+.type-group + .type-group{margin-top:14px}
+.type-group-title{
+  font-size:var(--fs-2xs);letter-spacing:.12em;color:var(--muted);font-weight:700;
+  margin-bottom:8px;position:sticky;top:0;background:var(--panel);padding:4px 0;z-index:1;
+}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{
+  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  border:1px solid var(--line);background:var(--surface-inset);color:var(--ivory);
+  border-radius:var(--radius-sm);padding:7px 11px;cursor:pointer;
+  font-family:inherit;text-align:left;transition:border-color .15s,background .15s;
+}
+.chip b{font-size:var(--fs-sm);font-weight:700;line-height:1.2;white-space:nowrap}
+.chip i{font-size:var(--fs-2xs);font-style:normal;color:var(--muted);line-height:1.2;white-space:nowrap}
+.chip:hover{border-color:var(--gold)}
+.chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.chip[aria-pressed="true"] i{color:rgba(0,0,0,.62)}
+.empty-hint{color:var(--muted);font-size:var(--fs-sm);padding:10px 2px}
+
+/* ── 鍵盤 ── */
+.kb-wrap{
+  border:1px solid var(--line);border-radius:var(--radius-md);overflow:hidden;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% 0%, var(--stage-glow) 0%, var(--bg) 60%);
+}
+#keyboardCanvas{display:block;width:100%;height:150px;background:transparent;touch-action:manipulation;cursor:pointer}
+.kb-bar{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  padding:8px 12px;border-top:1px solid var(--line);background:var(--panel);
+}
+.kb-bar .spacer{flex:1}
+.kb-legend{display:flex;gap:12px;font-size:var(--fs-2xs);color:var(--muted)}
+.kb-legend span{display:inline-flex;align-items:center;gap:5px}
+.kb-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.audio-status{font-size:var(--fs-2xs);color:var(--muted-bright);white-space:nowrap}
+select.mini{
+  background:var(--surface-inset);color:var(--ivory);border:1px solid var(--line);
+  border-radius:var(--radius-pill);padding:0 10px;height:32px;font-family:inherit;font-size:var(--fs-sm);
+}
+select.mini:focus{outline:none;border-color:var(--gold)}
+/* 手機上鍵盤是釘住的,這條工具列也跟著一直佔畫面高度——圖例的資訊
+   下方的結果面板已經寫得更清楚了,窄螢幕就先讓位給控制項,確保它們排得下一列 */
+@media (max-width:600px){
+  .kb-legend{display:none}
+  .kb-bar{padding:6px 8px;gap:6px}
+  select.mini{font-size:var(--fs-xs);padding:0 8px}
+}
+
+/* ── 結果面板 ── */
+.rt-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.rt-name{font-family:"Noto Serif TC",serif;font-size:var(--fs-2xl);font-weight:700;color:var(--gold-bright);line-height:1.1}
+.rt-sub{font-size:var(--fs-sm);color:var(--muted-bright)}
+.note-strip{display:flex;flex-wrap:wrap;gap:8px}
+.note-cell{
+  min-width:64px;flex:0 0 auto;text-align:center;
+  border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:8px 10px;background:var(--surface-inset);
+}
+.note-cell .deg{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
+.note-cell .nm{font-family:"Noto Serif TC",serif;font-size:var(--fs-xl);font-weight:700;color:var(--ivory);line-height:1.25}
+.note-cell .oct{font-size:var(--fs-2xs);color:var(--muted);opacity:.75}
+.note-cell.is-root{border-color:var(--gold);background:rgba(201,162,75,.12)}
+.note-cell.is-root .nm{color:var(--gold-bright)}
+.meta-row{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px;font-size:var(--fs-sm);color:var(--muted-bright)}
+.meta-row b{color:var(--ivory);font-weight:500;font-variant-numeric:tabular-nums}
+.desc{margin-top:12px;font-size:var(--fs-sm);line-height:1.75;color:var(--muted-bright)}
+.desc strong{color:var(--ivory);font-weight:500}
+
+/* 順階和弦表 */
+.table-scroll{overflow-x:auto}
+table.dia{width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:420px}
+table.dia th,table.dia td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+table.dia th{font-size:var(--fs-2xs);letter-spacing:.08em;color:var(--muted);font-weight:700;text-transform:uppercase}
+table.dia td.rn{color:var(--gold);font-family:"Noto Serif TC",serif;font-weight:700}
+table.dia td.sym{font-weight:700}
+table.dia td.tones{color:var(--muted-bright);font-size:var(--fs-xs)}
+table.dia tr:last-child td{border-bottom:none}
+table.dia button.link{
+  background:none;border:none;color:inherit;font:inherit;cursor:pointer;padding:0;
+  border-bottom:1px dashed var(--line);
+}
+table.dia button.link:hover{color:var(--gold);border-color:var(--gold)}
+
+/* 建議音階 / 相關連結 */
+.link-chips{display:flex;flex-wrap:wrap;gap:6px}
+.link-chip{
+  border:1px dashed var(--line);background:transparent;color:var(--muted-bright);
+  border-radius:var(--radius-pill);padding:6px 12px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;
+  transition:border-color .15s,color .15s;
+}
+.link-chip:hover{border-color:var(--gold);color:var(--gold)}
+
+/* 反查結果 */
+.find-list{display:flex;flex-direction:column;gap:8px}
+.find-item{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;background:var(--surface-inset);
+}
+.find-item .fname{font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:700;color:var(--gold-bright)}
+.find-item .fzh{font-size:var(--fs-xs);color:var(--muted-bright)}
+.find-item .ftag{
+  margin-left:auto;font-size:var(--fs-2xs);color:var(--muted);
+  border:1px solid var(--line);border-radius:var(--radius-pill);padding:2px 8px;
+}
+.find-item .ftag.exact{color:var(--gold);border-color:var(--gold)}
+
+footer{
+  padding:16px 14px calc(18px + env(safe-area-inset-bottom));
+  text-align:center;color:var(--muted);font-size:var(--fs-2xs);line-height:1.8;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Harmony<span>Map</span></h1>
+    <span class="tagline">和弦與音階地圖</span>
+  </div>
+  <div class="header-right">
+    <button class="btn" id="playBtn" title="播放目前的和弦/音階">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+      <span class="btn-label">播放</span>
+    </button>
+    <button class="btn ghost" id="themeToggle" aria-pressed="false" aria-label="切換淺色/深色主題" title="切換主題">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 18a6 6 0 1 1 0-12 6 6 0 0 1 0 12zm0-16 2.4 2.4L12 4.8 9.6 4.4 12 2zm0 20-2.4-2.4 2.4.4 2.4-.4L12 22zM2 12l2.4-2.4-.4 2.4.4 2.4L2 12zm20 0-2.4 2.4.4-2.4-.4-2.4L22 12z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- ── 左欄:挑選 ─────────────────────────── -->
+  <div class="col-pick">
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabChord" aria-selected="true">和弦</button>
+      <button role="tab" id="tabScale" aria-selected="false">音階</button>
+      <button role="tab" id="tabFind"  aria-selected="false">反查</button>
+    </div>
+
+    <div class="card" id="rootCard">
+      <div class="card-title">根音</div>
+      <div class="root-row letters" id="letterRow"></div>
+      <div class="acc-row" id="accRow"></div>
+    </div>
+
+    <div class="card" id="typeCard">
+      <div class="card-title" id="typeCardTitle">和弦類型</div>
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input id="typeSearch" type="search" placeholder="搜尋名稱、符號或公式(如 m7、Dorian、♭9)" autocomplete="off">
+      </div>
+      <div class="type-scroll" id="typeList"></div>
+    </div>
+
+    <div class="card" id="findCard" hidden>
+      <div class="card-title">反查和弦</div>
+      <div class="desc" style="margin-top:0">直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音會被當成低音來排序。</div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn small ghost" id="findClear">清除選音</button>
+        <select class="mini" id="findSpell">
+          <option value="sharp">拼寫偏好:升記號 ♯</option>
+          <option value="flat">拼寫偏好:降記號 ♭</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 右欄:鍵盤 + 說明 ───────────────────── -->
+  <div class="col-view">
+    <div class="kb-wrap">
+      <canvas id="keyboardCanvas"></canvas>
+      <div class="kb-bar">
+        <div class="kb-legend">
+          <span><i style="background:var(--gold)"></i>根音</span>
+          <span><i style="background:var(--teal)"></i>組成音</span>
+        </div>
+        <span id="audioStatus" class="audio-status" hidden></span>
+        <div class="spacer"></div>
+        <select class="mini" id="octaveSel" title="起始八度"></select>
+        <select class="mini" id="labelSel" title="琴鍵上要標音名(C D E)、唱名(Do Re Mi)還是級數(1 ♭3 5)">
+          <option value="en">標音名</option>
+          <option value="do">標唱名</option>
+          <option value="deg">標級數</option>
+          <option value="off">不標字</option>
+        </select>
+        <select class="mini" id="playModeSel" title="播放方式">
+          <option value="block">齊奏</option>
+          <option value="arp">琶音</option>
+          <option value="asc">逐音上下行</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card" id="readout"></div>
+    <div class="card" id="extraCard" hidden></div>
+  </div>
+</main>
+
+<footer>
+  HarmonyMap · 鍵盤渲染沿用 ScrollScore 的繪製邏輯<br>
+  和弦與音階的音名皆依樂理正規拼寫推導(同一個級數只用一個字母),所以會出現 B♭♭、G♯♯ 這類重降重升音<br>
+  快捷鍵:↑↓ 換和弦/音階 · ←→ 換根音 · 空白鍵播放 · 點琴鍵可單獨試聽
+</footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ══════════════════════════════════════════════════════════════
+   1. 樂理核心:音名拼寫
+   ──────────────────────────────────────────────────────────────
+   「C 小三度」寫成 E♭ 而不是 D♯,是因為三度就必須落在 C 往上數第三個字母 E 上。
+   所以這裡不用「12 個音的查表」,而是照樂理規則推:
+     字母 = 根音字母 + (級數 - 1),升降記號 = 目標音高 - 該字母的自然音高。
+   這樣 Cdim7 會正確地拼成 C E♭ G♭ B♭♭(而不是 C D♯ F♯ A),
+   Locrian 的 ♭5 也不會被寫成 ♯4。
+   ══════════════════════════════════════════════════════════════ */
+const LETTERS   = ["C","D","E","F","G","A","B"];
+const LETTER_PC = [0, 2, 4, 5, 7, 9, 11];        // 各字母的自然音高(半音)
+const SOLFEGE   = ["Do","Re","Mi","Fa","Sol","La","Si"]; // 固定唱名,跟字母一一對應
+/* 級數 → 相對根音的半音數(自然音程) */
+const DEG_SEMI  = {1:0, 2:2, 3:4, 4:5, 5:7, 6:9, 7:11, 9:14, 11:17, 13:21};
+
+function accText(n){
+  if (n === 0) return "";
+  if (n > 0) return "♯".repeat(n);
+  return "♭".repeat(-n);
+}
+/* 把 "♭13"、"♯11"、"♭♭7"、"5" 這種級數代號拆成 {deg, alt} */
+function parseToken(tok){
+  let alt = 0, i = 0;
+  while (i < tok.length && (tok[i] === "♭" || tok[i] === "♯")) { alt += tok[i] === "♯" ? 1 : -1; i++; }
+  return { deg: parseInt(tok.slice(i), 10), alt };
+}
+function tokenSemi(tok){
+  const { deg, alt } = parseToken(tok);
+  return DEG_SEMI[deg] + alt;
+}
+/* 根音(字母序號 + 升降)加上一個級數代號,推出該音的正規拼寫與相對半音 */
+function spell(rootLetter, rootAcc, tok){
+  const { deg } = parseToken(tok);
+  const semi     = tokenSemi(tok);
+  const step     = rootLetter + (deg - 1);
+  const letter   = step % 7;
+  const carry    = Math.floor(step / 7);            // 跨過 B→C 要補一個八度
+  const absolute = LETTER_PC[rootLetter] + rootAcc + semi;
+  const natural  = LETTER_PC[letter] + 12 * carry;
+  let acc = absolute - natural;
+  let name;
+  if (acc < -2 || acc > 2) {
+    // 三重升降(例如 G♯ 的利底安♯2)在實務上不會這樣寫,退回等音的簡易拼寫
+    name = simpleName(((absolute % 12) + 12) % 12, acc < 0 ? "flat" : "sharp");
+    acc = null;
+  } else {
+    name = LETTERS[letter] + accText(acc);
+  }
+  return { tok, deg, semi, name, letter, acc };
+}
+const SHARP_NAMES = ["C","C♯","D","D♯","E","F","F♯","G","G♯","A","A♯","B"];
+const FLAT_NAMES  = ["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"];
+function simpleName(pc, pref){ return (pref === "flat" ? FLAT_NAMES : SHARP_NAMES)[pc]; }
+/* 音名 → 唱名(把字母換掉,升降記號原樣保留) */
+function toSolfege(name){
+  const idx = LETTERS.indexOf(name[0]);
+  return idx < 0 ? name : SOLFEGE[idx] + name.slice(1);
+}
+function midiToFreq(m){ return 440 * Math.pow(2, (m - 69) / 12); }
+
+/* ══════════════════════════════════════════════════════════════
+   2. 和弦字典
+   ══════════════════════════════════════════════════════════════ */
+const CHORDS = [
+  // ── 三和弦 ──
+  {id:"maj",   sym:"",       zh:"大三和弦",     en:"Major",            g:"三和弦", t:["1","3","5"],            alias:["M","△"], d:"最基本的和弦,大三度+小三度堆疊,聽起來明亮穩定。大調的 I、IV、V 級都是它。"},
+  {id:"min",   sym:"m",      zh:"小三和弦",     en:"Minor",            g:"三和弦", t:["1","♭3","5"],           alias:["min","−"], d:"把大三和弦的三音降半音,色彩立刻轉為柔和、內斂。小調的 i 級。"},
+  {id:"dim",   sym:"dim",    zh:"減三和弦",     en:"Diminished",       g:"三和弦", t:["1","♭3","♭5"],          alias:["°","m♭5"], d:"兩個小三度疊起來,五音被壓縮成減五度,聽感緊張、不穩定,強烈想解決到下一個和弦。"},
+  {id:"aug",   sym:"aug",    zh:"增三和弦",     en:"Augmented",        g:"三和弦", t:["1","3","♯5"],           alias:["+","♯5"], d:"兩個大三度疊起來,五音升高半音。因為完全對稱,任何轉位聽起來都一樣,常當作經過性的擴張和弦。"},
+  {id:"sus2",  sym:"sus2",   zh:"掛留二和弦",   en:"Suspended 2nd",    g:"三和弦", t:["1","2","5"],            alias:["sus9"], d:"用二音取代三音,沒有大小調的傾向,聲響開闊、空靈,常見於流行與民謠伴奏。"},
+  {id:"sus4",  sym:"sus4",   zh:"掛留四和弦",   en:"Suspended 4th",    g:"三和弦", t:["1","4","5"],            alias:["sus"], d:"用四音取代三音,產生想往三音落下的懸置感,古典裡通常解決到同根音的大/小三和弦。"},
+  {id:"pow",   sym:"5",      zh:"強力和弦",     en:"Power Chord",      g:"三和弦", t:["1","5"],                alias:["no3"], d:"只有根音與五音,沒有三音就沒有大小調色彩,經破音後仍然乾淨,是搖滾吉他的骨幹。"},
+
+  // ── 六和弦與加音和弦 ──
+  {id:"6",     sym:"6",      zh:"大六和弦",     en:"Major 6th",        g:"六和弦與加音", t:["1","3","5","6"],       alias:["M6"], d:"大三和弦加六音,比 maj7 更圓潤、沒有大七度的摩擦,常用來當終止和弦。"},
+  {id:"m6",    sym:"m6",     zh:"小六和弦",     en:"Minor 6th",        g:"六和弦與加音", t:["1","♭3","5","6"],      alias:[], d:"小三和弦加大六度(注意是大六度,不是♭6),來自旋律小調,帶著淡淡的爵士感。"},
+  {id:"69",    sym:"6/9",    zh:"六九和弦",     en:"Six Nine",         g:"六和弦與加音", t:["1","3","5","6","9"],   alias:["6add9"], d:"六音與九音一起加,完全沒有七度的張力,是爵士最常見的「大調結束和弦」。"},
+  {id:"add9",  sym:"add9",   zh:"加九和弦",     en:"Add 9",            g:"六和弦與加音", t:["1","3","5","9"],       alias:["add2"], d:"只加九音、不加七音,所以叫 add 而不是 9。色彩清亮,流行鋼琴的招牌音響。"},
+  {id:"madd9", sym:"m(add9)",zh:"小加九和弦",   en:"Minor Add 9",      g:"六和弦與加音", t:["1","♭3","5","9"],      alias:[], d:"小三和弦加九音,♭3 與 9 之間形成寬廣的張力,有種冷冽的美感。"},
+  {id:"add11", sym:"add11",  zh:"加十一和弦",   en:"Add 11",           g:"六和弦與加音", t:["1","3","5","11"],      alias:["add4"], d:"大三和弦加四度音,三音與四音只差半音會打架,通常把三音移高八度或省略。"},
+
+  // ── 七和弦 ──
+  {id:"maj7",  sym:"maj7",   zh:"大七和弦",     en:"Major 7th",        g:"七和弦", t:["1","3","5","7"],        alias:["△7","M7"], d:"大三和弦加大七度,是大調 I 級與 IV 級的完整形態,溫暖而帶有一點慵懶的漂浮感。"},
+  {id:"7",     sym:"7",      zh:"屬七和弦",     en:"Dominant 7th",     g:"七和弦", t:["1","3","5","♭7"],       alias:["dom7"], d:"三音與♭7形成三全音,是所有調性音樂最重要的張力來源,天生就想解決到 I 級。"},
+  {id:"m7",    sym:"m7",     zh:"小七和弦",     en:"Minor 7th",        g:"七和弦", t:["1","♭3","5","♭7"],      alias:["min7","−7"], d:"最溫和的七和弦,張力低、可久留,ii–V–I 裡的 ii 級就是它。"},
+  {id:"mMaj7", sym:"mMaj7",  zh:"小大七和弦",   en:"Minor Major 7th",  g:"七和弦", t:["1","♭3","5","7"],       alias:["m△7","mM7"], d:"小三和弦配大七度,來自和聲小調/旋律小調,懸疑、帶點希區考克式的不安。"},
+  {id:"m7b5",  sym:"m7♭5",   zh:"半減七和弦",   en:"Half Diminished",  g:"七和弦", t:["1","♭3","♭5","♭7"],     alias:["ø7"], d:"減三和弦加小七度,小調 ii–V–i 的 ii 級,比全減七柔和、還保有調性方向。"},
+  {id:"dim7",  sym:"dim7",   zh:"減七和弦",     en:"Diminished 7th",   g:"七和弦", t:["1","♭3","♭5","♭♭7"],    alias:["°7"], d:"四個音等距(全是小三度),完全對稱,可以往四個方向解決,是最好用的轉調樞紐。七音寫成重降七度。"},
+  {id:"7s5",   sym:"7♯5",    zh:"增屬七和弦",   en:"Augmented 7th",    g:"七和弦", t:["1","3","♯5","♭7"],      alias:["aug7","7+5"], d:"屬七和弦把五音升高,張力更強,常出現在解決到小調的 V 級。"},
+  {id:"maj7s5",sym:"maj7♯5", zh:"增大七和弦",   en:"Major 7th ♯5",     g:"七和弦", t:["1","3","♯5","7"],       alias:["△7♯5"], d:"取自旋律小調的第三級(Lydian ♯5),漂浮、沒有重力感,現代爵士很愛用。"},
+  {id:"7b5",   sym:"7♭5",    zh:"降五屬七",     en:"Dominant 7th ♭5",  g:"七和弦", t:["1","3","♭5","♭7"],      alias:[], d:"屬七把五音降低,和它的三全音代理和弦共用同一組音,是變化屬和弦的入門形態。"},
+  {id:"7sus4", sym:"7sus4",  zh:"屬七掛留四",   en:"Dominant 7 sus4",  g:"七和弦", t:["1","4","5","♭7"],       alias:["7sus"], d:"屬七和弦沒有三音、改用四音,張力被軟化,常寫成「ii7/V」的形式當作延遲解決。"},
+
+  // ── 九和弦 ──
+  {id:"maj9",  sym:"maj9",   zh:"大九和弦",     en:"Major 9th",        g:"九和弦", t:["1","3","5","7","9"],     alias:["△9"], d:"maj7 再往上疊九音,是最華麗的大調延伸音響,實務上常省略五音。"},
+  {id:"9",     sym:"9",      zh:"屬九和弦",     en:"Dominant 9th",     g:"九和弦", t:["1","3","5","♭7","9"],    alias:[], d:"屬七加九音,張力仍在但顏色更飽滿,放克與藍調最常見的和弦之一。"},
+  {id:"m9",    sym:"m9",     zh:"小九和弦",     en:"Minor 9th",        g:"九和弦", t:["1","♭3","5","♭7","9"],   alias:["−9"], d:"小七和弦加九音,柔軟又有層次,是 Neo-Soul 的標準配備。"},
+  {id:"mMaj9", sym:"mMaj9",  zh:"小大九和弦",   en:"Minor Major 9th",  g:"九和弦", t:["1","♭3","5","7","9"],    alias:["m△9"], d:"小大七再加九音,神祕色彩更濃,常見於旋律小調的即興。"},
+  {id:"m9b5",  sym:"m9♭5",   zh:"半減九和弦",   en:"Half Dim 9th",     g:"九和弦", t:["1","♭3","♭5","♭7","9"],  alias:["ø9"], d:"半減七加自然九音,來自旋律小調第六級(Locrian ♮2),小調 ii 級的進階配置。"},
+  {id:"9sus4", sym:"9sus4",  zh:"屬九掛留四",   en:"9 sus4",           g:"九和弦", t:["1","4","5","♭7","9"],    alias:["11"], d:"實務上就是把 ii 級小七和弦架在 V 的根音上,爵士鋼琴的經典開放聲位。"},
+  {id:"7b9",   sym:"7♭9",    zh:"降九屬七",     en:"Dominant 7 ♭9",    g:"九和弦", t:["1","3","5","♭7","♭9"],   alias:[], d:"往小調解決時的首選,去掉根音後其實就是一個減七和弦,張力尖銳。"},
+  {id:"7s9",   sym:"7♯9",    zh:"升九屬七",     en:"Dominant 7 ♯9",    g:"九和弦", t:["1","3","5","♭7","♯9"],   alias:["Hendrix"], d:"大三度與升九(等於小三度)同時存在的衝突音響,〈Purple Haze〉那個著名的和弦。"},
+
+  // ── 十一與十三和弦 ──
+  {id:"11",    sym:"11",     zh:"屬十一和弦",   en:"Dominant 11th",    g:"十一與十三", t:["1","5","♭7","9","11"],       alias:[], d:"完整的十一和弦會讓三音與十一音打架,所以標準做法是省略三音,聽起來接近 9sus4。"},
+  {id:"m11",   sym:"m11",    zh:"小十一和弦",   en:"Minor 11th",       g:"十一與十三", t:["1","♭3","5","♭7","9","11"],  alias:[], d:"小和弦沒有三音衝突的問題,可以把 1-♭3-5-♭7-9-11 全部堆好,音響寬廣如水面。"},
+  {id:"maj7s11",sym:"maj7♯11",zh:"利底安大七",  en:"Major 7 ♯11",      g:"十一與十三", t:["1","3","5","7","♯11"],       alias:["△7♯11"], d:"十一音升高半音就避開了與三音的衝突,這是利底安調式的招牌色彩,明亮又懸浮。"},
+  {id:"7s11",  sym:"7♯11",   zh:"升十一屬七",   en:"Dominant 7 ♯11",   g:"十一與十三", t:["1","3","5","♭7","♯11"],      alias:["7♭5(add)"], d:"對應利底安屬音階,是三全音代理常用的顏色,比 7♭5 保留了完全五度。"},
+  {id:"13",    sym:"13",     zh:"屬十三和弦",   en:"Dominant 13th",    g:"十一與十三", t:["1","3","5","♭7","9","13"],   alias:[], d:"最豐滿的屬和弦,實際彈奏通常只留 3、♭7、9、13 四個音,大樂團的標準配置。"},
+  {id:"maj13", sym:"maj13",  zh:"大十三和弦",   en:"Major 13th",       g:"十一與十三", t:["1","3","5","7","9","13"],    alias:["△13"], d:"大調延伸的極致,把 Ionian 除了四音以外的音都收進來。"},
+  {id:"m13",   sym:"m13",    zh:"小十三和弦",   en:"Minor 13th",       g:"十一與十三", t:["1","♭3","5","♭7","9","13"],  alias:[], d:"小七和弦配大十三度(來自多利安的自然六音),明亮版的小和弦。"},
+  {id:"13sus4",sym:"13sus4", zh:"十三掛留四",   en:"13 sus4",          g:"十一與十三", t:["1","4","5","♭7","9","13"],   alias:["13sus"], d:"沒有三音的十三和弦,張力鬆但顏色滿,常在段落結尾停留很久。"},
+
+  // ── 變化屬和弦 ──
+  {id:"7b13",  sym:"7♭13",   zh:"降十三屬七",   en:"Dominant 7 ♭13",   g:"變化屬和弦", t:["1","3","5","♭7","♭13"],      alias:["7♯5(add)"], d:"♭13 與 ♯5 是同一個音高,但寫法不同:保留完全五度時寫 ♭13,取代五音時寫 ♯5。"},
+  {id:"7b9s11",sym:"7♭9♯11", zh:"降九升十一",   en:"Dominant 7 ♭9♯11", g:"變化屬和弦", t:["1","3","5","♭7","♭9","♯11"], alias:[], d:"對應半全減音階,同時具備 ♭9 的尖銳與 ♯11 的懸浮,張力極高。"},
+  {id:"7s9b13",sym:"7♯9♭13", zh:"升九降十三",   en:"Dominant 7 ♯9♭13", g:"變化屬和弦", t:["1","3","♭7","♯9","♭13"],     alias:[], d:"往小調解決時最濃烈的配色,五音通常省略讓 ♭13 站出來。"},
+  {id:"7alt",  sym:"7alt",   zh:"變化屬和弦",   en:"Altered Dominant", g:"變化屬和弦", t:["1","3","♭7","♭9","♯9","♭13"],alias:["7♯9♭9♭13"], d:"把所有能變化的延伸音(♭9、♯9、♭13)一次用上,對應變化音階,爵士最強的解決前張力。"}
+];
+
+/* ══════════════════════════════════════════════════════════════
+   3. 音階字典
+   ══════════════════════════════════════════════════════════════ */
+const SCALES = [
+  // ── 大調七聲調式 ──
+  {id:"ionian",     zh:"大調(愛奧尼安)", en:"Ionian / Major",       g:"大調七聲調式", t:["1","2","3","4","5","6","7"],        d:"最基本的七聲音階,全全半全全全半。第四音是「避開音」,即興時不要在 I 級上久留。"},
+  {id:"dorian",     zh:"多利安",          en:"Dorian",               g:"大調七聲調式", t:["1","2","♭3","4","5","6","♭7"],      d:"小調系但六音是自然大六度,比自然小調明亮,是所有 m7 和弦的預設選擇。"},
+  {id:"phrygian",   zh:"弗里吉安",        en:"Phrygian",             g:"大調七聲調式", t:["1","♭2","♭3","4","5","♭6","♭7"],    d:"♭2 是最大特徵,帶有西班牙、佛朗明哥式的暗色與異國感。"},
+  {id:"lydian",     zh:"利底安",          en:"Lydian",               g:"大調七聲調式", t:["1","2","3","♯4","5","6","7"],       d:"比大調多一個 ♯4,沒有避開音,明亮到有點夢幻,電影配樂裡的「奇蹟感」。"},
+  {id:"mixolydian", zh:"米索利地安",      en:"Mixolydian",           g:"大調七聲調式", t:["1","2","3","4","5","6","♭7"],       d:"大調把七音降半音,是屬七和弦的家鄉,藍調搖滾與放克的骨幹。"},
+  {id:"aeolian",    zh:"自然小調(愛奧利安)", en:"Aeolian / Natural Minor", g:"大調七聲調式", t:["1","2","♭3","4","5","♭6","♭7"], d:"最標準的小調音階,♭6 讓它比多利安更沉、更有悲劇感。"},
+  {id:"locrian",    zh:"洛克里安",        en:"Locrian",              g:"大調七聲調式", t:["1","♭2","♭3","4","♭5","♭6","♭7"],   d:"唯一五音是減五度的調式,主和弦是 m7♭5,不穩定到幾乎無法當作終止。"},
+
+  // ── 和聲小調系統 ──
+  {id:"harmMinor",  zh:"和聲小調",        en:"Harmonic Minor",       g:"和聲小調系統", t:["1","2","♭3","4","5","♭6","7"],      d:"自然小調把七音升回導音,才能在小調得到真正的屬七和弦。♭6 到 7 的增二度是它的異國味來源。"},
+  {id:"locrian6",   zh:"洛克里安 ♮6",     en:"Locrian ♮6",           g:"和聲小調系統", t:["1","♭2","♭3","4","♭5","6","♭7"],    d:"和聲小調的第二級,用在 m7♭5 上時可以帶出自然六度的亮點。"},
+  {id:"ionianAug",  zh:"大調 ♯5",         en:"Ionian ♯5",            g:"和聲小調系統", t:["1","2","3","4","♯5","6","7"],       d:"和聲小調的第三級,對應 maj7♯5,聽感華麗而略帶不安。"},
+  {id:"dorian4",    zh:"烏克蘭小調(多利安♯4)", en:"Ukrainian Dorian", g:"和聲小調系統", t:["1","2","♭3","♯4","5","6","♭7"],  d:"和聲小調的第四級,♯4 加上自然 6,東歐與克萊茲梅爾音樂的典型色彩。"},
+  {id:"phrygDom",   zh:"弗里吉安屬音階",  en:"Phrygian Dominant",    g:"和聲小調系統", t:["1","♭2","3","4","5","♭6","♭7"],     d:"和聲小調的第五級,大三度配 ♭2 與 ♭6,是中東與佛朗明哥最具代表性的聲音。"},
+  {id:"lydian2",    zh:"利底安 ♯2",       en:"Lydian ♯2",            g:"和聲小調系統", t:["1","♯2","3","♯4","5","6","7"],      d:"和聲小調的第六級,兩個增音程讓它比利底安更奇幻。"},
+  {id:"superLocBB7",zh:"超級洛克里安 ♭♭7", en:"Altered ♭♭7",          g:"和聲小調系統", t:["1","♭2","♭3","♭4","♭5","♭6","♭♭7"],d:"和聲小調的第七級,主和弦是減七和弦,用在 dim7 上的完整音階。"},
+
+  // ── 旋律小調系統 ──
+  {id:"melMinor",   zh:"旋律小調(爵士小調)", en:"Melodic Minor",     g:"旋律小調系統", t:["1","2","♭3","4","5","6","7"],       d:"小三度配自然六、七度。爵士裡上下行都用同一組音,是七個現代調式的母體。"},
+  {id:"dorianb2",   zh:"多利安 ♭2",       en:"Dorian ♭2 / Phrygian ♮6", g:"旋律小調系統", t:["1","♭2","♭3","4","5","6","♭7"],  d:"旋律小調第二級,用在 sus♭9 這類和弦上,暗色但仍保有六度的亮點。"},
+  {id:"lydianAug",  zh:"利底安 ♯5",       en:"Lydian Augmented",     g:"旋律小調系統", t:["1","2","3","♯4","♯5","6","7"],      d:"旋律小調第三級,對應 maj7♯5,完全沒有重力感的漂浮音階。"},
+  {id:"lydianDom",  zh:"利底安屬音階",    en:"Lydian Dominant",      g:"旋律小調系統", t:["1","2","3","♯4","5","6","♭7"],      d:"旋律小調第四級,又稱 Overtone 音階(接近自然泛音列),是 7♯11 與三全音代理的標準選擇。"},
+  {id:"mixob6",     zh:"米索利地安 ♭6",   en:"Mixolydian ♭6",        g:"旋律小調系統", t:["1","2","3","4","5","♭6","♭7"],      d:"旋律小調第五級,又稱印度音階,屬七和弦帶 ♭13 時用它。"},
+  {id:"locrian2",   zh:"半減音階(洛克里安♮2)", en:"Locrian ♮2",      g:"旋律小調系統", t:["1","2","♭3","4","♭5","♭6","♭7"],    d:"旋律小調第六級,比一般洛克里安多了自然九音,是小調 ii 級 m7♭5 的首選。"},
+  {id:"altered",    zh:"變化音階(超級洛克里安)", en:"Altered / Super Locrian", g:"旋律小調系統", t:["1","♭2","♭3","♭4","♭5","♭6","♭7"], d:"旋律小調第七級,含 ♭9 ♯9 ♭5 ♯5 四個變化音(♭4 其實就是大三度),7alt 的專屬音階。"},
+
+  // ── 五聲與藍調 ──
+  {id:"majPent",    zh:"大調五聲",        en:"Major Pentatonic",     g:"五聲與藍調", t:["1","2","3","5","6"],                d:"大調拿掉四音與七音,沒有半音衝突,怎麼彈都不會錯,民謠與鄉村的基礎。"},
+  {id:"minPent",    zh:"小調五聲",        en:"Minor Pentatonic",     g:"五聲與藍調", t:["1","♭3","4","5","♭7"],              d:"搖滾與藍調獨奏的第一課,與大調五聲互為關係音階(相差小三度)。"},
+  {id:"bluesMin",   zh:"小調藍調",        en:"Minor Blues",          g:"五聲與藍調", t:["1","♭3","4","♭5","5","♭7"],         d:"小調五聲插入 ♭5 這顆藍調音,經過性地滑過去最有味道。"},
+  {id:"bluesMaj",   zh:"大調藍調",        en:"Major Blues",          g:"五聲與藍調", t:["1","2","♭3","3","5","6"],           d:"大調五聲插入 ♭3,♭3→3 的滑音是鄉村與西岸藍調的招牌。"},
+  {id:"egyptian",   zh:"埃及五聲(sus)",   en:"Egyptian / Sus Pent",  g:"五聲與藍調", t:["1","2","4","5","♭7"],               d:"大調五聲的第二轉位,全是二度與四度堆疊,開放且無調性傾向。"},
+  {id:"hirajoshi",  zh:"平調子",          en:"Hirajoshi",            g:"五聲與藍調", t:["1","2","♭3","5","♭6"],              d:"日本箏的定弦音階,兩個半音落點讓它一聽就有和風。"},
+  {id:"insen",      zh:"都節(陰音階)",    en:"Insen / Miyako-bushi", g:"五聲與藍調", t:["1","♭2","4","5","♭7"],              d:"♭2 加上四五度,日本傳統音樂中最幽暗的五聲音階。"},
+  {id:"ryukyu",     zh:"琉球音階",        en:"Ryukyu",               g:"五聲與藍調", t:["1","3","4","5","7"],                d:"沖繩民謠的音階,拿掉二音與六音,明亮而獨特。"},
+  {id:"kumoi",      zh:"雲井調子",        en:"Kumoi",                g:"五聲與藍調", t:["1","2","♭3","5","6"],               d:"小調五聲換掉四音與七音,帶自然六度,清澈的和風小調。"},
+
+  // ── 對稱音階 ──
+  {id:"wholeTone",  zh:"全音音階",        en:"Whole Tone",           g:"對稱音階", t:["1","2","3","♯4","♯5","♭7"],           d:"全部由全音構成,只有兩組不同的全音音階存在。無中心感,對應 7♯5,德布西的印象派語彙。"},
+  {id:"dimHW",      zh:"減音階(半全)",    en:"Half-Whole Diminished",g:"對稱音階", t:["1","♭2","♯2","3","♯4","5","6","♭7"],  d:"半音、全音交替的八聲音階,含 ♭9 ♯9 ♯11 13,是 7♭9 與 7♯11 的標準選擇。"},
+  {id:"dimWH",      zh:"減音階(全半)",    en:"Whole-Half Diminished",g:"對稱音階", t:["1","2","♭3","4","♭5","♭6","6","7"],   d:"全音、半音交替,主和弦是 dim7,四個小三度對稱,轉位後仍是同一組音。"},
+  {id:"augmented",  zh:"增音階",          en:"Augmented",            g:"對稱音階", t:["1","♯2","3","5","♯5","7"],            d:"小三度與半音交替的六聲音階,對應 maj7♯5,現代爵士的對稱素材。"},
+  {id:"chromatic",  zh:"半音階",          en:"Chromatic",            g:"對稱音階", t:["1","♭2","2","♭3","3","4","♭5","5","♭6","6","♭7","7"], d:"十二個半音全用,沒有調性中心,實務上當作經過音的來源而不是即興的骨架。"},
+
+  // ── 其他七聲音階 ──
+  {id:"harmMajor",  zh:"和聲大調",        en:"Harmonic Major",       g:"其他七聲音階", t:["1","2","3","4","5","♭6","7"],       d:"大調把六音降半音,同時擁有大三度與 ♭6,常用在 IV 級轉小調的瞬間。"},
+  {id:"dblHarm",    zh:"雙和聲大調(拜占庭)", en:"Double Harmonic",   g:"其他七聲音階", t:["1","♭2","3","4","5","♭6","7"],      d:"兩個增二度,又稱阿拉伯/吉普賽大調,異國感最強烈的七聲音階。"},
+  {id:"hungMinor",  zh:"匈牙利小調",      en:"Hungarian Minor",      g:"其他七聲音階", t:["1","2","♭3","♯4","5","♭6","7"],     d:"和聲小調再把四音升高,同時有 ♯4 與導音,東歐吉普賽音樂的代表。"},
+  {id:"neapMinor",  zh:"拿坡里小調",      en:"Neapolitan Minor",     g:"其他七聲音階", t:["1","♭2","♭3","4","5","♭6","7"],     d:"和聲小調配 ♭2,古典裡與拿坡里六和弦(♭II)一同出現。"},
+  {id:"neapMajor",  zh:"拿坡里大調",      en:"Neapolitan Major",     g:"其他七聲音階", t:["1","♭2","♭3","4","5","6","7"],      d:"旋律小調配 ♭2,下半部是小調、上半部是大調的混血音階。"},
+
+  // ── Bebop(八聲經過音階)──
+  {id:"bebopDom",   zh:"屬七 Bebop",      en:"Bebop Dominant",       g:"Bebop 八聲音階", t:["1","2","3","4","5","6","♭7","7"],   d:"米索利地安加一顆經過性的大七度,八個音剛好讓和弦內音落在正拍上。"},
+  {id:"bebopMaj",   zh:"大調 Bebop",      en:"Bebop Major",          g:"Bebop 八聲音階", t:["1","2","3","4","5","♯5","6","7"],   d:"大調在五音與六音之間插入 ♯5,八分音符跑句時和弦音自動對齊拍點。"},
+  {id:"bebopDor",   zh:"多利安 Bebop",    en:"Bebop Dorian",         g:"Bebop 八聲音階", t:["1","2","♭3","3","4","5","6","♭7"],  d:"多利安在 ♭3 與 4 之間插入自然三度,是 ii 級跑句最順手的音階。"},
+  {id:"bebopMel",   zh:"旋律小調 Bebop",  en:"Bebop Melodic Minor",  g:"Bebop 八聲音階", t:["1","2","♭3","4","5","♯5","6","7"],  d:"旋律小調插入 ♯5 經過音,小調長樂句的節奏對位工具。"}
+];
+
+/* 和弦 → 建議音階(點一下可以直接跳到那個音階看組成音) */
+const CHORD_SCALES = {
+  maj:["ionian","lydian","majPent"], min:["dorian","aeolian","minPent"],
+  dim:["dimWH","locrian"], aug:["wholeTone","augmented"],
+  sus2:["ionian","mixolydian"], sus4:["mixolydian","dorian"], pow:["minPent","mixolydian"],
+  "6":["ionian","majPent","bebopMaj"], m6:["melMinor","dorian"], "69":["ionian","majPent"],
+  add9:["ionian","lydian"], madd9:["melMinor","dorian"], add11:["mixolydian","ionian"],
+  maj7:["ionian","lydian","bebopMaj"], "7":["mixolydian","bebopDom","lydianDom"],
+  m7:["dorian","aeolian","bebopDor"], mMaj7:["melMinor","harmMinor"],
+  m7b5:["locrian2","locrian"], dim7:["dimWH","superLocBB7"],
+  "7s5":["wholeTone","altered"], maj7s5:["lydianAug","ionianAug"],
+  "7b5":["lydianDom","wholeTone"], "7sus4":["mixolydian","dorian"],
+  maj9:["ionian","lydian"], "9":["mixolydian","bebopDom"], m9:["dorian","aeolian"],
+  mMaj9:["melMinor"], m9b5:["locrian2"], "9sus4":["mixolydian","dorian"],
+  "7b9":["dimHW","phrygDom","altered"], "7s9":["altered","dimHW","bluesMin"],
+  "11":["mixolydian","dorian"], m11:["dorian","aeolian"],
+  maj7s11:["lydian"], "7s11":["lydianDom","dimHW"],
+  "13":["mixolydian","bebopDom"], maj13:["ionian","lydian"], m13:["dorian"],
+  "13sus4":["mixolydian"], "7b13":["mixob6","altered"],
+  "7b9s11":["dimHW"], "7s9b13":["altered"], "7alt":["altered","dimHW"]
+};
+
+/* ══════════════════════════════════════════════════════════════
+   4. 和弦辨識表:用「相對根音的音級集合」比對,反查與順階和弦共用
+   ══════════════════════════════════════════════════════════════ */
+const CHORD_MATCH = CHORDS.map(c => {
+  const pcs = [...new Set(c.t.map(t => ((tokenSemi(t) % 12) + 12) % 12))].sort((a, b) => a - b);
+  return { ref: c, key: pcs.join(","), size: pcs.length, pcs };
+});
+function setKey(pcs){ return [...new Set(pcs.map(p => ((p % 12) + 12) % 12))].sort((a, b) => a - b).join(","); }
+/* 給定根音音級與一組音級,回傳符合的和弦定義(可能多個,依字典順序 = 由簡到繁) */
+function matchChords(rootPc, pcs){
+  const rel = pcs.map(p => ((p - rootPc) % 12 + 12) % 12);
+  const k = setKey(rel);
+  return CHORD_MATCH.filter(m => m.key === k).map(m => m.ref);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   5. 鍵盤渲染 —— 以下這一段(isBlackKey / KB_* / computeKeyboardHeight /
+      rebuildKeyboardRange / drawKeyboard)直接照抄 ScrollScore 的實作,
+      連常數與註解都保持原樣,只把「左右手聲部(staff 1/2)」的語意
+      改讀成「根音 / 其他組成音」:
+        staff 1(金色)= 根音       staff 2(青色)= 和弦或音階內的其他音
+        attack       = 該音正在發聲(播放時的觸鍵瞬間高亮)
+   ══════════════════════════════════════════════════════════════ */
+function isBlackKey(midi){ return [1,3,6,8,10].includes(((midi%12)+12)%12); }
+let KB_LOW = 21, KB_HIGH = 108; // 預設A0~C8,選定和弦/音階後會依實際音域重新計算
+let KB_WHITE_KEYS = [], KB_WHITE_IDX = {};
+/* 真實鋼琴白鍵長寬比大約 6:1,鍵盤畫布固定高度時,可見的白鍵數量一多,
+   每個鍵就會被擠得又窄又長、比例完全跑掉。改成依「目前實際畫面寬度 ÷ 可見白鍵數」反推出
+   符合真實比例的高度,畫布高度動態跟著調,而不是每個裝置寬度都套同一個寫死的高度 */
+const WHITE_KEY_ASPECT = 5.2;
+const KB_MIN_H = 54, KB_MAX_H = 170;
+function computeKeyboardHeight(containerWidth, minH = KB_MIN_H, maxH = KB_MAX_H){
+  const n = Math.max(KB_WHITE_KEYS.length, 1);
+  const whiteW = containerWidth / n;
+  return Math.min(maxH, Math.max(minH, whiteW * WHITE_KEY_ASPECT));
+}
+function rebuildKeyboardRange(midiList){
+  let lowest = Infinity, highest = -Infinity;
+  for (const m of midiList) {
+    if (m < lowest) lowest = m;
+    if (m > highest) highest = m;
+  }
+  if (!isFinite(lowest) || !isFinite(highest)) {
+    KB_LOW = 48; KB_HIGH = 72; // 沒有選任何音時,退回中央的兩個八度
+  } else {
+    // 兩端都取範圍外最靠近的C(最低音所在八度的C,最高音上面那個八度的C)
+    KB_LOW = Math.floor(lowest / 12) * 12;
+    KB_HIGH = Math.ceil(highest / 12) * 12;
+    if (KB_HIGH <= KB_LOW) KB_HIGH = KB_LOW + 12; // 保險,至少留一個八度
+    if (KB_HIGH - KB_LOW < 24) KB_HIGH = KB_LOW + 24; // 視覺化用途:至少看得到兩個八度才有「地圖」感
+  }
+  KB_WHITE_KEYS = [];
+  for (let m = KB_LOW; m <= KB_HIGH; m++) if (!isBlackKey(m)) KB_WHITE_KEYS.push(m);
+  KB_WHITE_IDX = {};
+  KB_WHITE_KEYS.forEach((m, i) => KB_WHITE_IDX[m] = i);
+}
+rebuildKeyboardRange([]);
+
+function drawKeyboard(ctx, x, y, w, h, activeMap){
+  const whiteW = w / KB_WHITE_KEYS.length;
+
+  // 底板陰影,讓整個鍵盤看起來有深度
+  const baseGrad = ctx.createLinearGradient(0, y, 0, y + h);
+  baseGrad.addColorStop(0, "#050403");
+  baseGrad.addColorStop(1, "#0C0A07");
+  ctx.fillStyle = baseGrad;
+  ctx.fillRect(x, y, w, h);
+
+  const rr = (cx, cy, cw, ch, r) => {
+    if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(cx, cy, cw, ch, r); }
+    else { ctx.beginPath(); ctx.rect(cx, cy, cw, ch); }
+  };
+
+  // 白鍵:漸層 + 立體邊緣 + 按下時的光暈(觸鍵瞬間更亮,之後轉為持續的普通高亮)
+  for (let i = 0; i < KB_WHITE_KEYS.length; i++) {
+    const m = KB_WHITE_KEYS[i];
+    const kx = x + i * whiteW;
+    const kw = whiteW - 1;
+    const info = activeMap.get(m);
+    const staff = info && info.staff;
+    const attack = info && info.attack;
+    let baseColor = staff === 2 ? ["#5FE0CE", "#22887A"] : staff === 1 ? ["#FFDA7A", "#C4901A"] : ["#FFFDF6", "#DDD6C4"];
+    if (attack) baseColor = staff === 2 ? ["#B6FFF4", "#3FBFAE"] : ["#FFF3CC", "#F2B94B"];
+    const g = ctx.createLinearGradient(kx, y, kx, y + h);
+    g.addColorStop(0, baseColor[0]);
+    g.addColorStop(0.85, baseColor[1]);
+    g.addColorStop(1, baseColor[1]);
+    if (staff) {
+      ctx.save();
+      ctx.shadowColor = staff === 2 ? "rgba(63,191,174,0.85)" : "rgba(242,185,75,0.85)";
+      ctx.shadowBlur = attack ? 24 : 14;
+    }
+    rr(kx, y, kw, h, [3, 3, 6, 6]);
+    ctx.fillStyle = g;
+    ctx.fill();
+    if (staff) ctx.restore();
+    // 鍵縫陰影
+    ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 1;
+    rr(kx, y, kw, h, [3, 3, 6, 6]); ctx.stroke();
+    // 頂端高光細線,增加立體感
+    ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(kx + 2, y + 1); ctx.lineTo(kx + kw - 2, y + 1); ctx.stroke();
+  }
+
+  // 黑鍵:漸層 + 陰影,疊在白鍵上方
+  const blackH = h * 0.6, blackW = whiteW * 0.62;
+  for (let m = KB_LOW; m <= KB_HIGH; m++) {
+    if (!isBlackKey(m)) continue;
+    let leftWhite = m - 1;
+    while (isBlackKey(leftWhite)) leftWhite--;
+    const li = KB_WHITE_IDX[leftWhite];
+    if (li === undefined) continue;
+    const kx = x + (li + 1) * whiteW - blackW / 2;
+    const info = activeMap.get(m);
+    const staff = info && info.staff;
+    const attack = info && info.attack;
+    let baseColor = staff === 2 ? ["#3FBFAE", "#0F5F56"] : staff === 1 ? ["#F2B94B", "#8A6410"] : ["#3a3a3a", "#0a0a0a"];
+    if (attack) baseColor = staff === 2 ? ["#8FFFF0", "#22887A"] : staff === 1 ? ["#FFE39A", "#C4901A"] : baseColor;
+    // 黑鍵投影到白鍵上
+    ctx.fillStyle = "rgba(0,0,0,0.45)";
+    ctx.fillRect(kx - 1, y + blackH, blackW + 2, 6);
+
+    const g = ctx.createLinearGradient(kx, y, kx, y + blackH);
+    g.addColorStop(0, baseColor[0]);
+    g.addColorStop(1, baseColor[1]);
+    if (staff) {
+      ctx.save();
+      ctx.shadowColor = staff === 2 ? "rgba(63,191,174,0.9)" : "rgba(242,185,75,0.9)";
+      ctx.shadowBlur = 12;
+    }
+    rr(kx, y, blackW, blackH, [2, 2, 4, 4]);
+    ctx.fillStyle = g;
+    ctx.fill();
+    if (staff) ctx.restore();
+    // 黑鍵頂端光澤
+    ctx.fillStyle = "rgba(255,255,255,0.18)";
+    ctx.fillRect(kx + blackW * 0.15, y + 2, blackW * 0.3, blackH * 0.35);
+  }
+}
+
+/* ── 音名標籤:ScrollScore 的鍵盤不需要標音名(那邊看的是樂譜),
+   這裡是「知道這是什麼音」的工具,所以在上面照同一套幾何再疊一層文字,
+   不動到照抄過來的 drawKeyboard 本身 ── */
+function drawKeyLabels(ctx, x, y, w, h, labelMap){
+  if (!labelMap.size) return;
+  const whiteW = w / KB_WHITE_KEYS.length;
+  const blackH = h * 0.6, blackW = whiteW * 0.62;
+  const fs = Math.max(8, Math.min(15, whiteW * 0.40));
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+  // 白鍵標籤:寫在鍵的下緣(黑鍵構不到的地方)
+  for (let i = 0; i < KB_WHITE_KEYS.length; i++) {
+    const m = KB_WHITE_KEYS[i];
+    const lab = labelMap.get(m);
+    if (!lab) continue;
+    const cx = x + i * whiteW + (whiteW - 1) / 2;
+    ctx.font = (lab.strong ? "700 " : "500 ") + fs + "px 'Noto Serif TC', serif";
+    ctx.fillStyle = lab.strong ? "rgba(20,14,4,0.92)" : "rgba(60,52,36,0.55)";
+    ctx.fillText(lab.text, cx, y + h - fs * 0.95);
+  }
+  // 黑鍵標籤:寫在黑鍵下緣,字比白鍵小一點才塞得下
+  const bfs = Math.max(7, Math.min(12, blackW * 0.46));
+  for (let m = KB_LOW; m <= KB_HIGH; m++) {
+    if (!isBlackKey(m)) continue;
+    const lab = labelMap.get(m);
+    if (!lab) continue;
+    let leftWhite = m - 1;
+    while (isBlackKey(leftWhite)) leftWhite--;
+    const li = KB_WHITE_IDX[leftWhite];
+    if (li === undefined) continue;
+    const cx = x + (li + 1) * whiteW;
+    ctx.font = "700 " + bfs + "px 'Noto Serif TC', serif";
+    ctx.fillStyle = lab.strong ? "rgba(10,8,2,0.92)" : "rgba(255,253,246,0.6)";
+    ctx.fillText(lab.text, cx, y + blackH - bfs * 0.9);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   6. 畫布尺寸與繪製迴圈
+   ══════════════════════════════════════════════════════════════ */
+function resizeKeyboardCanvas(){
+  const cv = $("keyboardCanvas");
+  if (!cv) return;
+  const w = cv.getBoundingClientRect().width;
+  cv.style.height = computeKeyboardHeight(w) + "px";
+  const rect = cv.getBoundingClientRect();
+  // ScrollScore 的畫布是要拿去錄影的,所以用 CSS px;這裡是給人盯著看音名的,
+  // 乘上 devicePixelRatio 讓文字在高解析螢幕上不糊(繪圖座標仍維持 CSS px)
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  cv.width  = Math.round(rect.width * dpr);
+  cv.height = Math.round(rect.height * dpr);
+  cv._cssW = rect.width;
+  cv._cssH = rect.height;
+  cv._dpr = dpr;
+}
+function drawKeyboardLive(){
+  const cv = $("keyboardCanvas");
+  if (!cv || !cv.width) return;
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(cv._dpr, 0, 0, cv._dpr, 0, 0);
+  ctx.clearRect(0, 0, cv._cssW, cv._cssH);
+  const view = currentView();
+  drawKeyboard(ctx, 0, 0, cv._cssW, cv._cssH, view.activeMap);
+  if (STATE.label !== "off") drawKeyLabels(ctx, 0, 0, cv._cssW, cv._cssH, view.labelMap);
+}
+/* 頂欄高度餵給 CSS:手機版的鍵盤要黏在頂欄正下方,桌機版的右欄也要對齊,
+   而頂欄高度會隨字級與換行改變,寫死數字遲早會對不齊 */
+function syncHeaderHeight(){
+  const h = document.querySelector("header");
+  if (h) document.documentElement.style.setProperty("--header-h", h.offsetHeight + "px");
+}
+window.addEventListener("resize", () => { syncHeaderHeight(); resizeKeyboardCanvas(); drawKeyboardLive(); });
+
+/* ══════════════════════════════════════════════════════════════
+   7. 音訊:與 ScrollScore 同一套音源
+   ──────────────────────────────────────────────────────────────
+   主音源是 Salamander 鋼琴真實取樣(Tone.js 官方託管的完整版),
+   取樣還沒載好或抓不到時,退回同一套合成音色備援 —— 訊號鏈(限幅器、
+   殘響、依音高擺左右的聲像)與包絡參數都照 ScrollScore 的設定。
+   ══════════════════════════════════════════════════════════════ */
+let audioCtx = null, masterGain = null, masterLimiter = null;
+let reverbBus = null, reverbConvolver = null, reverbPreDelay = null, reverbWet = null;
+let scheduledNodes = [];
+function buildImpulseResponse(seconds, decayPow){
+  const rate = audioCtx.sampleRate;
+  const len = Math.max(1, Math.floor(rate * seconds));
+  const ir = audioCtx.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    let lp = 0;
+    for (let i = 0; i < len; i++) {
+      const t = i / len;
+      const env = Math.pow(1 - t, decayPow);
+      const noise = (Math.random() * 2 - 1) * env;
+      // 一極低通,係數隨時間變小 = 尾巴越後面越暗,模擬空間對高頻的吸收
+      const a = 0.42 * (1 - t * 0.8) + 0.02;
+      lp += a * (noise - lp);
+      d[i] = lp;
+    }
+  }
+  return ir;
+}
+function ensureAudio(){
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    masterGain = audioCtx.createGain();
+    masterGain.gain.value = 0.48;   // 留足夠的動態餘裕,和弦同時發聲才不會相加後破音
+    masterLimiter = audioCtx.createDynamicsCompressor();
+    masterLimiter.threshold.value = -3;
+    masterLimiter.knee.value = 3;
+    masterLimiter.ratio.value = 12;
+    masterLimiter.attack.value = 0.001;
+    masterLimiter.release.value = 0.25;
+    masterGain.connect(masterLimiter);
+    masterLimiter.connect(audioCtx.destination);
+
+    reverbBus = audioCtx.createGain();
+    reverbPreDelay = audioCtx.createDelay(0.2);
+    reverbPreDelay.delayTime.value = 0.018;
+    reverbConvolver = audioCtx.createConvolver();
+    reverbConvolver.buffer = buildImpulseResponse(2.1, 2.4);
+    reverbWet = audioCtx.createGain();
+    reverbWet.gain.value = 0.18;
+    reverbBus.connect(reverbPreDelay);
+    reverbPreDelay.connect(reverbConvolver);
+    reverbConvolver.connect(reverbWet);
+    reverbWet.connect(masterGain);
+  }
+  if (audioCtx.state === "suspended") audioCtx.resume();
+  loadPianoSamples();
+}
+
+/* ── 真實樂器取樣 ─────────────────────────────
+   PIANO_BASE 是 Tone.js 官方託管的完整版 Salamander 鋼琴取樣,音質/延音都比一般鏡像版本好。
+   exactList 是這個取樣庫實際收錄的每一個(音名,八度),逐一驗證過才收錄,
+   不是套公式帶入每個八度固定幾個音——套用不存在的組合只會讓抓取落空 */
+const PIANO_BASE = "https://tonejs.github.io/audio/salamander/";
+const NOTE_SEMITONE = { C:0, Cs:1, D:2, Ds:3, E:4, F:5, Fs:6, G:7, Gs:8, A:9, As:10, B:11 };
+const PIANO_SAMPLES = [
+  ["A",0],
+  ["C",1],["Ds",1],["Fs",1],["A",1],
+  ["C",2],["Ds",2],["Fs",2],["A",2],
+  ["C",3],["Ds",3],["Fs",3],["A",3],
+  ["C",4],["Ds",4],["Fs",4],["A",4],
+  ["C",5],["Ds",5],["Fs",5],["A",5],
+  ["C",6],["Ds",6],["Fs",6],["A",6],
+  ["C",7],["Ds",7],["Fs",7],["A",7],
+  ["C",8]
+];
+let pianoBuffers = null, pianoLoading = null;
+function setAudioStatus(txt){
+  const el = $("audioStatus");
+  if (el) { el.textContent = txt || ""; el.hidden = !txt; }
+}
+function loadPianoSamples(){
+  if (pianoBuffers || pianoLoading) return pianoLoading || Promise.resolve();
+  const list = [], jobs = [];
+  for (const [letter, oct] of PIANO_SAMPLES) {
+    const midi = (oct + 1) * 12 + NOTE_SEMITONE[letter];
+    const url = PIANO_BASE + letter + oct + ".mp3";
+    jobs.push(
+      fetch(url).then(r => { if (!r.ok) throw new Error("404"); return r.arrayBuffer(); })
+        .then(arr => audioCtx.decodeAudioData(arr))
+        .then(buf => { list.push({ midi, buffer: buf }); })
+        .catch(() => {}) // 該取樣缺失就跳過,不影響其他音符
+    );
+  }
+  setAudioStatus("載入鋼琴音色中…");
+  pianoLoading = Promise.all(jobs).then(() => {
+    pianoBuffers = list;
+    setAudioStatus(list.length ? "" : "音色載入失敗,使用合成音色");
+    if (!list.length) setTimeout(() => setAudioStatus(""), 4000);
+  });
+  return pianoLoading;
+}
+/* 找最接近的取樣,用 playbackRate 補足音高差(標準取樣器做法) */
+function nearestSample(list, targetMidi){
+  let best = list[0], bestDist = Infinity;
+  for (const s of list) {
+    const dist = Math.abs(s.midi - targetMidi);
+    if (dist < bestDist) { bestDist = dist; best = s; }
+  }
+  return best;
+}
+/* 取樣播放。chordAnchors:同一個和弦裡,同音名(差整數個八度)的音優先共用同一份錄音,
+   讓八度關係更精確;但如果共用會讓變速幅度過大(音色明顯失真),就改用各自最近的錄音 */
+function playSampledPiano(midi, when, dur, chordAnchors){
+  const list = pianoBuffers;
+  if (!list || !list.length) return false;
+  const pitchClass = ((midi % 12) + 12) % 12;
+  const SHARE_SHIFT_LIMIT = 4; // 半音,超過這個幅度共用弊大於利
+  let best;
+  if (chordAnchors && chordAnchors[pitchClass] && Math.abs(midi - chordAnchors[pitchClass].midi) <= SHARE_SHIFT_LIMIT) {
+    best = chordAnchors[pitchClass];
+  } else {
+    best = nearestSample(list, midi);
+    if (chordAnchors && !chordAnchors[pitchClass]) chordAnchors[pitchClass] = best;
+  }
+  const rate = Math.pow(2, (midi - best.midi) / 12);
+  const src = audioCtx.createBufferSource();
+  src.buffer = best.buffer;
+  src.playbackRate.setValueAtTime(rate, when);
+  const g = audioCtx.createGain();
+  const peakGain = 0.6, tail = 0.4;
+  const sustain = Math.max(dur, 0.1);
+  // 取樣本身錄音長度可能比需要的延音短,加上尾段循環撐住聲音
+  const neededSec = (sustain + tail) * rate;
+  const bufDur = best.buffer.duration;
+  if (bufDur < neededSec && bufDur > 0.3) {
+    src.loop = true;
+    const loopLen = Math.min(0.6, bufDur * 0.3);
+    src.loopStart = Math.max(0, bufDur - loopLen);
+    src.loopEnd = bufDur;
+  }
+  g.gain.setValueAtTime(peakGain, when);
+  /* 鋼琴弦被敲下去之後就一路自然衰減,而且衰減速度必須是「每秒固定比例」,
+     不是「不管多長都在音符結束時剛好衰減到某個比例」——後者短音掉得快、長音掉得慢,
+     同一台鋼琴上不該有這種差異。這裡用固定時間常數 DECAY_TAU */
+  const DECAY_TAU = 2.2; // 秒:約每 2.2 秒衰減到 37%,接近真實鋼琴中音域的衰減速度
+  const decayEnd = Math.max(when + Math.max(sustain, 0.02), when + 0.005);
+  const endLevel = Math.max(0.06, Math.exp(-(decayEnd - when) / DECAY_TAU));
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peakGain * endLevel), decayEnd);
+  g.gain.exponentialRampToValueAtTime(0.0001, decayEnd + tail);
+  src.connect(g);
+  connectOut(g, midi);
+  src.start(when);
+  src.stop(when + sustain + tail + 0.1);
+  scheduledNodes.push(src);
+  return true;
+}
+/* 聲像 + 殘響送出:鋼琴依音高擺左右(低音左、高音右),取樣與合成兩條路徑共用同一個出口,
+   否則取樣載入前後的空間感會突然改變 */
+function connectOut(node, midi){
+  const panner = audioCtx.createStereoPanner ? audioCtx.createStereoPanner() : null;
+  const out = panner || node;
+  if (panner) { panner.pan.value = pianoPanFor(midi); node.connect(panner); }
+  out.connect(masterGain);
+  if (reverbBus) {
+    const send = audioCtx.createGain();
+    send.gain.value = 0.5;
+    out.connect(send); send.connect(reverbBus);
+  }
+}
+/* 對外的統一入口:有取樣就用取樣,沒有就用合成音色備援 */
+function scheduleNote(midi, when, dur, chordAnchors){
+  if (playSampledPiano(midi, when, dur, chordAnchors)) return;
+  schedulePiano(midi, when, dur);
+}
+/* 真實鋼琴的低音弦在左、高音弦在右(以演奏者的視角) */
+function pianoPanFor(midi){
+  const t = Math.max(0, Math.min(1, (midi - 21) / 87));
+  return (t - 0.5) * 0.64;
+}
+function schedulePiano(midi, when, dur){
+  const freq = midiToFreq(midi);
+  const osc = audioCtx.createOscillator();
+  const osc2 = audioCtx.createOscillator();
+  const g = audioCtx.createGain();
+  const lp = audioCtx.createBiquadFilter();
+  osc.type = "triangle"; osc.frequency.value = freq;
+  osc2.type = "sine";    osc2.frequency.value = freq * 2; // 一點泛音
+  lp.type = "lowpass";   lp.frequency.value = Math.min(freq * 6, 8000);
+  const g2 = audioCtx.createGain(); g2.gain.value = 0.18;
+  const peak = 0.32;
+  const sustain = Math.max(dur * 0.9, 0.08), releaseTail = 0.35;
+  g.gain.setValueAtTime(0, when);
+  g.gain.linearRampToValueAtTime(peak, when + 0.012);
+  // 鋼琴弦是持續自然衰減,而且衰減速度是每秒固定比例(短音長音都一樣)
+  const decayEnd = when + Math.max(sustain, 0.02);
+  const endLevel = Math.max(0.06, Math.exp(-(decayEnd - when) / 2.2));
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak * endLevel), decayEnd);
+  g.gain.exponentialRampToValueAtTime(0.0001, decayEnd + releaseTail);
+  osc.connect(lp); osc2.connect(g2); g2.connect(lp);
+  lp.connect(g);
+  connectOut(g, midi); // 與取樣路徑共用同一個出口(聲像 + 殘響)
+  osc.start(when); osc2.start(when);
+  const stopAt = when + sustain + releaseTail + 0.05;
+  osc.stop(stopAt); osc2.stop(stopAt);
+  scheduledNodes.push(osc, osc2);
+}
+function stopAllSound(){
+  for (const n of scheduledNodes) { try { n.stop(); } catch (e) {} }
+  scheduledNodes = [];
+  soundingWindows = [];
+}
+
+/* 播放中的視覺高亮:記下每個音的發聲區間,rAF 期間比對現在時間 */
+let soundingWindows = [];   // [{midi, from, to}] 以 audioCtx.currentTime 為基準
+let animId = 0;
+function startHighlightLoop(untilTime){
+  cancelAnimationFrame(animId);
+  const step = () => {
+    drawKeyboardLive();
+    if (audioCtx && audioCtx.currentTime < untilTime) animId = requestAnimationFrame(step);
+    else { soundingWindows = []; drawKeyboardLive(); }
+  };
+  animId = requestAnimationFrame(step);
+}
+function isSounding(midi){
+  if (!audioCtx || !soundingWindows.length) return false;
+  const t = audioCtx.currentTime;
+  return soundingWindows.some(s => s.midi === midi && t >= s.from && t <= s.to);
+}
+function playNotes(midis, mode){
+  ensureAudio();
+  stopAllSound();
+  const t0 = audioCtx.currentTime + 0.06;
+  let seq;
+  if (mode === "block") {
+    seq = midis.map(m => ({ midi: m, at: t0, dur: 2.6 }));
+  } else if (mode === "arp") {
+    const gap = 0.16;
+    seq = midis.map((m, i) => ({ midi: m, at: t0 + i * gap, dur: 2.6 - i * gap * 0.2 }));
+  } else { // 逐音上下行:上去再下來,最後一顆是最高音的下行起點,不重複敲
+    const gap = 0.30;
+    const up = midis.slice();
+    const down = midis.slice(0, -1).reverse();
+    seq = up.concat(down).map((m, i) => ({ midi: m, at: t0 + i * gap, dur: gap * 1.6 }));
+  }
+  let end = t0;
+  const chordAnchors = {}; // 同一次播放裡,同音名的音共用同一份錄音,八度關係才精確
+  for (const n of seq) {
+    scheduleNote(n.midi, n.at, n.dur, chordAnchors);
+    soundingWindows.push({ midi: n.midi, from: n.at, to: n.at + Math.min(n.dur, 0.55) });
+    end = Math.max(end, n.at + n.dur);
+  }
+  startHighlightLoop(end + 0.3);
+}
+function playSingle(midi){
+  ensureAudio();
+  const at = audioCtx.currentTime + 0.02;
+  scheduleNote(midi, at, 1.4, null);
+  soundingWindows.push({ midi, from: at, to: at + 0.4 });
+  startHighlightLoop(at + 0.7);
+}
+
+/* ══════════════════════════════════════════════════════════════
+   8. 應用狀態
+   ══════════════════════════════════════════════════════════════ */
+const STATE = {
+  tab: "chord",
+  letter: 0,      // LETTERS 的索引
+  acc: 0,         // -1 / 0 / 1
+  chordId: "maj7",
+  scaleId: "ionian",
+  octave: 4,      // 根音所在八度(C4 = MIDI 60)
+  label: "en",
+  playMode: "block",
+  search: "",
+  findSel: new Set(),
+  findSpell: "sharp"
+};
+const chordById = id => CHORDS.find(c => c.id === id);
+const scaleById = id => SCALES.find(s => s.id === id);
+function rootName(){ return LETTERS[STATE.letter] + accText(STATE.acc); }
+function rootPc(){ return ((LETTER_PC[STATE.letter] + STATE.acc) % 12 + 12) % 12; }
+function rootMidi(){ return 12 * (STATE.octave + 1) + LETTER_PC[STATE.letter] + STATE.acc; }
+
+/* 目前選擇 → 音的清單(含正規拼寫與實際 MIDI) */
+function currentNotes(){
+  const def = STATE.tab === "scale" ? scaleById(STATE.scaleId) : chordById(STATE.chordId);
+  if (!def) return [];
+  const base = rootMidi();
+  return def.t.map(tok => {
+    const s = spell(STATE.letter, STATE.acc, tok);
+    return Object.assign({}, s, { midi: base + s.semi });
+  });
+}
+/* 音階要多畫一顆高八度的主音,才看得出「一圈」的形狀。
+   這一份是「讀出來給人看/拿去播放」的音,音階固定一個八度就好 */
+function displayNotes(){
+  const notes = currentNotes();
+  if (STATE.tab === "scale" && notes.length) {
+    const first = notes[0];
+    notes.push(Object.assign({}, first, { midi: first.midi + 12, octaveTop: true }));
+  }
+  return notes;
+}
+/* 這一份是畫在鍵盤上的音。和弦畫的是一個具體的排列(延伸音本來就該疊在上面),
+   音階則是一組「音級」,本來每個八度都會重複出現,所以整片鍵盤都畫出來,
+   一眼就看得到這個音階在鋼琴上的形狀 */
+function keyboardNotes(){
+  const notes = displayNotes();
+  if (STATE.tab !== "scale" || !notes.length) return notes;
+  const out = [];
+  const base = currentNotes();
+  for (let oct = 0; oct <= 1; oct++) {
+    for (const n of base) out.push(Object.assign({}, n, { midi: n.midi + 12 * oct }));
+  }
+  out.push(Object.assign({}, base[0], { midi: base[0].midi + 24, octaveTop: true }));
+  return out;
+}
+/* 交給 drawKeyboard 的 activeMap,以及標籤用的 labelMap */
+function currentView(){
+  const activeMap = new Map(), labelMap = new Map();
+  if (STATE.tab === "find") {
+    const an = findAnalysis();
+    const bass = an.sel[0];
+    for (const m of an.sel) {
+      const pc = ((m % 12) + 12) % 12;
+      activeMap.set(m, { staff: m === bass ? 1 : 2, attack: isSounding(m) });
+      labelMap.set(m, { text: keyLabelText(an.nameByPc.get(pc), an.tokByPc.get(pc)), strong: true });
+    }
+  } else {
+    for (const n of keyboardNotes()) {
+      const isRoot = n.deg === 1;
+      activeMap.set(n.midi, { staff: isRoot ? 1 : 2, attack: isSounding(n.midi) });
+      labelMap.set(n.midi, { text: keyLabelText(n.name, n.tok), strong: true });
+    }
+  }
+  // 沒被選到的 C 也淡淡標一下,才知道現在看的是哪個八度
+  for (let m = KB_LOW; m <= KB_HIGH; m += 12) {
+    if (!labelMap.has(m)) labelMap.set(m, { text: STATE.label === "deg" ? "" : keyLabelText("C", null) + (m / 12 - 1), strong: false });
+  }
+  return { activeMap, labelMap };
+}
+function keyLabelText(name, tok){
+  if (STATE.label === "do") return toSolfege(name);
+  if (STATE.label === "deg") return tok || "";
+  return name;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   9. 介面渲染
+   ══════════════════════════════════════════════════════════════ */
+function buildRootPicker(){
+  const lr = $("letterRow");
+  lr.innerHTML = "";
+  LETTERS.forEach((L, i) => {
+    const b = document.createElement("button");
+    b.className = "key-btn";
+    b.textContent = L;
+    b.setAttribute("aria-pressed", String(i === STATE.letter));
+    b.onclick = () => { STATE.letter = i; render(); };
+    lr.appendChild(b);
+  });
+  const ar = $("accRow");
+  ar.innerHTML = "";
+  [[-1, "♭ 降"], [0, "♮ 原"], [1, "♯ 升"]].forEach(([v, t]) => {
+    const b = document.createElement("button");
+    b.className = "key-btn";
+    b.textContent = t;
+    b.setAttribute("aria-pressed", String(v === STATE.acc));
+    b.onclick = () => { STATE.acc = v; render(); };
+    ar.appendChild(b);
+  });
+}
+
+function matchesSearch(item, q){
+  if (!q) return true;
+  const hay = [item.zh, item.en, item.sym || "", item.id, (item.alias || []).join(" "), item.t.join(" ")]
+    .join(" ").toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+function buildTypeList(){
+  const list = $("typeList");
+  list.innerHTML = "";
+  const isChord = STATE.tab === "chord";
+  const items = (isChord ? CHORDS : SCALES).filter(it => matchesSearch(it, STATE.search));
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-hint">沒有符合的項目,換個關鍵字試試(可以搜尋 m7、Lydian、♭9、五聲…)</div>';
+    return;
+  }
+  const groups = [];
+  for (const it of items) {
+    let grp = groups.find(g => g.name === it.g);
+    if (!grp) groups.push(grp = { name: it.g, items: [] });
+    grp.items.push(it);
+  }
+  const selId = isChord ? STATE.chordId : STATE.scaleId;
+  for (const g of groups) {
+    const wrap = document.createElement("div");
+    wrap.className = "type-group";
+    const title = document.createElement("div");
+    title.className = "type-group-title";
+    title.textContent = g.name;
+    wrap.appendChild(title);
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    for (const it of g.items) {
+      const b = document.createElement("button");
+      b.className = "chip";
+      b.setAttribute("aria-pressed", String(it.id === selId));
+      b.innerHTML = "<b></b><i></i>";
+      b.querySelector("b").textContent = isChord ? rootName() + it.sym : it.zh;
+      b.querySelector("i").textContent = isChord ? it.zh : it.en;
+      b.onclick = () => {
+        if (isChord) STATE.chordId = it.id; else STATE.scaleId = it.id;
+        render();
+      };
+      chips.appendChild(b);
+    }
+    wrap.appendChild(chips);
+    list.appendChild(wrap);
+  }
+}
+
+const ROMAN = ["I","II","III","IV","V","VI","VII"];
+/* 七聲音階的順階和弦:每隔一個音疊上去,再用和弦辨識表反查名稱 */
+function diatonicChords(scale){
+  if (scale.t.length !== 7) return null;
+  const notes = scale.t.map(tok => spell(STATE.letter, STATE.acc, tok));
+  const out = [];
+  for (let i = 0; i < 7; i++) {
+    const pick = k => {
+      const idx = (i + k) % 7;
+      const wraps = Math.floor((i + k) / 7);
+      return { note: notes[idx], semi: notes[idx].semi + 12 * wraps };
+    };
+    const stack = [pick(0), pick(2), pick(4), pick(6)];
+    const rel = stack.map(s => s.semi - stack[0].semi);
+    const triad = matchChords(0, rel.slice(0, 3))[0];
+    const seventh = matchChords(0, rel)[0];
+    const rn = ROMAN[i];
+    let roman = rn;
+    if (triad) {
+      if (triad.id === "min" || triad.id === "dim") roman = rn.toLowerCase();
+      if (triad.id === "dim") roman += "°";
+      if (triad.id === "aug") roman += "+";
+    }
+    out.push({
+      roman,
+      root: stack[0].note.name,
+      triad: triad ? stack[0].note.name + triad.sym : "—",
+      triadZh: triad ? triad.zh : "",
+      seventh: seventh ? stack[0].note.name + seventh.sym : "—",
+      seventhId: seventh ? seventh.id : null,
+      seventhLetter: stack[0].note.letter,
+      seventhAcc: stack[0].note.acc,
+      tones: stack.map(s => s.note.name).join(" ")
+    });
+  }
+  return out;
+}
+
+function intervalSteps(notes){
+  const steps = [];
+  for (let i = 1; i < notes.length; i++) steps.push(notes[i].semi - notes[i - 1].semi);
+  return steps;
+}
+
+function renderReadout(){
+  const ro = $("readout"), ex = $("extraCard");
+  if (STATE.tab === "find") { renderFindReadout(ro, ex); return; }
+
+  const isChord = STATE.tab === "chord";
+  const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
+  const notes = currentNotes();
+  const title = isChord ? (rootName() + def.sym) : (rootName() + " " + def.zh);
+  const sub = isChord
+    ? def.zh + " · " + def.en + (def.alias.length ? " · 別名 " + def.alias.map(a => rootName() + a).join("、") : "")
+    : def.en;
+
+  let html = '<div class="rt-head"><div class="rt-name"></div><div class="rt-sub"></div></div>';
+  html += '<div class="note-strip">';
+  const shown = displayNotes();
+  let prevOct = null;
+  for (const n of shown) {
+    const oct = Math.floor(n.midi / 12) - 1;
+    // 八度數字只在「換八度」的那顆音標出來,不然每一格都寫一次很吵
+    const octLabel = oct === prevOct ? "" : "第 " + oct + " 八度";
+    prevOct = oct;
+    html += '<div class="note-cell' + (n.deg === 1 && !n.octaveTop ? " is-root" : "") + '" data-midi="' + n.midi + '">' +
+              '<div class="deg">' + (n.deg === 1 && !n.octaveTop ? "根音 1" : n.tok) + '</div>' +
+              '<div class="nm">' + (STATE.label === "do" ? toSolfege(n.name) : n.name) + '</div>' +
+              '<div class="oct">' + (octLabel || "&nbsp;") + '</div>' +
+            '</div>';
+  }
+  html += '</div>';
+
+  const steps = intervalSteps(notes);
+  html += '<div class="meta-row">' +
+            '<span>公式 <b>' + def.t.join("  ") + '</b></span>' +
+            '<span>半音間隔 <b>' + steps.join("–") + '</b></span>' +
+            '<span>' + (isChord ? "組成音數" : "音數") + ' <b>' + notes.length + '</b></span>' +
+            '<span>音級集合 <b>' + [...new Set(notes.map(n => n.name))].join(" ") + '</b></span>' +
+          '</div>';
+  html += '<div class="desc">' + def.d + '</div>';
+  ro.innerHTML = html;
+  ro.querySelector(".rt-name").textContent = title;
+  ro.querySelector(".rt-sub").textContent = sub;
+  ro.querySelectorAll(".note-cell").forEach(el => {
+    el.style.cursor = "pointer";
+    el.onclick = () => playSingle(+el.dataset.midi);
+  });
+
+  // ── 延伸資訊 ──
+  if (isChord) {
+    const ids = CHORD_SCALES[def.id] || [];
+    let e = '<div class="card-title">可以搭配的音階</div><div class="link-chips">';
+    for (const sid of ids) {
+      const s = scaleById(sid);
+      if (s) e += '<button class="link-chip" data-scale="' + sid + '">' + rootName() + " " + s.zh + " · " + s.en + '</button>';
+    }
+    e += '</div>';
+    // 同一組音的其他寫法(等和弦)
+    const others = matchChords(rootPc(), notes.map(n => (rootPc() + n.semi) % 12)).filter(c => c.id !== def.id);
+    if (others.length) {
+      e += '<div class="card-title" style="margin-top:16px">同樣這幾個音的其他和弦名稱</div><div class="link-chips">';
+      for (const o of others) e += '<button class="link-chip" data-chord="' + o.id + '">' + rootName() + o.sym + " · " + o.zh + '</button>';
+      e += '</div>';
+    }
+    ex.innerHTML = e;
+    ex.hidden = false;
+    ex.querySelectorAll("[data-scale]").forEach(b => b.onclick = () => { STATE.tab = "scale"; STATE.scaleId = b.dataset.scale; render(); });
+    ex.querySelectorAll("[data-chord]").forEach(b => b.onclick = () => { STATE.chordId = b.dataset.chord; render(); });
+  } else {
+    const dia = diatonicChords(def);
+    if (!dia) {
+      ex.innerHTML = '<div class="card-title">順階和弦</div><div class="desc" style="margin-top:0">' +
+        def.t.length + ' 個音的音階不是照三度堆疊建構的,沒有標準的順階和弦表。直接看上面的組成音來配和弦即可。</div>';
+      ex.hidden = false;
+    } else {
+      let e = '<div class="card-title">順階和弦(三度堆疊)</div><div class="table-scroll"><table class="dia">' +
+              '<tr><th>級數</th><th>三和弦</th><th>七和弦</th><th>組成音</th></tr>';
+      for (const d of dia) {
+        e += '<tr><td class="rn">' + d.roman + '</td><td class="sym">' + d.triad + '</td>' +
+             '<td class="sym"><button class="link" data-id="' + (d.seventhId || "") + '" data-letter="' + d.seventhLetter + '" data-acc="' + (d.seventhAcc === null ? "" : d.seventhAcc) + '">' + d.seventh + '</button></td>' +
+             '<td class="tones">' + d.tones + '</td></tr>';
+      }
+      e += '</table></div><div class="desc">點七和弦可以直接跳去看它的組成音。</div>';
+      ex.innerHTML = e;
+      ex.hidden = false;
+      ex.querySelectorAll("button.link").forEach(b => {
+        b.onclick = () => {
+          if (!b.dataset.id || b.dataset.acc === "") return;
+          STATE.tab = "chord";
+          STATE.chordId = b.dataset.id;
+          STATE.letter = +b.dataset.letter;
+          STATE.acc = +b.dataset.acc;
+          render();
+        };
+      });
+    }
+  }
+}
+/* 反查的分析結果:選了哪些音、符合哪些和弦、每個音級該怎麼拼寫。
+   鍵盤標籤與下方面板共用同一份結果,兩邊的音名才不會不一致 */
+function findAnalysis(){
+  const sel = [...STATE.findSel].sort((a, b) => a - b);
+  const pcs = [...new Set(sel.map(m => ((m % 12) + 12) % 12))];
+  const bassPc = sel.length ? ((sel[0] % 12) + 12) % 12 : null;
+  const results = [];
+  for (const rp of pcs) {
+    for (const c of matchChords(rp, pcs)) results.push({ rootPc: rp, chord: c, isBass: rp === bassPc });
+  }
+  // 低音當根音的排前面,再來是組成音少(比較單純)的寫法
+  results.sort((a, b) => (b.isBass - a.isBass) || (a.chord.t.length - b.chord.t.length));
+
+  /* 音名拼寫:一旦找到完全符合的和弦,就照那個和弦的級數推算正規拼寫
+     (所以 C-E-G-B♭ 會寫成 B♭ 而不是 A♯);沒有符合的和弦時才退回升/降偏好 */
+  const nameByPc = new Map(), tokByPc = new Map();
+  if (results.length) {
+    const best = results[0];
+    const rn = simpleName(best.rootPc, STATE.findSpell);
+    const li = LETTERS.indexOf(rn[0]);
+    const ac = (rn.match(/♯/g) || []).length - (rn.match(/♭/g) || []).length;
+    for (const tok of best.chord.t) {
+      const s = spell(li, ac, tok);
+      const pc = ((LETTER_PC[li] + ac + s.semi) % 12 + 12) % 12;
+      if (!nameByPc.has(pc)) { nameByPc.set(pc, s.name); tokByPc.set(pc, tok); }
+    }
+  }
+  for (const p of pcs) if (!nameByPc.has(p)) nameByPc.set(p, simpleName(p, STATE.findSpell));
+  return { sel, pcs, bassPc, results, nameByPc, tokByPc };
+}
+
+function renderFindReadout(ro, ex){
+  const an = findAnalysis();
+  const sel = an.sel;
+  if (!sel.length) {
+    ro.innerHTML = '<div class="rt-head"><div class="rt-name">反查和弦</div></div>' +
+      '<div class="desc" style="margin-top:0">在上面的鍵盤點幾個音,這裡就會列出所有名字符合的和弦。' +
+      '例如點 C E G B♭ 會得到 <strong>C7</strong>,再加一個 D 就變成 <strong>C9</strong>。</div>';
+    ex.hidden = true;
+    return;
+  }
+  const pcs = an.pcs, results = an.results, spellPref = STATE.findSpell;
+  // 依實際彈奏的高低順序把音名列出來(同一個音級只列一次)
+  const seen = new Set();
+  const ordered = sel.map(m => ((m % 12) + 12) % 12).filter(p => !seen.has(p) && seen.add(p));
+
+  let html = '<div class="rt-head"><div class="rt-name">' +
+             ordered.map(p => an.nameByPc.get(p)).join(" ") + '</div>' +
+             '<div class="rt-sub">已選 ' + sel.length + ' 個音 · ' + pcs.length + ' 個不同音級</div></div>';
+  if (results.length) {
+    html += '<div class="find-list">';
+    for (const r of results.slice(0, 12)) {
+      const nm = simpleName(r.rootPc, spellPref) + r.chord.sym;
+      html += '<div class="find-item"><span class="fname">' + nm + '</span>' +
+              '<span class="fzh">' + r.chord.zh + '</span>' +
+              '<span class="ftag exact">' + (r.isBass ? "根音在低音" : "轉位") + '</span></div>';
+    }
+    html += '</div>';
+  } else {
+    html += '<div class="desc" style="margin-top:0">這組音沒有完全對應的標準和弦名稱。下面列出「包含這幾個音」的和弦,可以當作候選。</div>';
+  }
+  ro.innerHTML = html;
+
+  // 超集合:哪些和弦「包含」目前選的音
+  const supers = [];
+  for (let rp = 0; rp < 12; rp++) {
+    for (const m of CHORD_MATCH) {
+      if (m.size <= pcs.length) continue;
+      const abs = new Set(m.pcs.map(p => (p + rp) % 12));
+      if (pcs.every(p => abs.has(p))) supers.push({ rootPc: rp, chord: m.ref, missing: m.size - pcs.length });
+    }
+  }
+  supers.sort((a, b) => a.missing - b.missing || a.chord.t.length - b.chord.t.length);
+  if (supers.length) {
+    let e = '<div class="card-title">這些音可以屬於(還差幾個音)</div><div class="find-list">';
+    for (const s of supers.slice(0, 10)) {
+      e += '<div class="find-item"><span class="fname">' + simpleName(s.rootPc, spellPref) + s.chord.sym + '</span>' +
+           '<span class="fzh">' + s.chord.zh + '</span>' +
+           '<span class="ftag">還差 ' + s.missing + ' 音</span></div>';
+    }
+    e += '</div>';
+    ex.innerHTML = e;
+    ex.hidden = false;
+  } else {
+    ex.hidden = true;
+  }
+}
+
+function renderOctaveSel(){
+  const sel = $("octaveSel");
+  if (sel.options.length) { sel.value = String(STATE.octave); return; }
+  for (let o = 2; o <= 5; o++) {
+    const op = document.createElement("option");
+    op.value = String(o);
+    op.textContent = "起始 " + LETTERS[STATE.letter] + o;
+    sel.appendChild(op);
+  }
+  sel.value = String(STATE.octave);
+}
+function refreshOctaveLabels(){
+  const sel = $("octaveSel");
+  [...sel.options].forEach(op => { op.textContent = "起始 " + rootName() + op.value; });
+}
+
+function render(){
+  // 分頁狀態
+  $("tabChord").setAttribute("aria-selected", String(STATE.tab === "chord"));
+  $("tabScale").setAttribute("aria-selected", String(STATE.tab === "scale"));
+  $("tabFind").setAttribute("aria-selected", String(STATE.tab === "find"));
+  const findMode = STATE.tab === "find";
+  $("rootCard").hidden = findMode;
+  $("typeCard").hidden = findMode;
+  $("findCard").hidden = !findMode;
+  $("typeCardTitle").textContent = STATE.tab === "chord" ? "和弦類型" : "音階類型";
+  $("playBtn").disabled = findMode && !STATE.findSel.size;
+
+  if (!findMode) {
+    buildRootPicker();
+    buildTypeList();
+    renderOctaveSel();
+    refreshOctaveLabels();
+  }
+
+  // 鍵盤音域:照選到的音重算(反查模式固定顯示兩個八度的工作區)
+  if (findMode) {
+    const base = 12 * (STATE.octave + 1);
+    rebuildKeyboardRange([base, base + 24]);
+  } else {
+    rebuildKeyboardRange(keyboardNotes().map(n => n.midi));
+  }
+  resizeKeyboardCanvas();
+  drawKeyboardLive();
+  renderReadout();
+}
+
+/* ══════════════════════════════════════════════════════════════
+   10. 互動
+   ══════════════════════════════════════════════════════════════ */
+/* 鍵盤點擊:用跟 drawKeyboard 一樣的幾何反推點到哪個鍵(黑鍵疊在上面所以先判斷) */
+function keyAt(px, py){
+  const cv = $("keyboardCanvas");
+  const w = cv._cssW, h = cv._cssH;
+  const whiteW = w / KB_WHITE_KEYS.length;
+  const blackH = h * 0.6, blackW = whiteW * 0.62;
+  for (let m = KB_LOW; m <= KB_HIGH; m++) {
+    if (!isBlackKey(m)) continue;
+    let leftWhite = m - 1;
+    while (isBlackKey(leftWhite)) leftWhite--;
+    const li = KB_WHITE_IDX[leftWhite];
+    if (li === undefined) continue;
+    const kx = (li + 1) * whiteW - blackW / 2;
+    if (py <= blackH && px >= kx && px <= kx + blackW) return m;
+  }
+  const i = Math.floor(px / whiteW);
+  return KB_WHITE_KEYS[Math.max(0, Math.min(KB_WHITE_KEYS.length - 1, i))];
+}
+$("keyboardCanvas").addEventListener("pointerdown", ev => {
+  const cv = $("keyboardCanvas");
+  const rect = cv.getBoundingClientRect();
+  const m = keyAt(ev.clientX - rect.left, ev.clientY - rect.top);
+  if (m === undefined) return;
+  if (STATE.tab === "find") {
+    if (STATE.findSel.has(m)) STATE.findSel.delete(m); else STATE.findSel.add(m);
+    playSingle(m);
+    render();
+  } else {
+    playSingle(m);
+  }
+});
+
+$("tabChord").onclick = () => { STATE.tab = "chord"; STATE.search = ""; $("typeSearch").value = ""; render(); };
+$("tabScale").onclick = () => { STATE.tab = "scale"; STATE.search = ""; $("typeSearch").value = ""; render(); };
+$("tabFind").onclick  = () => { STATE.tab = "find"; render(); };
+$("typeSearch").addEventListener("input", e => { STATE.search = e.target.value.trim(); buildTypeList(); });
+$("octaveSel").addEventListener("change", e => { STATE.octave = +e.target.value; render(); });
+$("labelSel").addEventListener("change", e => { STATE.label = e.target.value; render(); });
+$("playModeSel").addEventListener("change", e => { STATE.playMode = e.target.value; });
+$("findClear").onclick = () => { STATE.findSel.clear(); render(); };
+$("findSpell").addEventListener("change", e => { STATE.findSpell = e.target.value; render(); });
+$("playBtn").onclick = () => {
+  const midis = STATE.tab === "find"
+    ? [...STATE.findSel].sort((a, b) => a - b)
+    : displayNotes().map(n => n.midi);
+  if (!midis.length) return;
+  playNotes(midis, STATE.playMode);
+};
+
+/* 鍵盤快捷鍵:上下切換類型、左右移動根音,方便一路瀏覽完整個字典 */
+document.addEventListener("keydown", ev => {
+  if (ev.target.tagName === "INPUT" || ev.target.tagName === "SELECT") return;
+  if (ev.key === " ") { ev.preventDefault(); $("playBtn").click(); return; }
+  if (STATE.tab === "find") return;
+  const isChord = STATE.tab === "chord";
+  const list = isChord ? CHORDS : SCALES;
+  const cur = list.findIndex(x => x.id === (isChord ? STATE.chordId : STATE.scaleId));
+  if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
+    ev.preventDefault();
+    const next = (cur + (ev.key === "ArrowDown" ? 1 : list.length - 1)) % list.length;
+    if (isChord) STATE.chordId = list[next].id; else STATE.scaleId = list[next].id;
+    render();
+  } else if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") {
+    ev.preventDefault();
+    STATE.letter = (STATE.letter + (ev.key === "ArrowRight" ? 1 : 6)) % 7;
+    render();
+  }
+});
+
+/* 取樣有 30 個檔案,等按下播放才開始抓的話,第一次播放一定只聽得到合成音色備援。
+   改成使用者第一次碰到頁面(點任何地方、按任何鍵)就先暖機——這時通常還在挑和弦,
+   等真的按下播放,真實鋼琴取樣多半已經就緒。沒有互動就不下載,不會白白吃流量 */
+["pointerdown", "keydown"].forEach(ev =>
+  window.addEventListener(ev, () => ensureAudio(), { once: true, capture: true }));
+
+/* ── 主題 ── */
+const THEME_KEY = "harmonymap.light";
+function applyTheme(){
+  const on = localStorage.getItem(THEME_KEY) === "1";
+  document.body.classList.toggle("light", on);
+  $("themeToggle").setAttribute("aria-pressed", String(on));
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", on ? "#FBF7EE" : "#0C0A07");
+  resizeKeyboardCanvas();   // 畫布底色吃 --bg,換主題要重畫
+  drawKeyboardLive();
+}
+$("themeToggle").onclick = () => {
+  localStorage.setItem(THEME_KEY, localStorage.getItem(THEME_KEY) === "1" ? "0" : "1");
+  applyTheme();
+};
+
+syncHeaderHeight();
+applyTheme();
+render();
+</script>
+</body>
+</html>
