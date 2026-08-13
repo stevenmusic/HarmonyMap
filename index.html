@@ -469,10 +469,10 @@ footer{
         </div>
         <div class="spacer"></div>
         <select class="mini" id="octaveSel" title="起始八度"></select>
-        <select class="mini" id="labelSel" title="琴鍵上要標音名(C D E)、唱名(Do Re Mi)還是級數(1 ♭3 5)">
+        <select class="mini" id="labelSel" title="琴鍵上要標音名(C D E)、唱名(Do Re Mi)還是數字(1 ♭3 5)">
           <option value="en">標音名</option>
           <option value="do">標唱名</option>
-          <option value="deg">標級數</option>
+          <option value="deg">標數字</option>
           <option value="off">不標字</option>
         </select>
         <select class="mini" id="playModeSel" title="播放方式"></select>
@@ -1872,7 +1872,7 @@ const PLAY_MODES = {
 };
 /* 每個分頁各自記住自己的播放方式:在和弦用齊奏、去音階看一眼(自動變成逐音)、
    再切回和弦時應該回到齊奏,而不是把音階的設定帶回來 */
-const PLAY_PREF = { chord: "block", scale: "asc", find: "block" };
+const PLAY_PREF = { chord: "block", scale: "arp", find: "block" };
 function buildPlayModes(){
   const sel = $("playModeSel");
   const opts = PLAY_MODES[STATE.tab] || PLAY_MODES.chord;
