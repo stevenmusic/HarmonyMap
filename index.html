@@ -207,13 +207,23 @@ main{
 .filter-chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
 .filter-chip .cnt{opacity:.6;font-size:var(--fs-2xs);margin-left:4px}
 .filter-label{width:3em;flex:none;color:var(--muted);font-size:var(--fs-xs)}
+/* 記號的圖例。金線與 ≡ 這兩個標記本身看不出是什麼意思,一定要寫出來——
+   靠 title 屬性不算數,手機沒有 hover */
+.filter-hint{font-size:var(--fs-2xs);color:var(--muted);opacity:.85;line-height:1.6;padding-left:3em}
+.filter-hint b{color:var(--gold);font-weight:400}
+
 /* 分組副標:說明是什麼音程定義了這個家族,讓分組本身也在教東西 */
 .type-group-sub{
   font-size:var(--fs-2xs);color:var(--muted);opacity:.85;font-weight:400;
   letter-spacing:0;margin-top:2px;
 }
-/* 必學的和弦用左緣一道金邊標出來,不佔額外高度 */
-.chip[data-lv="3"]{box-shadow:inset 3px 0 0 var(--gold)}
+/* 必學的和弦在左上角標一顆星。原本用左緣金邊,但一道色塊看不出是什麼意思
+   (連做的人都要問),星號本身就帶語意。≡ 在右上角,兩個記號各佔一角不會打架 */
+.chip[data-lv="3"]::before{
+  content:"★";position:absolute;top:2px;left:5px;
+  font-size:10px;line-height:1;color:var(--gold);
+}
+.chip[data-lv="3"][aria-pressed="true"]::before{color:rgba(0,0,0,.55)}
 .search-wrap{position:relative;margin-bottom:10px}
 .search-wrap input{
   width:100%;height:38px;padding:0 12px 0 34px;
@@ -247,6 +257,7 @@ main{
 }
 .chip[data-dup][aria-pressed="true"]::after{color:rgba(0,0,0,.55)}
 .chip b{font-size:var(--fs-sm);font-weight:700;line-height:1.25;white-space:nowrap}
+.chip[data-lv="3"],.chip[data-dup]{padding-top:11px}
 .chip i{font-size:var(--fs-2xs);font-style:normal;color:var(--muted);line-height:1.25;white-space:nowrap}
 /* 音階的中文名稱長度差很多(「多利安」到「烏克蘭小調(多利安♯4)」),允許換行才不會被截掉 */
 .chips.wide .chip b,.chips.wide .chip i{white-space:normal}
@@ -464,11 +475,7 @@ footer{
           <option value="deg">標級數</option>
           <option value="off">不標字</option>
         </select>
-        <select class="mini" id="playModeSel" title="播放方式">
-          <option value="block">齊奏</option>
-          <option value="arp">琶音</option>
-          <option value="asc">逐音上下行</option>
-        </select>
+        <select class="mini" id="playModeSel" title="播放方式"></select>
       </div>
     </div>
 
@@ -500,6 +507,7 @@ footer{
         <div class="filter-row" id="levelRow"></div>
         <div class="filter-row" id="sizeRow"></div>
         <div class="filter-row" id="dupRow"></div>
+        <div class="filter-hint" id="filterHint"></div>
       </div>
       <div class="search-wrap">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -843,7 +851,7 @@ const GROUP_NOTE = {
 /* 風格標籤:和弦的風格不是它的內在屬性,而是「誰常用它」,所以做成可複選的篩選,
    不做成分組——分組放錯會把和弦藏起來,篩選只是縮小範圍 */
 const STYLES = [["cl","古典"],["pop","流行搖滾"],["jz","爵士"],["bl","藍調靈魂"],["film","影視配樂"]];
-const LEVELS = [[3,"必學"],[2,"常見以上"]];
+const LEVELS = [[3,"★ 必學"],[2,"常見以上"]];
 /* 第三條軸:編制。家族分組把三和弦與七和弦排在同一組(因為它們本來就是同一個家族,
    三和弦是種子、七和弦與延伸是往上疊的張力音),但「我現在只要三和弦」仍然是很常見的需求。
    同樣用篩選解決,而不是為它另開分組——分組一旦按音數切,家族就又被拆散了 */
@@ -1522,6 +1530,7 @@ function buildFilterRows(){
       b.onclick = () => { STATE.hideDup = on ? 0 : val; render(); };
       row.appendChild(b);
     }
+    $("filterHint").innerHTML = '右上角 <b>≡</b> = 與其他音階同音高(例如庫爾德 ≡ 弗里吉安),點進去看得到全部別名';
     return;
   }
   const empty = axis => axis === "style" ? "" : 0;
@@ -1550,6 +1559,8 @@ function buildFilterRows(){
   mk($("styleRow"), "風格", STYLES, "style");
   mk($("levelRow"), "程度", LEVELS, "level");
   mk($("sizeRow"),  "編制", SIZES,  "size");
+  $("filterHint").innerHTML =
+    '左上角 <b>★</b> = 必學　·　右上角 <b>≡</b> = 與其他和弦同音高';
 }
 
 function buildTypeList(){
@@ -1851,6 +1862,36 @@ function renderFindReadout(ro, ex){
   }
 }
 
+/* 播放方式的選項隨分頁改變:音階不提供「齊奏」——把一整個音階的音同時壓下去
+   在音樂上沒有意義(那是和弦的呈現方式),音階是旋律性的,只該用琶音或逐音上下行。
+   如果使用者在和弦分頁選了齊奏再切到音階,自動落到逐音上下行 */
+const PLAY_MODES = {
+  chord: [["block","齊奏"],["arp","琶音"],["asc","逐音上下行"]],
+  scale: [["arp","琶音"],["asc","逐音上下行"]],
+  find:  [["block","齊奏"],["arp","琶音"],["asc","逐音上下行"]]
+};
+/* 每個分頁各自記住自己的播放方式:在和弦用齊奏、去音階看一眼(自動變成逐音)、
+   再切回和弦時應該回到齊奏,而不是把音階的設定帶回來 */
+const PLAY_PREF = { chord: "block", scale: "asc", find: "block" };
+function buildPlayModes(){
+  const sel = $("playModeSel");
+  const opts = PLAY_MODES[STATE.tab] || PLAY_MODES.chord;
+  let pref = PLAY_PREF[STATE.tab];
+  if (!opts.some(o => o[0] === pref)) pref = opts[opts.length - 1][0];
+  STATE.playMode = pref;
+  const built = opts.map(o => o[0]).join(",");
+  if (sel._built !== built) {
+    sel.innerHTML = "";
+    for (const [v, t] of opts) {
+      const op = document.createElement("option");
+      op.value = v; op.textContent = t;
+      sel.appendChild(op);
+    }
+    sel._built = built;
+  }
+  sel.value = STATE.playMode;
+}
+
 function renderOctaveSel(){
   const sel = $("octaveSel");
   if (sel.options.length) { sel.value = String(STATE.octave); return; }
@@ -1877,6 +1918,7 @@ function render(){
   $("typeCard").hidden = findMode;
   $("findCard").hidden = !findMode;
   $("typeCardTitle").textContent = STATE.tab === "chord" ? "和弦類型" : "音階類型";
+  buildPlayModes();
 
   if (!findMode) {
     buildRootPicker();
@@ -1966,7 +2008,7 @@ $("typeSearch").addEventListener("input", e => { STATE.search = e.target.value.t
 /* 切換分頁時把篩選清掉,免得跳到音階分頁後回來發現清單「怎麼少了一半」 */
 $("octaveSel").addEventListener("change", e => { STATE.octave = +e.target.value; render(); });
 $("labelSel").addEventListener("change", e => { STATE.label = e.target.value; render(); });
-$("playModeSel").addEventListener("change", e => { STATE.playMode = e.target.value; });
+$("playModeSel").addEventListener("change", e => { STATE.playMode = e.target.value; PLAY_PREF[STATE.tab] = e.target.value; });
 $("findClear").onclick = () => { STATE.findSel.clear(); render(); };
 $("findSpell").addEventListener("change", e => { STATE.findSpell = e.target.value; render(); });
 /* 播放目前選的和弦/音階。由「點和弦名稱」與空白鍵觸發,沒有獨立的播放按鈕 */
