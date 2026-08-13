@@ -195,6 +195,9 @@ main{
 /* 風格與程度的篩選晶片。放在捲動區(不是釘住的上半部),所以不吃釘住區的高度 */
 .filter-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
 .filter-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+/* [hidden] 是 UA 樣式表給的 display:none,會被上面作者自訂的 display:flex 蓋掉,
+   一定要自己補這一條,否則 hidden 設了也沒用(和弦的篩選列會跑到音階分頁上) */
+.filter-rows[hidden],.filter-row[hidden]{display:none}
 .filter-chip{
   border:1px solid var(--line);background:transparent;color:var(--muted-bright);
   border-radius:var(--radius-pill);padding:5px 12px;font-family:inherit;font-size:var(--fs-xs);
@@ -236,6 +239,13 @@ main{
   border-radius:var(--radius-sm);padding:8px 8px;cursor:pointer;
   font-family:inherit;text-align:center;transition:border-color .15s,background .15s;
 }
+.chip{position:relative}
+/* 與其他條目同音高的,右上角標一個 ≡,瀏覽時就看得出來,不必點進去才發現 */
+.chip[data-dup]::after{
+  content:"≡";position:absolute;top:2px;right:5px;
+  font-size:10px;line-height:1;color:var(--muted);opacity:.75;
+}
+.chip[data-dup][aria-pressed="true"]::after{color:rgba(0,0,0,.55)}
 .chip b{font-size:var(--fs-sm);font-weight:700;line-height:1.25;white-space:nowrap}
 .chip i{font-size:var(--fs-2xs);font-style:normal;color:var(--muted);line-height:1.25;white-space:nowrap}
 /* 音階的中文名稱長度差很多(「多利安」到「烏克蘭小調(多利安♯4)」),允許換行才不會被截掉 */
@@ -489,6 +499,7 @@ footer{
         <div class="filter-row" id="styleRow"></div>
         <div class="filter-row" id="levelRow"></div>
         <div class="filter-row" id="sizeRow"></div>
+        <div class="filter-row" id="dupRow"></div>
       </div>
       <div class="search-wrap">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -837,7 +848,27 @@ const LEVELS = [[3,"必學"],[2,"常見以上"]];
    三和弦是種子、七和弦與延伸是往上疊的張力音),但「我現在只要三和弦」仍然是很常見的需求。
    同樣用篩選解決,而不是為它另開分組——分組一旦按音數切,家族就又被拆散了 */
 const SIZES = [[3,"三和弦"],[4,"七和弦與加音"],[5,"延伸與變化"]];
+const DUPOPT = [[1,"隱藏同音重複"]];
 function sizeBucket(n){ return n <= 3 ? 3 : (n === 4 ? 4 : 5); }
+
+/* 同音異名索引:阿拉伯與印度有大量音階與西方音階是同一組音高
+   (庫爾德 = 弗里吉安、卡菲 = 多利安…)。這不是資料錯誤,而是音樂的事實——
+   但要注意「同音高」不等於「同一個東西」:
+     · 馬卡姆的拉斯特、巴亞提,定義音本來是四分之一音,鋼琴只能近似,
+       「等於米索利地安」是近似之後才成立的
+     · 印度的塔特(thaat)只是拉格的「母音階」,拉格本身還要看上行/下行、
+       vadi(骨幹音)與演奏時辰,同一個塔特可以長出完全不同的拉格
+   所以一律保留條目(有人就是要查「拜拉夫」),但要讓使用者一眼看到重複關係,
+   而且可以一鍵把重複的收起來 */
+const SAME_PITCH = (() => {
+  const first = new Map(), map = new Map();
+  for (const s of SCALES) {
+    const k = setKey(s.t.map(tokenSemi));
+    if (first.has(k)) map.set(s.id, first.get(k));   // 指向代表條目
+    else first.set(k, s);
+  }
+  return map;
+})();
 
 const CHORD_MATCH = CHORDS.map(c => {
   const pcs = [...new Set(c.t.map(t => ((tokenSemi(t) % 12) + 12) % 12))].sort((a, b) => a - b);
@@ -1352,6 +1383,7 @@ const STATE = {
   style: "",   // 風格篩選(空字串 = 全部)
   level: 0,    // 常用度下限(0 = 全部)
   size: 0,     // 編制(0 = 全部)
+  hideDup: 0,  // 音階:隱藏與其他條目同音高的重複條目
   findSel: new Set(),
   findSpell: "sharp"
 };
@@ -1468,8 +1500,30 @@ function passesFilter(it){ return chordPasses(it, STATE.style, STATE.level, STAT
 
 function buildFilterRows(){
   const wrap = $("filterRows");
-  wrap.hidden = STATE.tab !== "chord";
+  const isChord = STATE.tab === "chord";
+  wrap.hidden = STATE.tab === "find";
+  $("styleRow").hidden = $("levelRow").hidden = $("sizeRow").hidden = !isChord;
+  $("dupRow").hidden = isChord;
   if (wrap.hidden) return;
+  if (!isChord) {
+    const row = $("dupRow");
+    row.innerHTML = "";
+    const tag = document.createElement("span");
+    tag.className = "filter-label";
+    tag.textContent = "同音";
+    row.appendChild(tag);
+    for (const [val, text] of DUPOPT) {
+      const on = STATE.hideDup === val;
+      const b = document.createElement("button");
+      b.className = "filter-chip";
+      b.setAttribute("aria-pressed", String(on));
+      b.title = "阿拉伯與印度有不少音階與西方音階是同一組音高,打開這個開關只留代表條目(搜尋時仍然找得到全部)";
+      b.innerHTML = text + '<span class="cnt">' + SCALES.filter(x => !SAME_PITCH.has(x.id)).length + '</span>';
+      b.onclick = () => { STATE.hideDup = on ? 0 : val; render(); };
+      row.appendChild(b);
+    }
+    return;
+  }
   const empty = axis => axis === "style" ? "" : 0;
   const mk = (row, label, opts, axis) => {
     row.innerHTML = "";
@@ -1504,6 +1558,8 @@ function buildTypeList(){
   const isChord = STATE.tab === "chord";
   let items = (isChord ? CHORDS : SCALES).filter(it => matchesSearch(it, STATE.search));
   if (isChord) items = items.filter(passesFilter);
+  // 搜尋中就不套用「隱藏重複」——不然搜「拜拉夫」會什麼都找不到,那才是真的幫倒忙
+  else if (STATE.hideDup && !STATE.search) items = items.filter(it => !SAME_PITCH.has(it.id));
   if (!items.length) {
     list.innerHTML = '<div class="empty-hint">沒有符合的項目。放寬上面的篩選,或換個關鍵字試試(可以搜尋 m7、Lydian、♭9、五聲…)</div>';
     return;
@@ -1535,6 +1591,8 @@ function buildTypeList(){
       b.className = "chip";
       b.setAttribute("aria-pressed", String(it.id === selId));
       if (it.lv) b.dataset.lv = it.lv;
+      const same = SAME_PITCH.get(it.id);
+      if (same) { b.dataset.dup = "1"; b.title = "與「" + same.zh + "」是同一組音高"; }
       b.innerHTML = "<b></b><i></i>";
       b.querySelector("b").textContent = isChord ? rootName() + it.sym : it.zh;
       b.querySelector("i").textContent = isChord ? it.zh : it.en;
