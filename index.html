@@ -381,7 +381,11 @@ footer{
   .topbar .tabs{grid-column:1;grid-row:1}
   .topbar #rootCard,.topbar #findCard{grid-column:1;grid-row:2}
   .topbar .kb-wrap{grid-column:2;grid-row:1 / span 2}
-  .lower{display:grid;grid-template-columns:minmax(340px,420px) 1fr;align-items:start}
+  /* 欄寬分配:會捲的長清單拿彈性寬度,不會捲的短說明給上限。
+     反過來(清單鎖 420px、說明吃 1fr)在平板橫式會很難看——實測 1024×768 時
+     清單被擠成 420 寬 × 1292 高的窄長條、右下角一大片空白。
+     讓清單隨寬度長大,每列多放幾顆晶片,整體高度就跟著降下來 */
+  .lower{display:grid;grid-template-columns:minmax(360px,1fr) minmax(340px,480px);align-items:start}
   /* 右邊的說明欄也跟著釘住。不然左邊清單很長、右邊說明很短,清單一往下捲,
      右半邊就整片空著。--topbar-h 由 JS 量出來(鍵盤高度會隨音域變,寫死會對不齊) */
   .info{position:sticky;top:calc(var(--header-h, 60px) + var(--topbar-h, 250px) + 10px)}
