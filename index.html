@@ -82,6 +82,14 @@ header{
   position:sticky;top:0;z-index:20;
 }
 .header-left,.header-right{display:flex;align-items:center;flex-wrap:wrap;gap:8px 10px}
+/* Hub 頁(stevenmusic.github.io)是後來才生的,工具頁原本沒有回首頁的路徑——
+   跟 ScrollScore/SightScore/LoudMaster 用同一套安靜文字連結 */
+.home-link{
+  display:inline-flex;align-items:center;gap:4px;flex:none;
+  color:var(--muted);font-size:var(--fs-sm);text-decoration:none;
+  padding:6px 4px;border-radius:var(--radius-sm);transition:color .15s;
+}
+.home-link:hover,.home-link:focus-visible{color:var(--gold-bright)}
 /* 品牌名用流體字級(clamp)而不是斷點階梯。用斷點的話,430px 的 Pro Max 跟 320px 的 SE
    會拿到同一個字級,大螢幕明明放得下卻被迫用小字,看起來就是「字太小」。
    改成跟著視窗寬度連續縮放:窄機收到剛好放得下,寬機自然長回原本的大小。
@@ -515,6 +523,9 @@ footer{
 
 <header>
   <div class="header-left">
+    <a href="https://stevenmusic.github.io/" class="home-link" aria-label="回首頁" title="回首頁">
+      <span aria-hidden="true">←</span><span class="btn-label">首頁</span>
+    </a>
     <h1>Harmony<span>Map</span></h1>
     <span class="tagline">和弦與音階地圖</span>
   </div>
