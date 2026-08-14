@@ -366,8 +366,10 @@ main{
 .kb-gear{
   flex:none;background:transparent;border:1px solid var(--line);color:var(--muted-bright);
   border-radius:var(--radius-pill);width:26px;height:26px;line-height:1;
-  font-size:13px;cursor:pointer;margin-left:8px;transition:border-color .15s,color .15s;
+  display:inline-flex;align-items:center;justify-content:center; /* 線稿圖示要自己置中,不靠字型基線 */
+  cursor:pointer;margin-left:8px;transition:border-color .15s,color .15s;
 }
+.kb-gear svg{display:block}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
 .audio-status{
   position:absolute;top:8px;left:8px;z-index:2;
@@ -600,10 +602,7 @@ footer{
 </main>
 
 <footer>
-  HarmonyMap · 鍵盤渲染沿用 ScrollScore 的繪製邏輯<br>
-  和弦與音階的音名皆依樂理正規拼寫推導(同一個級數只用一個字母),所以會出現 B♭♭、G♯♯ 這類重降重升音<br>
-  點和弦或音階名稱就會直接發聲(再點一次重播),點琴鍵可單獨試聽<br>
-  快捷鍵:↑↓ 換和弦/音階 · ←→ 換根音 · 空白鍵播放
+  HarmonyMap
 </footer>
 
 <script>
@@ -2150,7 +2149,11 @@ function renderSummary(){
     tones = currentNotes().map(n => STATE.label === "do" ? toSolfege(n.name) : n.name).join(" ");
   }
   el.innerHTML = '<b></b><span class="zh"></span><span class="tones"></span>' +
-    '<button class="kb-gear" id="kbGear" aria-label="鍵盤設定" title="起始八度、琴鍵標示、播放方式">⚙</button>';
+    // 齒輪圖示照抄 ScrollScore 的設定鈕(同一組 24 格線稿、stroke-width 2、圓端點),
+    // 兩個工具放在一起看要是同一個產品。原本用 ⚙ 字元,粗細與字型會隨系統跑掉
+    '<button class="kb-gear" id="kbGear" aria-label="鍵盤設定" title="起始八度、琴鍵標示、播放方式">' +
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>' +
+    '</button>';
   el.querySelector("b").textContent = name;
   el.querySelector(".zh").textContent = zh;
   el.querySelector(".tones").textContent = tones;
