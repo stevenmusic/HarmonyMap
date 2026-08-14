@@ -184,16 +184,38 @@ main{
 /* 手機:根音卡片是釘住的,每省下一點高度就是清單多看到一排。
    「根音」這個標題可以省——底下就是 C D E F G A B 七顆按鈕,不會看不懂 */
 @media (max-width:900px){
-  #rootCard{padding:10px 12px}
+  #rootCard{padding:8px 10px}
   #rootCard .card-title{display:none}
-  .root-row.letters .key-btn{height:40px}
-  .acc-row .key-btn{height:32px}
+  .root-row.letters .key-btn{height:38px}
+  .acc-row{margin-top:5px}
+  .acc-row .key-btn{height:30px}
   .topbar{gap:8px}
+  #typeCard{padding:12px}
 }
 
 /* ── 類型清單:搜尋 + 分組晶片 ── */
-/* 風格與程度的篩選晶片。放在捲動區(不是釘住的上半部),所以不吃釘住區的高度 */
+/* 搜尋 + 篩選同一排,省掉一整行的高度 */
+.find-row{display:flex;gap:8px;align-items:stretch;margin-bottom:10px}
+.find-row .search-wrap{flex:1;min-width:0;margin-bottom:0}
+.filter-summary{
+  cursor:pointer;user-select:none;flex:none;
+  display:inline-flex;align-items:center;gap:6px;
+  background:transparent;font-family:inherit;
+  border:1px solid var(--line);border-radius:var(--radius-pill);
+  padding:5px 14px 5px 10px;font-size:var(--fs-xs);color:var(--muted-bright);
+  transition:border-color .15s,color .15s;
+}
+.filter-summary:hover{border-color:var(--gold);color:var(--gold)}
+.filter-summary .chev{display:inline-block;transition:transform .2s;font-size:14px;line-height:1}
+.filter-summary[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.filter-summary[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
+.filter-summary .badge{
+  background:var(--gold);color:var(--bg);border-radius:var(--radius-pill);
+  padding:1px 7px;font-size:var(--fs-2xs);font-weight:700;
+}
+.filter-summary .badge:empty{display:none}
 .filter-rows{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+.filter-rows[hidden]{display:none}
 .filter-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
 /* [hidden] 是 UA 樣式表給的 display:none,會被上面作者自訂的 display:flex 蓋掉,
    一定要自己補這一條,否則 hidden 設了也沒用(和弦的篩選列會跑到音階分頁上) */
@@ -211,6 +233,45 @@ main{
    靠 title 屬性不算數,手機沒有 hover */
 .filter-hint{font-size:var(--fs-2xs);color:var(--muted);opacity:.85;line-height:1.6;padding-left:3em}
 .filter-hint b{color:var(--gold);font-weight:400}
+
+/* ── 分類按鈕 ── */
+/* 這一排是主要的導覽方式,不是篩選:按一下就換一整組項目。
+   所以做得比篩選晶片明顯(實心底、字大一級),使用者才知道要先從這裡選 */
+/* position:relative 是為了讓按鈕的 offsetLeft 以這一排為基準,
+   捲到選中項目的計算才不會算到別的祖先身上 */
+.group-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;position:relative}
+/* 同樣的老問題:作者自訂的 display:flex 會蓋掉 [hidden] 的 display:none */
+.group-tabs[hidden]{display:none}
+.group-tab{
+  border:1px solid var(--line);background:var(--surface-inset);color:var(--muted-bright);
+  border-radius:var(--radius-sm);padding:7px 12px;font-family:inherit;font-size:var(--fs-sm);
+  cursor:pointer;transition:border-color .15s,color .15s,background .15s;white-space:nowrap;
+}
+.group-tab:hover{border-color:var(--gold);color:var(--gold)}
+.group-tab[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
+.group-tab .cnt{opacity:.6;font-size:var(--fs-2xs);margin-left:5px}
+.group-tab[aria-pressed="true"] .cnt{opacity:.66}
+/* 選了哪一組,就把那一組的定義寫在按鈕底下——原本這句話是掛在分組標題上的,
+   改成分類按鈕之後標題不見了,這句話不能跟著不見 */
+.group-note{font-size:var(--fs-2xs);color:var(--muted);line-height:1.6;margin-bottom:10px}
+.group-note:empty{display:none}
+/* 窄螢幕改成一排橫向捲動。和弦 7 顆會折成三列、音階 12 顆折成四五列,
+   等於再吃掉 100~150px 的第一屏——這排是導覽,不該比它要導覽的內容還高 */
+@media (max-width:600px){
+  .group-tabs{
+    flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
+    margin-left:-14px;margin-right:-14px;padding:0 14px; /* 出血到卡片邊緣,看得出還有東西可以捲 */
+  }
+  .group-tabs::-webkit-scrollbar{display:none}
+  .group-tab{scroll-snap-align:start;flex:none}
+  /* 沒有捲軸的話,最後一顆剛好切齊右緣時會看起來「就這幾組」——
+     音階有 12 組,只看得到 3 組卻不知道還有,等於把九成的字典藏起來。
+     捲得動的那一側用漸層淡出,一眼就知道還有東西 */
+  .group-tabs.more-right{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 34px),transparent)}
+  .group-tabs.more-left{-webkit-mask-image:linear-gradient(90deg,transparent,#000 34px);mask-image:linear-gradient(90deg,transparent,#000 34px)}
+  .group-tabs.more-left.more-right{-webkit-mask-image:linear-gradient(90deg,transparent,#000 34px,#000 calc(100% - 34px),transparent);mask-image:linear-gradient(90deg,transparent,#000 34px,#000 calc(100% - 34px),transparent)}
+}
 
 /* 分組副標:說明是什麼音程定義了這個家族,讓分組本身也在教東西 */
 .type-group-sub{
@@ -278,8 +339,8 @@ main{
    刻意限制成「絕對只有一行」(nowrap + 超出用省略號),因為這一塊在手機上是釘住的,
    高度只要會隨內容變化,底下整排和弦按鈕就會跟著上下跳 */
 .kb-summary{
-  display:flex;align-items:baseline;gap:10px;
-  padding:9px 12px 0;white-space:nowrap;overflow:hidden;
+  display:flex;align-items:center;gap:10px;
+  padding:8px 10px;white-space:nowrap;overflow:hidden;
 }
 .kb-summary b{
   font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:700;
@@ -290,16 +351,24 @@ main{
   font-size:var(--fs-sm);color:var(--ivory);letter-spacing:.06em;
   flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;
 }
-.kb-bar{
-  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
-  padding:8px 12px;border-top:1px solid var(--line);background:var(--panel);
+/* 鍵盤設定的浮動面板。蓋在琴鍵上方(.kb-wrap 是 overflow:hidden,所以尺寸要放得進去),
+   關掉之後完全不佔版面高度——原本這三個選單常駐一整排,吃掉釘住區約 50px */
+.kb-popover{
+  position:absolute;right:8px;bottom:8px;z-index:5;
+  display:flex;flex-direction:column;gap:6px;
+  background:var(--surface-glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  border:1px solid var(--gold);border-radius:var(--radius-md);
+  padding:10px 12px;box-shadow:var(--shadow-md);
 }
-.kb-bar .spacer{flex:1}
-.kb-legend{display:flex;gap:12px;font-size:var(--fs-2xs);color:var(--muted)}
-.kb-legend span{display:inline-flex;align-items:center;gap:5px}
-.kb-legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
-/* 載入提示是暫時的,絕對定位浮在鍵盤左上角。
-   放進工具列的話,它出現與消失會把那排選單擠成兩行再收回去,整個版面跳一下 */
+.kb-popover[hidden]{display:none}
+.kb-popover label{display:flex;align-items:center;gap:8px;font-size:var(--fs-2xs);color:var(--muted)}
+.kb-popover select{flex:1;min-width:118px}
+.kb-gear{
+  flex:none;background:transparent;border:1px solid var(--line);color:var(--muted-bright);
+  border-radius:var(--radius-pill);width:26px;height:26px;line-height:1;
+  font-size:13px;cursor:pointer;margin-left:8px;transition:border-color .15s,color .15s;
+}
+.kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
 .audio-status{
   position:absolute;top:8px;left:8px;z-index:2;
   font-size:var(--fs-2xs);color:var(--muted-bright);white-space:nowrap;
@@ -315,8 +384,6 @@ select.mini:focus{outline:none;border-color:var(--gold)}
 /* 手機上鍵盤是釘住的,這條工具列也跟著一直佔畫面高度——圖例的資訊
    下方的結果面板已經寫得更清楚了,窄螢幕就先讓位給控制項,確保它們排得下一列 */
 @media (max-width:600px){
-  .kb-legend{display:none}
-  .kb-bar{padding:6px 8px;gap:6px}
   select.mini{font-size:var(--fs-xs);padding:0 8px}
 }
 
@@ -462,20 +529,17 @@ footer{
       <canvas id="keyboardCanvas"></canvas>
       <span id="audioStatus" class="audio-status" hidden></span>
       <div class="kb-summary" id="kbSummary"></div>
-      <div class="kb-bar">
-        <div class="kb-legend">
-          <span><i style="background:var(--gold)"></i>根音</span>
-          <span><i style="background:var(--teal)"></i>組成音</span>
-        </div>
-        <div class="spacer"></div>
-        <select class="mini" id="octaveSel" title="起始八度"></select>
-        <select class="mini" id="labelSel" title="琴鍵上要標音名(C D E)、唱名(Do Re Mi)還是數字(1 ♭3 5)">
-          <option value="en">標音名</option>
-          <option value="do">標唱名</option>
-          <option value="deg">標數字</option>
+      <!-- 起始八度/標示方式/播放方式都是「設一次就不太會再動」的設定,
+           不該常駐在最貴的釘住區裡,收進這個浮動面板 -->
+      <div class="kb-popover" id="kbPopover" hidden>
+        <label>起始八度<select class="mini" id="octaveSel"></select></label>
+        <label>琴鍵標示<select class="mini" id="labelSel">
+          <option value="en">音名 C D E</option>
+          <option value="do">唱名 Do Re Mi</option>
+          <option value="deg">數字 1 ♭3 5</option>
           <option value="off">不標字</option>
-        </select>
-        <select class="mini" id="playModeSel" title="播放方式"></select>
+        </select></label>
+        <label>播放方式<select class="mini" id="playModeSel"></select></label>
       </div>
     </div>
 
@@ -501,7 +565,19 @@ footer{
   <!-- ══ 只有這一區會捲動:和弦/音階清單 + 結果說明 ══ -->
   <div class="lower">
     <div class="card" id="typeCard">
-      <div class="card-title" id="typeCardTitle">和弦類型</div>
+      <!-- 篩選預設收合。它是「偶爾用一次」的功能,常駐展開會把主要內容(和弦清單)
+           整個推到第一屏之外——實測手機版第一顆和弦落在 y=803 的 844px 畫面上 -->
+      <!-- 搜尋與篩選併成一排。篩選預設收合——它是「偶爾用一次」的功能,
+           常駐展開會把主要內容(和弦清單)整個推到第一屏之外 -->
+      <div class="find-row">
+        <div class="search-wrap">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="typeSearch" type="search" placeholder="搜尋名稱、符號或公式" autocomplete="off">
+        </div>
+        <button class="filter-summary" id="filterToggle" aria-expanded="false">
+          <span class="chev">›</span><span>篩選</span><span class="badge" id="filterBadge"></span>
+        </button>
+      </div>
       <div class="filter-rows" id="filterRows" hidden>
         <div class="filter-row" id="styleRow"></div>
         <div class="filter-row" id="levelRow"></div>
@@ -509,10 +585,10 @@ footer{
         <div class="filter-row" id="dupRow"></div>
         <div class="filter-hint" id="filterHint"></div>
       </div>
-      <div class="search-wrap">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input id="typeSearch" type="search" placeholder="搜尋名稱、符號或公式(如 m7、Dorian、♭9)" autocomplete="off">
-      </div>
+      <!-- 分類按鈕:一次只顯示一個家族/系統的項目。67 個和弦、95 個音階全部攤成
+           一長條清單的話,要看小調系得先捲過三個家族;改成先選分類,清單一次最多 17 個 -->
+      <div class="group-tabs" id="groupTabs"></div>
+      <div class="group-note" id="groupNote"></div>
       <div class="type-scroll" id="typeList"></div>
     </div>
 
@@ -846,7 +922,20 @@ const GROUP_NOTE = {
   "小調系":     "小三度 + 純五度 · 柔和、可以久留",
   "減系與半減系":"小三度 + 減五度 · 不穩定,指向性強",
   "無三度和弦": "沒有三音,不屬大調也不屬小調",
-  "增六和弦":   "由解決方向定義的古典功能和聲"
+  "增六和弦":   "由解決方向定義的古典功能和聲",
+  // 音階的分組說明。分類按鈕底下這一行是唯一會寫出「這一組憑什麼是一組」的地方,
+  // 和弦有、音階沒有的話,選到音階時那一行就空著
+  "大調七聲調式":  "同一組音、換一個音當主音,得到七個調式",
+  "和聲小調系統":  "自然小調升第七音,再依序換主音",
+  "旋律小調系統":  "自然小調升第六、七音,再依序換主音",
+  "五聲與藍調":    "五個音為骨幹,沒有半音衝突,加藍調音",
+  "日本音階":      "多為五聲,以小二度與四度框架決定色彩",
+  "阿拉伯與中東":  "馬卡姆的母音階;拉斯特、巴亞提原本含四分之一音",
+  "印度與其他亞洲":"印度十大塔特(拉格的母音階)與東亞、東南亞音階",
+  "對稱音階":      "音程循環排列,移調後音高不變",
+  "其他七聲音階":  "不屬前面任一系統的七聲音階",
+  "Bebop 八聲音階":"七聲音階加一個經過音,讓和弦音落在正拍",
+  "進階與罕用":    "作曲家自創或地區性的音階,查詢用"
 };
 /* 風格標籤:和弦的風格不是它的內在屬性,而是「誰常用它」,所以做成可複選的篩選,
    不做成分組——分組放錯會把和弦藏起來,篩選只是縮小範圍 */
@@ -1095,7 +1184,7 @@ function syncStickyMetrics(){
   const t = document.querySelector(".topbar");
   if (t) root.setProperty("--topbar-h", t.offsetHeight + "px");
 }
-window.addEventListener("resize", () => { syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); syncStickyMetrics(); });
+window.addEventListener("resize", () => { syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); syncStickyMetrics(); updateGroupFade(); });
 
 /* ══════════════════════════════════════════════════════════════
    7. 音訊:與 ScrollScore 同一套音源
@@ -1391,12 +1480,17 @@ const STATE = {
   style: "",   // 風格篩選(空字串 = 全部)
   level: 0,    // 常用度下限(0 = 全部)
   size: 0,     // 編制(0 = 全部)
+  filtersOpen: false,  // 篩選預設收合
+  group: { chord: "", scale: "" },  // 目前顯示哪一個家族/系統("" = 全部),兩個分頁各自記住
   hideDup: 0,  // 音階:隱藏與其他條目同音高的重複條目
   findSel: new Set(),
   findSpell: "sharp"
 };
 const chordById = id => CHORDS.find(c => c.id === id);
 const scaleById = id => SCALES.find(s => s.id === id);
+// 一開始就停在「選中的那一個和弦/音階所屬的分類」,而不是攤開全部 162 個項目
+STATE.group.chord = chordById(STATE.chordId).g;
+STATE.group.scale = scaleById(STATE.scaleId).g;
 function rootName(){ return LETTERS[STATE.letter] + accText(STATE.acc); }
 function rootPc(){ return ((LETTER_PC[STATE.letter] + STATE.acc) % 12 + 12) % 12; }
 function rootMidi(){ return 12 * (STATE.octave + 1) + LETTER_PC[STATE.letter] + STATE.acc; }
@@ -1507,12 +1601,14 @@ function chordPasses(c, style, level, size){
 function passesFilter(it){ return chordPasses(it, STATE.style, STATE.level, STATE.size); }
 
 function buildFilterRows(){
-  const wrap = $("filterRows");
   const isChord = STATE.tab === "chord";
-  wrap.hidden = STATE.tab === "find";
+  const wrap = $("filterRows");
+  $("filterToggle").hidden = STATE.tab === "find";
+  wrap.hidden = STATE.tab === "find" || !STATE.filtersOpen;
   $("styleRow").hidden = $("levelRow").hidden = $("sizeRow").hidden = !isChord;
   $("dupRow").hidden = isChord;
-  if (wrap.hidden) return;
+  $("filterToggle").setAttribute("aria-expanded", String(STATE.filtersOpen));
+  if (STATE.tab === "find") return;
   if (!isChord) {
     const row = $("dupRow");
     row.innerHTML = "";
@@ -1531,6 +1627,7 @@ function buildFilterRows(){
       row.appendChild(b);
     }
     $("filterHint").innerHTML = '右上角 <b>≡</b> = 與其他音階同音高(例如庫爾德 ≡ 弗里吉安),點進去看得到全部別名';
+    $("filterBadge").textContent = STATE.hideDup ? "隱藏重複" : "";
     return;
   }
   const empty = axis => axis === "style" ? "" : 0;
@@ -1559,18 +1656,105 @@ function buildFilterRows(){
   mk($("styleRow"), "風格", STYLES, "style");
   mk($("levelRow"), "程度", LEVELS, "level");
   mk($("sizeRow"),  "編制", SIZES,  "size");
+  // 收合狀態下也要看得出「現在有沒有在篩選」,否則會以為清單怎麼少了一半
+  const on = [
+    (STYLES.find(x => x[0] === STATE.style) || [])[1],
+    (LEVELS.find(x => x[0] === STATE.level) || [])[1],
+    (SIZES.find(x => x[0] === STATE.size) || [])[1]
+  ].filter(Boolean);
+  $("filterBadge").textContent = on.length ? on.join(" · ") : "";
   $("filterHint").innerHTML =
     '左上角 <b>★</b> = 必學　·　右上角 <b>≡</b> = 與其他和弦同音高';
 }
 
-function buildTypeList(){
-  const list = $("typeList");
-  list.innerHTML = "";
+/* 目前分頁套用搜尋與篩選之後的完整候選清單(還沒依分類縮小)。
+   清單、分類按鈕的數字、上下鍵瀏覽三個地方都要用同一份,不然數字會對不起來 */
+function filteredItems(){
   const isChord = STATE.tab === "chord";
   let items = (isChord ? CHORDS : SCALES).filter(it => matchesSearch(it, STATE.search));
   if (isChord) items = items.filter(passesFilter);
   // 搜尋中就不套用「隱藏重複」——不然搜「拜拉夫」會什麼都找不到,那才是真的幫倒忙
   else if (STATE.hideDup && !STATE.search) items = items.filter(it => !SAME_PITCH.has(it.id));
+  return items;
+}
+const groupKey = () => STATE.tab === "chord" ? "chord" : "scale";
+/* 從別處跳過來的項目(順階和弦表、建議音階、上下鍵)可能不在目前分類裡,
+   分類要跟著換過去,否則會「選好了卻在清單上找不到它」。
+   只在「選擇真的變了」的時候才動:每次 render 都無條件校正的話,
+   使用者按下別的分類按鈕會立刻被彈回選中項目所屬的那一組,分類等於按不動 */
+const lastSel = { chord: STATE.chordId, scale: STATE.scaleId };
+function syncGroup(){
+  if (STATE.tab === "find") return;
+  const key = groupKey();
+  const id = key === "chord" ? STATE.chordId : STATE.scaleId;
+  if (lastSel[key] === id) return;
+  lastSel[key] = id;
+  const def = key === "chord" ? chordById(id) : scaleById(id);
+  if (def && STATE.group[key] && STATE.group[key] !== def.g) STATE.group[key] = def.g;
+}
+
+/* 分類按鈕:一次只顯示一組。這是主要導覽,不是篩選——篩選是縮小範圍,
+   這個是換一整組,所以做得比篩選晶片明顯 */
+function buildGroupTabs(){
+  const row = $("groupTabs"), note = $("groupNote");
+  const key = groupKey();
+  // 搜尋結果會跨分類,這時候分類按鈕沒有意義,收起來讓結果照原本的分組排
+  row.hidden = !!STATE.search;
+  if (STATE.search) { row.innerHTML = ""; note.textContent = ""; return; }
+  const items = filteredItems();
+  const counts = new Map();
+  for (const it of items) counts.set(it.g, (counts.get(it.g) || 0) + 1);
+  // 篩選把整組篩光的話(例如「流行 × 三和弦」之下沒有增六和弦),退回「全部」,
+  // 不然按鈕不見了、清單也空著,看起來像壞掉
+  if (STATE.group[key] && !counts.get(STATE.group[key])) STATE.group[key] = "";
+  const order = [];
+  for (const it of (key === "chord" ? CHORDS : SCALES)) if (!order.includes(it.g)) order.push(it.g);
+  row.innerHTML = "";
+  const mk = (name, label, n) => {
+    const b = document.createElement("button");
+    b.className = "group-tab";
+    b.setAttribute("aria-pressed", String(STATE.group[key] === name));
+    b.innerHTML = "<span></span><span class='cnt'></span>";
+    b.children[0].textContent = label;
+    b.children[1].textContent = n;
+    b.onclick = () => { STATE.group[key] = name; render(); };
+    row.appendChild(b);
+  };
+  mk("", "全部", items.length);
+  for (const g of order) if (counts.get(g)) mk(g, g, counts.get(g));
+  note.textContent = STATE.group[key] ? (GROUP_NOTE[STATE.group[key]] || "") : "";
+  // 手機上這排是橫向捲的,選中的那顆可能在畫面外(例如跳到「進階與罕用」)。
+  // 用 scrollLeft 而不是 scrollIntoView——後者會連整頁一起捲,把鍵盤推走
+  // 選中的那顆已經看得到就不要動,不然一開啟就把「全部」捲掉,少了一個出口
+  const cur = row.querySelector('[aria-pressed="true"]');
+  if (cur && row.scrollWidth > row.clientWidth) {
+    const l = cur.offsetLeft, r = l + cur.offsetWidth;
+    if (l < row.scrollLeft + 8) row.scrollLeft = Math.max(0, l - 16);
+    else if (r > row.scrollLeft + row.clientWidth - 8) row.scrollLeft = r - row.clientWidth + 16;
+  }
+  updateGroupFade();
+}
+
+/* 分類列捲得動的那一側才淡出。捲到底還在淡的話,會一直以為後面還有東西 */
+function updateGroupFade(){
+  const row = $("groupTabs");
+  // 門檻抓 16px:捲動吸附(scroll-snap)會停在左邊 14px 的內距上,
+  // 門檻太小的話「其實還在最左邊」也會被判定成捲過了,左緣白白淡掉一塊
+  const can = row.scrollWidth - row.clientWidth > 16;
+  row.classList.toggle("more-left", can && row.scrollLeft > 16);
+  row.classList.toggle("more-right", can && row.scrollLeft < row.scrollWidth - row.clientWidth - 16);
+}
+$("groupTabs").addEventListener("scroll", updateGroupFade, { passive: true });
+
+function buildTypeList(){
+  const list = $("typeList");
+  list.innerHTML = "";
+  const isChord = STATE.tab === "chord";
+  const key = groupKey();
+  let items = filteredItems();
+  // 選了分類就只出那一組(搜尋時不受分類限制)
+  const single = !STATE.search && STATE.group[key];
+  if (single) items = items.filter(it => it.g === STATE.group[key]);
   if (!items.length) {
     list.innerHTML = '<div class="empty-hint">沒有符合的項目。放寬上面的篩選,或換個關鍵字試試(可以搜尋 m7、Lydian、♭9、五聲…)</div>';
     return;
@@ -1585,16 +1769,20 @@ function buildTypeList(){
   for (const g of groups) {
     const wrap = document.createElement("div");
     wrap.className = "type-group";
-    const title = document.createElement("div");
-    title.className = "type-group-title";
-    title.textContent = g.name;
-    if (GROUP_NOTE[g.name]) {
-      const sub = document.createElement("div");
-      sub.className = "type-group-sub";
-      sub.textContent = GROUP_NOTE[g.name];
-      title.appendChild(sub);
+    // 只出一組的時候不用再寫一次標題——上面那顆分類按鈕就是標題了,
+    // 定義那句話也已經放在按鈕底下的 .group-note
+    if (!single) {
+      const title = document.createElement("div");
+      title.className = "type-group-title";
+      title.textContent = g.name;
+      if (GROUP_NOTE[g.name]) {
+        const sub = document.createElement("div");
+        sub.className = "type-group-sub";
+        sub.textContent = GROUP_NOTE[g.name];
+        title.appendChild(sub);
+      }
+      wrap.appendChild(title);
     }
-    wrap.appendChild(title);
     const chips = document.createElement("div");
     chips.className = isChord ? "chips" : "chips wide";
     for (const it of g.items) {
@@ -1917,12 +2105,13 @@ function render(){
   $("rootCard").hidden = findMode;
   $("typeCard").hidden = findMode;
   $("findCard").hidden = !findMode;
-  $("typeCardTitle").textContent = STATE.tab === "chord" ? "和弦類型" : "音階類型";
   buildPlayModes();
 
   if (!findMode) {
     buildRootPicker();
     buildFilterRows();
+    syncGroup();
+    buildGroupTabs();
     buildTypeList();
     renderOctaveSel();
     refreshOctaveLabels();
@@ -1960,10 +2149,12 @@ function renderSummary(){
     zh = isChord ? def.zh : def.en;
     tones = currentNotes().map(n => STATE.label === "do" ? toSolfege(n.name) : n.name).join(" ");
   }
-  el.innerHTML = '<b></b><span class="zh"></span><span class="tones"></span>';
+  el.innerHTML = '<b></b><span class="zh"></span><span class="tones"></span>' +
+    '<button class="kb-gear" id="kbGear" aria-label="鍵盤設定" title="起始八度、琴鍵標示、播放方式">⚙</button>';
   el.querySelector("b").textContent = name;
   el.querySelector(".zh").textContent = zh;
   el.querySelector(".tones").textContent = tones;
+  el.querySelector("#kbGear").onclick = ev => { ev.stopPropagation(); toggleKbPopover(); };
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -2004,13 +2195,15 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
 $("tabChord").onclick = () => { STATE.tab = "chord"; STATE.search = ""; STATE.style = ""; STATE.level = 0; STATE.size = 0; $("typeSearch").value = ""; render(); };
 $("tabScale").onclick = () => { STATE.tab = "scale"; STATE.search = ""; $("typeSearch").value = ""; render(); };
 $("tabFind").onclick  = () => { STATE.tab = "find"; render(); };
-$("typeSearch").addEventListener("input", e => { STATE.search = e.target.value.trim(); buildTypeList(); });
+// 搜尋只重畫清單與分類列,不跑整個 render()——每打一個字就重算音域、重畫鍵盤太浪費
+$("typeSearch").addEventListener("input", e => { STATE.search = e.target.value.trim(); buildGroupTabs(); buildTypeList(); });
 /* 切換分頁時把篩選清掉,免得跳到音階分頁後回來發現清單「怎麼少了一半」 */
 $("octaveSel").addEventListener("change", e => { STATE.octave = +e.target.value; render(); });
 $("labelSel").addEventListener("change", e => { STATE.label = e.target.value; render(); });
 $("playModeSel").addEventListener("change", e => { STATE.playMode = e.target.value; PLAY_PREF[STATE.tab] = e.target.value; });
 $("findClear").onclick = () => { STATE.findSel.clear(); render(); };
 $("findSpell").addEventListener("change", e => { STATE.findSpell = e.target.value; render(); });
+$("filterToggle").onclick = () => { STATE.filtersOpen = !STATE.filtersOpen; render(); };
 /* 播放目前選的和弦/音階。由「點和弦名稱」與空白鍵觸發,沒有獨立的播放按鈕 */
 function playCurrent(){
   const midis = STATE.tab === "find"
@@ -2027,11 +2220,14 @@ document.addEventListener("keydown", ev => {
   if (ev.key === " ") { ev.preventDefault(); playCurrent(); return; }
   if (STATE.tab === "find") return;
   const isChord = STATE.tab === "chord";
-  const list = isChord ? CHORDS : SCALES;
+  // 走目前看得到的清單(套過搜尋與篩選),而不是整本字典——
+  // 不然篩選中按↓會跳到根本沒顯示出來的項目。跨到別的分類時 syncGroup() 會把分類帶過去
+  const list = filteredItems();
+  if (!list.length) return;
   const cur = list.findIndex(x => x.id === (isChord ? STATE.chordId : STATE.scaleId));
   if (ev.key === "ArrowDown" || ev.key === "ArrowUp") {
     ev.preventDefault();
-    const next = (cur + (ev.key === "ArrowDown" ? 1 : list.length - 1)) % list.length;
+    const next = cur < 0 ? 0 : (cur + (ev.key === "ArrowDown" ? 1 : list.length - 1)) % list.length;
     if (isChord) STATE.chordId = list[next].id; else STATE.scaleId = list[next].id;
     render();
   } else if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") {
@@ -2046,6 +2242,19 @@ document.addEventListener("keydown", ev => {
    等真的按下播放,真實鋼琴取樣多半已經就緒。沒有互動就不下載,不會白白吃流量 */
 ["pointerdown", "keydown"].forEach(ev =>
   window.addEventListener(ev, () => ensureAudio(), { once: true, capture: true }));
+
+/* 鍵盤設定面板的開關。點面板外面或按 Esc 就關掉 */
+function toggleKbPopover(force){
+  const pop = $("kbPopover"), gear = $("kbGear");
+  const open = force !== undefined ? force : pop.hidden;
+  pop.hidden = !open;
+  if (gear) gear.setAttribute("aria-expanded", String(open));
+}
+document.addEventListener("pointerdown", ev => {
+  const pop = $("kbPopover");
+  if (!pop.hidden && !pop.contains(ev.target) && ev.target.id !== "kbGear") toggleKbPopover(false);
+});
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") toggleKbPopover(false); });
 
 /* ── 主題 ── */
 const THEME_KEY = "harmonymap.light";
