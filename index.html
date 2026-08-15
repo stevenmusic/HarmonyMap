@@ -120,9 +120,11 @@ header h1 span{color:var(--ivory);font-weight:600}
 .btn.ghost{border-color:var(--line);color:var(--muted-bright)}
 .btn.small{height:32px;padding:0 12px;font-size:var(--fs-sm)}
 #themeToggle[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
-/* 語言切換鈕:跟主題鈕同一套外觀。文字固定最小寬度,EN/中 切換時鈕本身不跳動 */
+/* 語言切換鈕:跟主題/設定等圖示鈕一樣統一用正圓形(跟 ScrollScore/SightScore/LoudNorm
+   同一套外觀),只顯示「EN」/「中」文字、不搭配圖示——四個專案不要有的用文字有的用圖示。
+   aspect-ratio:1 讓寬度自動跟著當下 .btn 的高度走,不用每個斷點各寫一次寬度 */
+#langToggle{aspect-ratio:1;padding:0}
 #langToggle[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
-#langToggle .btn-label{min-width:1.3em;text-align:center}
 /* 頂欄的內距與間距同樣跟著寬度連續縮放,不用斷點硬切(照 ScrollScore 的值) */
 @media (max-width:600px){
   header{padding:8px clamp(6px, 2.2vw, 10px);gap:clamp(4px, 1.4vw, 6px);flex-wrap:nowrap}
@@ -538,12 +540,7 @@ footer{
     <span class="tagline" data-i18n="tagline">和弦與音階地圖</span>
   </div>
   <div class="header-right">
-    <button class="btn" id="langToggle" aria-pressed="false" data-i18n-attr="aria-label:langToggleLabel,title:langToggleTitle">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 010 18 15 15 0 010-18z"/>
-      </svg>
-      <span class="btn-label" id="langLabel" data-i18n="langToggleText">EN</span>
-    </button>
+    <button class="btn" id="langToggle" aria-pressed="false" data-i18n-attr="aria-label:langToggleLabel,title:langToggleTitle" data-i18n="langToggleText">EN</button>
     <button class="btn" id="themeToggle" aria-label="淺色模式" aria-pressed="false" data-i18n-attr="aria-label:themeToggleLabel,title:themeToggleTitle" title="切換淺色/深色主題">
       <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="9"/>
