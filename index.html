@@ -325,6 +325,20 @@ main{
   font-size:var(--fs-2xs);letter-spacing:.12em;color:var(--muted);font-weight:700;
   margin-bottom:8px;padding:4px 0;
 }
+/* 「進階變化」的展開鈕。做得比晶片輕(只有一條文字 + 箭頭),
+   讓它讀起來像分隔線而不是又一個可以選的項目 */
+.rare-toggle{
+  display:flex;align-items:center;gap:6px;width:100%;margin-top:8px;
+  background:transparent;border:0;border-top:1px solid var(--line);
+  padding:9px 2px 0;font-family:inherit;font-size:var(--fs-2xs);
+  color:var(--muted);cursor:pointer;transition:color .15s;
+}
+.rare-toggle:hover{color:var(--gold)}
+.rare-toggle .chev{display:inline-block;font-size:13px;line-height:1;transition:transform .2s}
+.rare-toggle[aria-expanded="true"]{color:var(--gold)}
+.rare-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.rare-toggle + .chips{margin-top:8px}
+
 /* 等寬格線排列。原本用 flex 讓晶片各自照文字長度決定寬度,每一列的數量與寬度都不一樣,
    整片看起來參差不齊;改成固定欄寬的 grid,行列自然對齊,長短名稱都排得整整齊齊 */
 .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
@@ -673,6 +687,7 @@ const I18N = {
     spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
     searchPlaceholder: "搜尋名稱、符號或公式",
     filterToggleText: "篩選",
+    rareToggle: "進階變化 {n} 種",
     accFlat: "♭ 降", accNatural: "♮ 原", accSharp: "♯ 升",
     filterStyle: "風格", filterLevel: "程度", filterSize: "編制", filterEnharmonic: "同音",
     hideDupBadge: "隱藏重複",
@@ -726,6 +741,7 @@ const I18N = {
     spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
     searchPlaceholder: "Search name, symbol, or formula",
     filterToggleText: "Filter",
+    rareToggle: "{n} advanced variants",
     accFlat: "♭ Flat", accNatural: "♮ Natural", accSharp: "♯ Sharp",
     filterStyle: "Style", filterLevel: "Level", filterSize: "Size", filterEnharmonic: "Enh.",
     hideDupBadge: "Hiding dups",
@@ -1011,152 +1027,152 @@ const CHORDS = [
    ══════════════════════════════════════════════════════════════ */
 const SCALES = [
   // ── 大調七聲調式 ──
-  {id:"ionian",     zh:"大調(愛奧尼安)", en:"Ionian / Major",       g:"大調七聲調式", t:["1","2","3","4","5","6","7"],        d:"最基本的七聲音階,全全半全全全半。第四音是「避開音」,即興時不要在 I 級上久留。", d_en:"The most basic seven-note scale — whole, whole, half, whole, whole, whole, half. The 4th is an \"avoid note\" — don't linger on it over the I chord when improvising."},
-  {id:"dorian",     zh:"多利安",          en:"Dorian",               g:"大調七聲調式", t:["1","2","♭3","4","5","6","♭7"],      d:"小調系但六音是自然大六度,比自然小調明亮,是所有 m7 和弦的預設選擇。", d_en:"A minor-family scale with a natural major 6th, brighter than natural minor — the default choice over any m7 chord."},
-  {id:"phrygian",   zh:"弗里吉安",        en:"Phrygian",             g:"大調七聲調式", t:["1","♭2","♭3","4","5","♭6","♭7"],    d:"♭2 是最大特徵,帶有西班牙、佛朗明哥式的暗色與異國感。", d_en:"The ♭2 is its defining feature, giving it a dark, exotic, Spanish/flamenco color."},
-  {id:"lydian",     zh:"利底安",          en:"Lydian",               g:"大調七聲調式", t:["1","2","3","♯4","5","6","7"],       d:"比大調多一個 ♯4,沒有避開音,明亮到有點夢幻,電影配樂裡的「奇蹟感」。", d_en:"One extra ♯4 compared to the major scale, with no avoid note — bright to the point of dreamy, the \"sense of wonder\" sound in film scoring."},
-  {id:"mixolydian", zh:"米索利地安",      en:"Mixolydian",           g:"大調七聲調式", t:["1","2","3","4","5","6","♭7"],       d:"大調把七音降半音,是屬七和弦的家鄉,藍調搖滾與放克的骨幹。", d_en:"The major scale with the 7th lowered a half step — the home scale of the dominant 7th chord, the backbone of blues rock and funk."},
-  {id:"aeolian",    zh:"自然小調(愛奧利安)", en:"Aeolian / Natural Minor", g:"大調七聲調式", t:["1","2","♭3","4","5","♭6","♭7"], d:"最標準的小調音階,♭6 讓它比多利安更沉、更有悲劇感。", d_en:"The most standard minor scale — the ♭6 makes it darker and more tragic-sounding than Dorian."},
-  {id:"locrian",    zh:"洛克里安",        en:"Locrian",              g:"大調七聲調式", t:["1","♭2","♭3","4","♭5","♭6","♭7"],   d:"唯一五音是減五度的調式,主和弦是 m7♭5,不穩定到幾乎無法當作終止。", d_en:"The only mode with a diminished 5th — its tonic chord is m7♭5, so unstable it can barely function as a point of rest."},
+  {id:"ionian",     zh:"大調(愛奧尼安)", en:"Ionian / Major",       g:"大調七聲調式", t:["1","2","3","4","5","6","7"],        lv:3, d:"最基本的七聲音階,全全半全全全半。第四音是「避開音」,即興時不要在 I 級上久留。", d_en:"The most basic seven-note scale — whole, whole, half, whole, whole, whole, half. The 4th is an \"avoid note\" — don't linger on it over the I chord when improvising."},
+  {id:"dorian",     zh:"多利安",          en:"Dorian",               g:"大調七聲調式", t:["1","2","♭3","4","5","6","♭7"],      lv:3, d:"小調系但六音是自然大六度,比自然小調明亮,是所有 m7 和弦的預設選擇。", d_en:"A minor-family scale with a natural major 6th, brighter than natural minor — the default choice over any m7 chord."},
+  {id:"phrygian",   zh:"弗里吉安",        en:"Phrygian",             g:"大調七聲調式", t:["1","♭2","♭3","4","5","♭6","♭7"],    lv:3, d:"♭2 是最大特徵,帶有西班牙、佛朗明哥式的暗色與異國感。", d_en:"The ♭2 is its defining feature, giving it a dark, exotic, Spanish/flamenco color."},
+  {id:"lydian",     zh:"利底安",          en:"Lydian",               g:"大調七聲調式", t:["1","2","3","♯4","5","6","7"],       lv:3, d:"比大調多一個 ♯4,沒有避開音,明亮到有點夢幻,電影配樂裡的「奇蹟感」。", d_en:"One extra ♯4 compared to the major scale, with no avoid note — bright to the point of dreamy, the \"sense of wonder\" sound in film scoring."},
+  {id:"mixolydian", zh:"米索利地安",      en:"Mixolydian",           g:"大調七聲調式", t:["1","2","3","4","5","6","♭7"],       lv:3, d:"大調把七音降半音,是屬七和弦的家鄉,藍調搖滾與放克的骨幹。", d_en:"The major scale with the 7th lowered a half step — the home scale of the dominant 7th chord, the backbone of blues rock and funk."},
+  {id:"aeolian",    zh:"自然小調(愛奧利安)", en:"Aeolian / Natural Minor", g:"大調七聲調式", t:["1","2","♭3","4","5","♭6","♭7"], lv:3, d:"最標準的小調音階,♭6 讓它比多利安更沉、更有悲劇感。", d_en:"The most standard minor scale — the ♭6 makes it darker and more tragic-sounding than Dorian."},
+  {id:"locrian",    zh:"洛克里安",        en:"Locrian",              g:"大調七聲調式", t:["1","♭2","♭3","4","♭5","♭6","♭7"],   lv:3, d:"唯一五音是減五度的調式,主和弦是 m7♭5,不穩定到幾乎無法當作終止。", d_en:"The only mode with a diminished 5th — its tonic chord is m7♭5, so unstable it can barely function as a point of rest."},
 
   // ── 和聲小調系統 ──
-  {id:"harmMinor",  zh:"和聲小調",        en:"Harmonic Minor",       g:"和聲小調系統", t:["1","2","♭3","4","5","♭6","7"],      d:"自然小調把七音升回導音,才能在小調得到真正的屬七和弦。♭6 到 7 的增二度是它的異國味來源。", d_en:"Natural minor with the 7th raised back to a leading tone, so a minor key can get a real dominant 7th chord. The augmented 2nd from ♭6 to 7 is the source of its exotic flavor."},
-  {id:"locrian6",   zh:"洛克里安 ♮6",     en:"Locrian ♮6",           g:"和聲小調系統", t:["1","♭2","♭3","4","♭5","6","♭7"],    d:"和聲小調的第二級,用在 m7♭5 上時可以帶出自然六度的亮點。", d_en:"The 2nd degree of harmonic minor — used over m7♭5 it brings out the bright spot of a natural 6th."},
-  {id:"ionianAug",  zh:"大調 ♯5",         en:"Ionian ♯5",            g:"和聲小調系統", t:["1","2","3","4","♯5","6","7"],       d:"和聲小調的第三級,對應 maj7♯5,聽感華麗而略帶不安。", d_en:"The 3rd degree of harmonic minor, matching maj7♯5 — a lavish sound with a hint of unease."},
-  {id:"dorian4",    zh:"烏克蘭小調(多利安♯4)", en:"Ukrainian Dorian", g:"和聲小調系統", t:["1","2","♭3","♯4","5","6","♭7"],  d:"和聲小調的第四級,♯4 加上自然 6,東歐與克萊茲梅爾音樂的典型色彩。", d_en:"The 4th degree of harmonic minor — ♯4 plus a natural 6th, the classic color of Eastern European and klezmer music."},
-  {id:"phrygDom",   zh:"弗里吉安屬音階",  en:"Phrygian Dominant",    g:"和聲小調系統", t:["1","♭2","3","4","5","♭6","♭7"],     d:"和聲小調的第五級,大三度配 ♭2 與 ♭6,是中東與佛朗明哥最具代表性的聲音。", d_en:"The 5th degree of harmonic minor — a major 3rd paired with ♭2 and ♭6, the most representative sound of Middle Eastern and flamenco music."},
-  {id:"lydian2",    zh:"利底安 ♯2",       en:"Lydian ♯2",            g:"和聲小調系統", t:["1","♯2","3","♯4","5","6","7"],      d:"和聲小調的第六級,兩個增音程讓它比利底安更奇幻。", d_en:"The 6th degree of harmonic minor — two augmented intervals make it even more fantastical than Lydian."},
+  {id:"harmMinor",  zh:"和聲小調",        en:"Harmonic Minor",       g:"和聲小調系統", t:["1","2","♭3","4","5","♭6","7"],      lv:3, d:"自然小調把七音升回導音,才能在小調得到真正的屬七和弦。♭6 到 7 的增二度是它的異國味來源。", d_en:"Natural minor with the 7th raised back to a leading tone, so a minor key can get a real dominant 7th chord. The augmented 2nd from ♭6 to 7 is the source of its exotic flavor."},
+  {id:"locrian6",   zh:"洛克里安 ♮6",     en:"Locrian ♮6",           g:"和聲小調系統", t:["1","♭2","♭3","4","♭5","6","♭7"],    lv:1, d:"和聲小調的第二級,用在 m7♭5 上時可以帶出自然六度的亮點。", d_en:"The 2nd degree of harmonic minor — used over m7♭5 it brings out the bright spot of a natural 6th."},
+  {id:"ionianAug",  zh:"大調 ♯5",         en:"Ionian ♯5",            g:"和聲小調系統", t:["1","2","3","4","♯5","6","7"],       lv:2, d:"和聲小調的第三級,對應 maj7♯5,聽感華麗而略帶不安。", d_en:"The 3rd degree of harmonic minor, matching maj7♯5 — a lavish sound with a hint of unease."},
+  {id:"dorian4",    zh:"烏克蘭小調(多利安♯4)", en:"Ukrainian Dorian", g:"和聲小調系統", t:["1","2","♭3","♯4","5","6","♭7"],  lv:2, d:"和聲小調的第四級,♯4 加上自然 6,東歐與克萊茲梅爾音樂的典型色彩。", d_en:"The 4th degree of harmonic minor — ♯4 plus a natural 6th, the classic color of Eastern European and klezmer music."},
+  {id:"phrygDom",   zh:"弗里吉安屬音階",  en:"Phrygian Dominant",    g:"和聲小調系統", t:["1","♭2","3","4","5","♭6","♭7"],     lv:2, d:"和聲小調的第五級,大三度配 ♭2 與 ♭6,是中東與佛朗明哥最具代表性的聲音。", d_en:"The 5th degree of harmonic minor — a major 3rd paired with ♭2 and ♭6, the most representative sound of Middle Eastern and flamenco music."},
+  {id:"lydian2",    zh:"利底安 ♯2",       en:"Lydian ♯2",            g:"和聲小調系統", t:["1","♯2","3","♯4","5","6","7"],      lv:2, d:"和聲小調的第六級,兩個增音程讓它比利底安更奇幻。", d_en:"The 6th degree of harmonic minor — two augmented intervals make it even more fantastical than Lydian."},
   {id:"superLocBB7",zh:"超級洛克里安 ♭♭7", en:"Altered ♭♭7",          g:"和聲小調系統", t:["1","♭2","♭3","♭4","♭5","♭6","♭♭7"],d:"和聲小調的第七級,主和弦是減七和弦,用在 dim7 上的完整音階。", d_en:"The 7th degree of harmonic minor — its tonic chord is a diminished 7th; the complete scale to use over dim7."},
 
   // ── 旋律小調系統 ──
-  {id:"melMinor",   zh:"旋律小調(爵士小調)", en:"Melodic Minor",     g:"旋律小調系統", t:["1","2","♭3","4","5","6","7"],       d:"小三度配自然六、七度。爵士裡上下行都用同一組音,是七個現代調式的母體。", d_en:"A minor 3rd paired with a natural 6th and 7th. In jazz, the same notes are used ascending and descending — the parent scale of the seven modern modes."},
-  {id:"dorianb2",   zh:"多利安 ♭2",       en:"Dorian ♭2 / Phrygian ♮6", g:"旋律小調系統", t:["1","♭2","♭3","4","5","6","♭7"],  d:"旋律小調第二級,用在 sus♭9 這類和弦上,暗色但仍保有六度的亮點。", d_en:"The 2nd degree of melodic minor — used over sus♭9-type chords, dark but still keeping the bright spot of the 6th."},
-  {id:"lydianAug",  zh:"利底安 ♯5",       en:"Lydian Augmented",     g:"旋律小調系統", t:["1","2","3","♯4","♯5","6","7"],      d:"旋律小調第三級,對應 maj7♯5,完全沒有重力感的漂浮音階。", d_en:"The 3rd degree of melodic minor, matching maj7♯5 — a completely weightless, floating scale."},
-  {id:"lydianDom",  zh:"利底安屬音階",    en:"Lydian Dominant",      g:"旋律小調系統", t:["1","2","3","♯4","5","6","♭7"],      d:"旋律小調第四級,又稱 Overtone 音階(接近自然泛音列),是 7♯11 與三全音代理的標準選擇。", d_en:"The 4th degree of melodic minor, also called the Overtone scale (close to the natural harmonic series) — the standard choice for 7♯11 and tritone substitution."},
-  {id:"mixob6",     zh:"米索利地安 ♭6",   en:"Mixolydian ♭6",        g:"旋律小調系統", t:["1","2","3","4","5","♭6","♭7"],      d:"旋律小調第五級,又稱印度音階,屬七和弦帶 ♭13 時用它。", d_en:"The 5th degree of melodic minor, also called the Hindu scale — used over dominant chords carrying a ♭13."},
-  {id:"locrian2",   zh:"半減音階(洛克里安♮2)", en:"Locrian ♮2",      g:"旋律小調系統", t:["1","2","♭3","4","♭5","♭6","♭7"],    d:"旋律小調第六級,比一般洛克里安多了自然九音,是小調 ii 級 m7♭5 的首選。", d_en:"The 6th degree of melodic minor — has a natural 9th that ordinary Locrian lacks, the first choice for a minor-key ii chord voiced as m7♭5."},
-  {id:"altered",    zh:"變化音階(超級洛克里安)", en:"Altered / Super Locrian", g:"旋律小調系統", t:["1","♭2","♭3","♭4","♭5","♭6","♭7"], d:"旋律小調第七級,含 ♭9 ♯9 ♭5 ♯5 四個變化音(♭4 其實就是大三度),7alt 的專屬音階。", d_en:"The 7th degree of melodic minor, containing four altered tones — ♭9, ♯9, ♭5, ♯5 (the ♭4 is enharmonically a major 3rd) — the dedicated scale for 7alt."},
+  {id:"melMinor",   zh:"旋律小調(爵士小調)", en:"Melodic Minor",     g:"旋律小調系統", t:["1","2","♭3","4","5","6","7"],       lv:3, d:"小三度配自然六、七度。爵士裡上下行都用同一組音,是七個現代調式的母體。", d_en:"A minor 3rd paired with a natural 6th and 7th. In jazz, the same notes are used ascending and descending — the parent scale of the seven modern modes."},
+  {id:"dorianb2",   zh:"多利安 ♭2",       en:"Dorian ♭2 / Phrygian ♮6", g:"旋律小調系統", t:["1","♭2","♭3","4","5","6","♭7"],  lv:2, d:"旋律小調第二級,用在 sus♭9 這類和弦上,暗色但仍保有六度的亮點。", d_en:"The 2nd degree of melodic minor — used over sus♭9-type chords, dark but still keeping the bright spot of the 6th."},
+  {id:"lydianAug",  zh:"利底安 ♯5",       en:"Lydian Augmented",     g:"旋律小調系統", t:["1","2","3","♯4","♯5","6","7"],      lv:2, d:"旋律小調第三級,對應 maj7♯5,完全沒有重力感的漂浮音階。", d_en:"The 3rd degree of melodic minor, matching maj7♯5 — a completely weightless, floating scale."},
+  {id:"lydianDom",  zh:"利底安屬音階",    en:"Lydian Dominant",      g:"旋律小調系統", t:["1","2","3","♯4","5","6","♭7"],      lv:2, d:"旋律小調第四級,又稱 Overtone 音階(接近自然泛音列),是 7♯11 與三全音代理的標準選擇。", d_en:"The 4th degree of melodic minor, also called the Overtone scale (close to the natural harmonic series) — the standard choice for 7♯11 and tritone substitution."},
+  {id:"mixob6",     zh:"米索利地安 ♭6",   en:"Mixolydian ♭6",        g:"旋律小調系統", t:["1","2","3","4","5","♭6","♭7"],      lv:2, d:"旋律小調第五級,又稱印度音階,屬七和弦帶 ♭13 時用它。", d_en:"The 5th degree of melodic minor, also called the Hindu scale — used over dominant chords carrying a ♭13."},
+  {id:"locrian2",   zh:"半減音階(洛克里安♮2)", en:"Locrian ♮2",      g:"旋律小調系統", t:["1","2","♭3","4","♭5","♭6","♭7"],    lv:2, d:"旋律小調第六級,比一般洛克里安多了自然九音,是小調 ii 級 m7♭5 的首選。", d_en:"The 6th degree of melodic minor — has a natural 9th that ordinary Locrian lacks, the first choice for a minor-key ii chord voiced as m7♭5."},
+  {id:"altered",    zh:"變化音階(超級洛克里安)", en:"Altered / Super Locrian", g:"旋律小調系統", t:["1","♭2","♭3","♭4","♭5","♭6","♭7"], lv:2, d:"旋律小調第七級,含 ♭9 ♯9 ♭5 ♯5 四個變化音(♭4 其實就是大三度),7alt 的專屬音階。", d_en:"The 7th degree of melodic minor, containing four altered tones — ♭9, ♯9, ♭5, ♯5 (the ♭4 is enharmonically a major 3rd) — the dedicated scale for 7alt."},
 
   // ── 和聲大調系統 ──
-  {id:"harmMajor",  zh:"和聲大調",        en:"Harmonic Major",       g:"和聲大調系統", t:["1","2","3","4","5","♭6","7"],       d:"大調把六音降半音,同時擁有大三度與 ♭6,常用在 IV 級轉小調的瞬間。", d_en:"The major scale with the 6th lowered a half step, keeping both the major 3rd and the ♭6 — often used at the moment a IV chord tips into minor."},
-  {id:"dorianb5", zh:"多利安 ♭5", en:"Dorian ♭5", g:"和聲大調系統", t:["1","2","♭3","4","♭5","6","♭7"], d:"和聲大調第二級。小三度配 ♭5 又保留大六度,是 IIm7♭5 上的另一種選擇,比洛克里安 ♯2 更暗。", d_en:"The 2nd degree of harmonic major. A minor 3rd paired with ♭5 while keeping the major 6th — an alternative for IIm7♭5, darker than Locrian ♯2."},
-  {id:"phrygianb4", zh:"弗里吉安 ♭4", en:"Phrygian ♭4", g:"和聲大調系統", t:["1","♭2","♭3","♭4","5","♭6","♭7"], d:"和聲大調第三級。♭4 讓三音與四音擠在一起,張力極高,少見但適合營造不安。", d_en:"The 3rd degree of harmonic major. The ♭4 squeezes right up against the 3rd for very high tension — rare, but good for building unease."},
-  {id:"lydianb3", zh:"利底安 ♭3", en:"Lydian ♭3", g:"和聲大調系統", t:["1","2","♭3","♯4","5","6","7"], d:"和聲大調第四級,又稱 Lydian Diminished。小三度配 ♯4 與大七度,可用在 mMaj7♯11。", d_en:"The 4th degree of harmonic major, also called Lydian Diminished. A minor 3rd paired with ♯4 and a major 7th — usable over mMaj7♯11."},
-  {id:"mixob2", zh:"米索利地安 ♭2", en:"Mixolydian ♭2", g:"和聲大調系統", t:["1","♭2","3","4","5","6","♭7"], d:"和聲大調第五級。屬和弦配 ♭9 但保留大十三度,是 7♭9 上很好用的選擇。", d_en:"The 5th degree of harmonic major. A dominant chord with ♭9 that keeps the major 13th — a great choice over 7♭9."},
-  {id:"lydAug2", zh:"增利底安 ♯2", en:"Lydian Augmented ♯2", g:"和聲大調系統", t:["1","♯2","3","♯4","♯5","6","7"], d:"和聲大調第六級。三個升高音,漂浮又帶增二度,現代配樂用來寫神祕感。", d_en:"The 6th degree of harmonic major. Three raised tones — floating, with an augmented 2nd — used in modern scoring to write a sense of mystery."},
-  {id:"locrianbb7", zh:"洛克里安 ♭♭7", en:"Locrian ♭♭7", g:"和聲大調系統", t:["1","♭2","♭3","4","♭5","♭6","♭♭7"], d:"和聲大調第七級。與減七和弦完全相合,是 dim7 上的音階選擇。", d_en:"The 7th degree of harmonic major. A perfect match for a diminished 7th chord — the scale choice over dim7."},
+  {id:"harmMajor",  zh:"和聲大調",        en:"Harmonic Major",       g:"和聲大調系統", t:["1","2","3","4","5","♭6","7"],       lv:2, d:"大調把六音降半音,同時擁有大三度與 ♭6,常用在 IV 級轉小調的瞬間。", d_en:"The major scale with the 6th lowered a half step, keeping both the major 3rd and the ♭6 — often used at the moment a IV chord tips into minor."},
+  {id:"dorianb5", zh:"多利安 ♭5", en:"Dorian ♭5", g:"和聲大調系統", t:["1","2","♭3","4","♭5","6","♭7"], lv:1, d:"和聲大調第二級。小三度配 ♭5 又保留大六度,是 IIm7♭5 上的另一種選擇,比洛克里安 ♯2 更暗。", d_en:"The 2nd degree of harmonic major. A minor 3rd paired with ♭5 while keeping the major 6th — an alternative for IIm7♭5, darker than Locrian ♯2."},
+  {id:"phrygianb4", zh:"弗里吉安 ♭4", en:"Phrygian ♭4", g:"和聲大調系統", t:["1","♭2","♭3","♭4","5","♭6","♭7"], lv:1, d:"和聲大調第三級。♭4 讓三音與四音擠在一起,張力極高,少見但適合營造不安。", d_en:"The 3rd degree of harmonic major. The ♭4 squeezes right up against the 3rd for very high tension — rare, but good for building unease."},
+  {id:"lydianb3", zh:"利底安 ♭3", en:"Lydian ♭3", g:"和聲大調系統", t:["1","2","♭3","♯4","5","6","7"], lv:2, d:"和聲大調第四級,又稱 Lydian Diminished。小三度配 ♯4 與大七度,可用在 mMaj7♯11。", d_en:"The 4th degree of harmonic major, also called Lydian Diminished. A minor 3rd paired with ♯4 and a major 7th — usable over mMaj7♯11."},
+  {id:"mixob2", zh:"米索利地安 ♭2", en:"Mixolydian ♭2", g:"和聲大調系統", t:["1","♭2","3","4","5","6","♭7"], lv:2, d:"和聲大調第五級。屬和弦配 ♭9 但保留大十三度,是 7♭9 上很好用的選擇。", d_en:"The 5th degree of harmonic major. A dominant chord with ♭9 that keeps the major 13th — a great choice over 7♭9."},
+  {id:"lydAug2", zh:"增利底安 ♯2", en:"Lydian Augmented ♯2", g:"和聲大調系統", t:["1","♯2","3","♯4","♯5","6","7"], lv:1, d:"和聲大調第六級。三個升高音,漂浮又帶增二度,現代配樂用來寫神祕感。", d_en:"The 6th degree of harmonic major. Three raised tones — floating, with an augmented 2nd — used in modern scoring to write a sense of mystery."},
+  {id:"locrianbb7", zh:"洛克里安 ♭♭7", en:"Locrian ♭♭7", g:"和聲大調系統", t:["1","♭2","♭3","4","♭5","♭6","♭♭7"], lv:1, d:"和聲大調第七級。與減七和弦完全相合,是 dim7 上的音階選擇。", d_en:"The 7th degree of harmonic major. A perfect match for a diminished 7th chord — the scale choice over dim7."},
 
   // ── 雙和聲大調系統 ──
-  {id:"dblHarm",    zh:"雙和聲大調(拜占庭)", en:"Double Harmonic",   g:"雙和聲大調系統", t:["1","♭2","3","4","5","♭6","7"],      d:"兩個增二度,又稱阿拉伯/吉普賽大調,異國感最強烈的七聲音階。", d_en:"Two augmented 2nds, also called the Arabic/Gypsy major scale — the most strongly exotic-sounding seven-note scale."},
-  {id:"lydian26", zh:"利底安 ♯2 ♯6", en:"Lydian ♯2 ♯6", g:"雙和聲大調系統", t:["1","♯2","3","♯4","5","♯6","7"], d:"雙和聲大調第二級。♯2 ♯4 ♯6 三個升高音,兩個增二度,最外放的一個調式。", d_en:"The 2nd degree of double harmonic major. Three raised tones — ♯2, ♯4, ♯6 — and two augmented 2nds, the most outward-facing of these modes."},
-  {id:"ultraphryg", zh:"超弗里吉安", en:"Ultraphrygian", g:"雙和聲大調系統", t:["1","♭2","♭3","♭4","5","♭6","♭♭7"], d:"雙和聲大調第三級,又稱弗里吉安 ♭4 ♭♭7。半音與增二度交錯,幾乎沒有穩定音。", d_en:"The 3rd degree of double harmonic major, also called Phrygian ♭4 ♭♭7. Half steps and augmented 2nds interleave, with almost no stable tone."},
-  {id:"hungMinor",  zh:"匈牙利小調",      en:"Hungarian Minor",      g:"雙和聲大調系統", t:["1","2","♭3","♯4","5","♭6","7"],     d:"和聲小調再把四音升高,同時有 ♯4 與導音,東歐吉普賽音樂的代表。", d_en:"Harmonic minor with the 4th also raised — has both ♯4 and a leading tone, representative of Eastern European Gypsy music."},
-  {id:"oriental", zh:"東方音階", en:"Oriental", g:"雙和聲大調系統", t:["1","♭2","3","4","♭5","6","♭7"], d:"雙和聲大調第五級,又稱 Mixolydian ♭5 ♭9。中東與東歐旋律常見的下行色彩。", d_en:"The 5th degree of double harmonic major, also called Mixolydian ♭5 ♭9 — a common descending color in Middle Eastern and Eastern European melodies."},
-  {id:"ionianAug2", zh:"增愛奧尼安 ♯2", en:"Ionian Augmented ♯2", g:"雙和聲大調系統", t:["1","♯2","3","4","♯5","6","7"], d:"雙和聲大調第六級。大調骨架配 ♯2 與 ♯5,古典晚期與配樂裡的增和弦素材。", d_en:"The 6th degree of double harmonic major. A major-scale skeleton with ♯2 and ♯5 — augmented-chord material from the late-Romantic era and film scoring."},
-  {id:"locrianbb3bb7", zh:"洛克里安 ♭♭3 ♭♭7", en:"Locrian ♭♭3 ♭♭7", g:"雙和聲大調系統", t:["1","♭2","♭♭3","4","♭5","♭6","♭♭7"], d:"雙和聲大調第七級。拼寫上出現兩個重降音,實際音高與雙和聲大調同一組。", d_en:"The 7th degree of double harmonic major. Spelled with two double-flats, but the same pitches as double harmonic major."},
+  {id:"dblHarm",    zh:"雙和聲大調(拜占庭)", en:"Double Harmonic",   g:"雙和聲大調系統", t:["1","♭2","3","4","5","♭6","7"],      lv:2, d:"兩個增二度,又稱阿拉伯/吉普賽大調,異國感最強烈的七聲音階。", d_en:"Two augmented 2nds, also called the Arabic/Gypsy major scale — the most strongly exotic-sounding seven-note scale."},
+  {id:"lydian26", zh:"利底安 ♯2 ♯6", en:"Lydian ♯2 ♯6", g:"雙和聲大調系統", t:["1","♯2","3","♯4","5","♯6","7"], lv:1, d:"雙和聲大調第二級。♯2 ♯4 ♯6 三個升高音,兩個增二度,最外放的一個調式。", d_en:"The 2nd degree of double harmonic major. Three raised tones — ♯2, ♯4, ♯6 — and two augmented 2nds, the most outward-facing of these modes."},
+  {id:"ultraphryg", zh:"超弗里吉安", en:"Ultraphrygian", g:"雙和聲大調系統", t:["1","♭2","♭3","♭4","5","♭6","♭♭7"], lv:1, d:"雙和聲大調第三級,又稱弗里吉安 ♭4 ♭♭7。半音與增二度交錯,幾乎沒有穩定音。", d_en:"The 3rd degree of double harmonic major, also called Phrygian ♭4 ♭♭7. Half steps and augmented 2nds interleave, with almost no stable tone."},
+  {id:"hungMinor",  zh:"匈牙利小調",      en:"Hungarian Minor",      g:"雙和聲大調系統", t:["1","2","♭3","♯4","5","♭6","7"],     lv:2, d:"和聲小調再把四音升高,同時有 ♯4 與導音,東歐吉普賽音樂的代表。", d_en:"Harmonic minor with the 4th also raised — has both ♯4 and a leading tone, representative of Eastern European Gypsy music."},
+  {id:"oriental", zh:"東方音階", en:"Oriental", g:"雙和聲大調系統", t:["1","♭2","3","4","♭5","6","♭7"], lv:2, d:"雙和聲大調第五級,又稱 Mixolydian ♭5 ♭9。中東與東歐旋律常見的下行色彩。", d_en:"The 5th degree of double harmonic major, also called Mixolydian ♭5 ♭9 — a common descending color in Middle Eastern and Eastern European melodies."},
+  {id:"ionianAug2", zh:"增愛奧尼安 ♯2", en:"Ionian Augmented ♯2", g:"雙和聲大調系統", t:["1","♯2","3","4","♯5","6","7"], lv:1, d:"雙和聲大調第六級。大調骨架配 ♯2 與 ♯5,古典晚期與配樂裡的增和弦素材。", d_en:"The 6th degree of double harmonic major. A major-scale skeleton with ♯2 and ♯5 — augmented-chord material from the late-Romantic era and film scoring."},
+  {id:"locrianbb3bb7", zh:"洛克里安 ♭♭3 ♭♭7", en:"Locrian ♭♭3 ♭♭7", g:"雙和聲大調系統", t:["1","♭2","♭♭3","4","♭5","♭6","♭♭7"], lv:1, d:"雙和聲大調第七級。拼寫上出現兩個重降音,實際音高與雙和聲大調同一組。", d_en:"The 7th degree of double harmonic major. Spelled with two double-flats, but the same pitches as double harmonic major."},
 
   // ── 五聲與藍調 ──
-  {id:"majPent",    zh:"大調五聲",        en:"Major Pentatonic",     g:"五聲與藍調", t:["1","2","3","5","6"],                d:"大調拿掉四音與七音,沒有半音衝突,怎麼彈都不會錯,民謠與鄉村的基礎。", d_en:"The major scale with the 4th and 7th removed — no half-step clashes, so nothing you play sounds wrong. The foundation of folk and country music."},
-  {id:"minPent",    zh:"小調五聲",        en:"Minor Pentatonic",     g:"五聲與藍調", t:["1","♭3","4","5","♭7"],              d:"搖滾與藍調獨奏的第一課,與大調五聲互為關係音階(相差小三度)。", d_en:"Lesson one for rock and blues soloing, and the relative scale of major pentatonic (a minor 3rd apart)."},
-  {id:"bluesMin",   zh:"小調藍調",        en:"Minor Blues",          g:"五聲與藍調", t:["1","♭3","4","♭5","5","♭7"],         d:"小調五聲插入 ♭5 這顆藍調音,經過性地滑過去最有味道。", d_en:"Minor pentatonic with the ♭5 blue note dropped in — sounds best slid through as a passing tone."},
-  {id:"bluesMaj",   zh:"大調藍調",        en:"Major Blues",          g:"五聲與藍調", t:["1","2","♭3","3","5","6"],           d:"大調五聲插入 ♭3,♭3→3 的滑音是鄉村與西岸藍調的招牌。", d_en:"Major pentatonic with a ♭3 dropped in — the ♭3→3 slide is the signature move of country and West Coast blues."},
-  {id:"egyptian",   zh:"埃及五聲(sus)",   en:"Egyptian / Sus Pent",  g:"五聲與藍調", t:["1","2","4","5","♭7"],               d:"大調五聲的第二轉位,全是二度與四度堆疊,開放且無調性傾向。", d_en:"The second inversion of major pentatonic — entirely stacked 2nds and 4ths, open and with no clear tonal leaning."},
+  {id:"majPent",    zh:"大調五聲",        en:"Major Pentatonic",     g:"五聲與藍調", t:["1","2","3","5","6"],                lv:3, d:"大調拿掉四音與七音,沒有半音衝突,怎麼彈都不會錯,民謠與鄉村的基礎。", d_en:"The major scale with the 4th and 7th removed — no half-step clashes, so nothing you play sounds wrong. The foundation of folk and country music."},
+  {id:"minPent",    zh:"小調五聲",        en:"Minor Pentatonic",     g:"五聲與藍調", t:["1","♭3","4","5","♭7"],              lv:3, d:"搖滾與藍調獨奏的第一課,與大調五聲互為關係音階(相差小三度)。", d_en:"Lesson one for rock and blues soloing, and the relative scale of major pentatonic (a minor 3rd apart)."},
+  {id:"bluesMin",   zh:"小調藍調",        en:"Minor Blues",          g:"五聲與藍調", t:["1","♭3","4","♭5","5","♭7"],         lv:3, d:"小調五聲插入 ♭5 這顆藍調音,經過性地滑過去最有味道。", d_en:"Minor pentatonic with the ♭5 blue note dropped in — sounds best slid through as a passing tone."},
+  {id:"bluesMaj",   zh:"大調藍調",        en:"Major Blues",          g:"五聲與藍調", t:["1","2","♭3","3","5","6"],           lv:2, d:"大調五聲插入 ♭3,♭3→3 的滑音是鄉村與西岸藍調的招牌。", d_en:"Major pentatonic with a ♭3 dropped in — the ♭3→3 slide is the signature move of country and West Coast blues."},
+  {id:"egyptian",   zh:"埃及五聲(sus)",   en:"Egyptian / Sus Pent",  g:"五聲與藍調", t:["1","2","4","5","♭7"],               lv:1, d:"大調五聲的第二轉位,全是二度與四度堆疊,開放且無調性傾向。", d_en:"The second inversion of major pentatonic — entirely stacked 2nds and 4ths, open and with no clear tonal leaning."},
 
   // ── 日本音階 ──
-  {id:"hirajoshi",  zh:"平調子",          en:"Hirajoshi",            g:"日本音階", t:["1","2","♭3","5","♭6"],              d:"日本箏最常見的定弦音階,兩個半音落點讓它一聽就有和風。", d_en:"The most common tuning scale for the Japanese koto — its two half-step landings give it an unmistakable Japanese sound."},
-  {id:"kumoi",      zh:"雲井調子",        en:"Kumoi",                g:"日本音階", t:["1","2","♭3","5","6"],               d:"小調五聲換掉四音與七音、帶自然六度,清澈明亮的和風小調。", d_en:"Minor pentatonic with the 4th and 7th swapped out for a natural 6th — a clear, bright, Japanese-flavored minor scale."},
-  {id:"miyakobushi",zh:"都節音階",        en:"Miyako-bushi",         g:"日本音階", t:["1","♭2","4","5","♭6"],              d:"江戶時代都市音樂的代表音階,♭2 與 ♭6 兩個半音是它的招牌,聽起來最「日本」。", d_en:"The representative scale of Edo-period urban music — its two half steps, ♭2 and ♭6, are its signature, and it sounds the most \"Japanese\" of all."},
-  {id:"insen",      zh:"陰旋音階",        en:"Insen",                g:"日本音階", t:["1","♭2","4","5","♭7"],              d:"都節把 ♭6 換成 ♭7,陰暗中多一點流動感,常用於尺八與箏曲。", d_en:"Miyako-bushi with ♭6 swapped for ♭7 — darker but with more flow, common in shakuhachi and koto music."},
-  {id:"iwato",      zh:"岩戶音階",        en:"Iwato",                g:"日本音階", t:["1","♭2","4","♭5","♭7"],             d:"都節音階的轉位,含減五度,是日本音階裡最緊繃、最神祕的一個。", d_en:"An inversion of Miyako-bushi containing a diminished 5th — the tensest, most mysterious of the Japanese scales."},
-  {id:"ryukyu",     zh:"琉球音階",        en:"Ryukyu / Okinawan",    g:"日本音階", t:["1","3","4","5","7"],                d:"沖繩民謠的音階,拿掉二音與六音、保留大三與大七,明亮而獨特,與本土的陰暗和風完全相反。", d_en:"The scale of Okinawan folk music — drops the 2nd and 6th, keeps the major 3rd and major 7th, bright and distinct, the opposite of the dark mainland Japanese sound."},
-  {id:"ritsu",      zh:"律音階",          en:"Ritsu",                g:"日本音階", t:["1","2","4","5","6"],                d:"雅樂使用的音階,沒有半音,聽感平穩莊重。", d_en:"A scale used in gagaku court music, with no half steps — calm and stately."},
-  {id:"minyo",      zh:"民謠音階",        en:"Min'yō",               g:"日本音階", t:["1","♭3","4","5","♭7"],              d:"日本民謠的骨幹,音程結構與小調五聲相同,差別在旋律的走法與裝飾。", d_en:"The backbone of Japanese folk song — the same interval structure as minor pentatonic, differing in melodic movement and ornamentation."},
-  {id:"ryo",        zh:"呂音階",          en:"Ryo",                  g:"日本音階", t:["1","2","3","5","6"],                d:"與律音階相對的雅樂音階,結構等同大調五聲,明亮開闊。", d_en:"The gagaku counterpart to Ritsu — structurally identical to major pentatonic, bright and open."},
+  {id:"hirajoshi",  zh:"平調子",          en:"Hirajoshi",            g:"日本音階", t:["1","2","♭3","5","♭6"],              lv:2, d:"日本箏最常見的定弦音階,兩個半音落點讓它一聽就有和風。", d_en:"The most common tuning scale for the Japanese koto — its two half-step landings give it an unmistakable Japanese sound."},
+  {id:"kumoi",      zh:"雲井調子",        en:"Kumoi",                g:"日本音階", t:["1","2","♭3","5","6"],               lv:2, d:"小調五聲換掉四音與七音、帶自然六度,清澈明亮的和風小調。", d_en:"Minor pentatonic with the 4th and 7th swapped out for a natural 6th — a clear, bright, Japanese-flavored minor scale."},
+  {id:"miyakobushi",zh:"都節音階",        en:"Miyako-bushi",         g:"日本音階", t:["1","♭2","4","5","♭6"],              lv:2, d:"江戶時代都市音樂的代表音階,♭2 與 ♭6 兩個半音是它的招牌,聽起來最「日本」。", d_en:"The representative scale of Edo-period urban music — its two half steps, ♭2 and ♭6, are its signature, and it sounds the most \"Japanese\" of all."},
+  {id:"insen",      zh:"陰旋音階",        en:"Insen",                g:"日本音階", t:["1","♭2","4","5","♭7"],              lv:1, d:"都節把 ♭6 換成 ♭7,陰暗中多一點流動感,常用於尺八與箏曲。", d_en:"Miyako-bushi with ♭6 swapped for ♭7 — darker but with more flow, common in shakuhachi and koto music."},
+  {id:"iwato",      zh:"岩戶音階",        en:"Iwato",                g:"日本音階", t:["1","♭2","4","♭5","♭7"],             lv:1, d:"都節音階的轉位,含減五度,是日本音階裡最緊繃、最神祕的一個。", d_en:"An inversion of Miyako-bushi containing a diminished 5th — the tensest, most mysterious of the Japanese scales."},
+  {id:"ryukyu",     zh:"琉球音階",        en:"Ryukyu / Okinawan",    g:"日本音階", t:["1","3","4","5","7"],                lv:2, d:"沖繩民謠的音階,拿掉二音與六音、保留大三與大七,明亮而獨特,與本土的陰暗和風完全相反。", d_en:"The scale of Okinawan folk music — drops the 2nd and 6th, keeps the major 3rd and major 7th, bright and distinct, the opposite of the dark mainland Japanese sound."},
+  {id:"ritsu",      zh:"律音階",          en:"Ritsu",                g:"日本音階", t:["1","2","4","5","6"],                lv:1, d:"雅樂使用的音階,沒有半音,聽感平穩莊重。", d_en:"A scale used in gagaku court music, with no half steps — calm and stately."},
+  {id:"minyo",      zh:"民謠音階",        en:"Min'yō",               g:"日本音階", t:["1","♭3","4","5","♭7"],              lv:1, d:"日本民謠的骨幹,音程結構與小調五聲相同,差別在旋律的走法與裝飾。", d_en:"The backbone of Japanese folk song — the same interval structure as minor pentatonic, differing in melodic movement and ornamentation."},
+  {id:"ryo",        zh:"呂音階",          en:"Ryo",                  g:"日本音階", t:["1","2","3","5","6"],                lv:1, d:"與律音階相對的雅樂音階,結構等同大調五聲,明亮開闊。", d_en:"The gagaku counterpart to Ritsu — structurally identical to major pentatonic, bright and open."},
 
   // ── 阿拉伯與中東 ──
-  {id:"hijaz",      zh:"希賈茲",          en:"Hijaz",                g:"阿拉伯與中東", t:["1","♭2","3","4","5","♭6","♭7"],  d:"最廣為人知的馬卡姆,♭2 到 3 的增二度就是「中東感」的來源。音高結構與弗里吉安屬音階相同。", d_en:"The best-known maqam — the augmented 2nd from ♭2 to 3 is the source of that \"Middle Eastern\" feeling. Same pitches as Phrygian Dominant."},
-  {id:"hijazkar",   zh:"希賈茲卡爾",      en:"Hijaz Kar",            g:"阿拉伯與中東", t:["1","♭2","3","4","5","♭6","7"],   d:"上下半部都是希賈茲四音列,兩個增二度,又稱雙和聲大調、拜占庭音階。", d_en:"Both halves are Hijaz tetrachords, giving two augmented 2nds — also called double harmonic major or the Byzantine scale."},
-  {id:"nahawand",   zh:"納哈萬德",        en:"Nahawand",             g:"阿拉伯與中東", t:["1","2","♭3","4","5","♭6","7"],   d:"阿拉伯音樂裡的小調,結構等同和聲小調,是最貼近西方耳朵的馬卡姆之一。", d_en:"The minor scale of Arabic music — structurally identical to harmonic minor, one of the maqamat closest to Western ears."},
-  {id:"kurd",       zh:"庫爾德",          en:"Kurd",                 g:"阿拉伯與中東", t:["1","♭2","♭3","4","5","♭6","♭7"], d:"結構等同弗里吉安,現代阿拉伯流行歌大量使用。", d_en:"Structurally identical to Phrygian — used heavily in modern Arabic pop."},
-  {id:"ajam",       zh:"阿賈姆",          en:"Ajam",                 g:"阿拉伯與中東", t:["1","2","3","4","5","6","7"],      d:"阿拉伯音樂裡的大調,結構等同 Ionian,明亮、節慶感。", d_en:"The major scale of Arabic music — structurally identical to Ionian, bright and festive."},
-  {id:"bayati",     zh:"巴亞提",          en:"Bayati",               g:"阿拉伯與中東", t:["1","2","♭3","4","5","♭6","♭7"],  d:"最常用的馬卡姆之一。真正的巴亞提第二音是四分之一音(比 ♮2 略低),鋼琴彈不出來,這裡用最接近的十二平均律近似。", d_en:"One of the most-used maqamat. The true 2nd degree of Bayati is a quarter tone (slightly lower than ♮2), which a piano can't play — this is its closest 12-tone-equal-temperament approximation."},
-  {id:"rast",       zh:"拉斯特",          en:"Rast",                 g:"阿拉伯與中東", t:["1","2","3","4","5","6","♭7"],     d:"馬卡姆體系的「基準音階」,三音與七音實際是四分之一音,鋼琴上以 Mixolydian 近似。", d_en:"The \"reference scale\" of the maqam system — the 3rd and 7th are actually quarter tones, approximated on piano as Mixolydian."},
-  {id:"saba",       zh:"薩巴",            en:"Saba",                 g:"阿拉伯與中東", t:["1","2","♭3","♭4","5","♭6","♭7"], d:"四音就降下來(♭4),形成獨特的哀傷色彩,是最容易辨認的馬卡姆之一。", d_en:"The 4th degree drops a half step (♭4), giving it a distinctively mournful color — one of the most recognizable maqamat."},
-  {id:"nikriz",     zh:"尼克里茲",        en:"Nikriz",               g:"阿拉伯與中東", t:["1","2","♭3","♯4","5","6","♭7"],  d:"♯4 配自然六度,結構等同烏克蘭小調,土耳其與巴爾幹音樂常見。", d_en:"♯4 paired with a natural 6th — structurally identical to Ukrainian Dorian, common in Turkish and Balkan music."},
-  {id:"nawaathar",  zh:"納瓦阿薩爾",      en:"Nawa Athar",           g:"阿拉伯與中東", t:["1","2","♭3","♯4","5","♭6","7"],  d:"兩個增二度的小調型馬卡姆,結構等同匈牙利小調。", d_en:"A minor-type maqam with two augmented 2nds — structurally identical to Hungarian minor."},
-  {id:"suznak",     zh:"蘇茲納克",        en:"Suznak",               g:"阿拉伯與中東", t:["1","2","3","4","5","♭6","7"],     d:"下半部是拉斯特、上半部是希賈茲,結構等同和聲大調。", d_en:"The lower half is Rast, the upper half is Hijaz — structurally identical to harmonic major."},
-  {id:"zanjaran",   zh:"贊賈蘭",          en:"Zanjaran",             g:"阿拉伯與中東", t:["1","♭2","3","4","5","6","♭7"],    d:"希賈茲四音列配上明亮的自然六度,聽感比一般希賈茲開朗。", d_en:"A Hijaz tetrachord paired with a bright natural 6th — sounds more cheerful than typical Hijaz."},
-  {id:"atharkurd",  zh:"阿薩爾庫爾德",    en:"Athar Kurd",           g:"阿拉伯與中東", t:["1","♭2","♭3","♯4","5","♭6","7"], d:"庫爾德起頭、增四度轉折,是馬卡姆裡結構最曲折的一支。", d_en:"Starts as Kurd, then turns through an augmented 4th — the most winding structure among the maqamat."},
-  {id:"persian",    zh:"波斯音階",        en:"Persian",              g:"阿拉伯與中東", t:["1","♭2","3","4","♭5","♭6","7"],  d:"兩個增二度加減五度,異國情調濃厚,常見於電影配樂對「東方」的想像。", d_en:"Two augmented 2nds plus a diminished 5th — heavily exotic, often used in film scoring to evoke \"the East\"."},
-  {id:"jiharkah", zh:"賈哈爾卡", en:"Jiharkah", g:"阿拉伯與中東", t:["1","2","3","4","5","6","♭7"], d:"阿賈姆家族的馬卡姆,以大調四音列起頭、七音降半音,音高與米索利地安相同。", d_en:"A maqam of the Ajam family — starts with a major tetrachord, 7th lowered a half step — the same pitches as Mixolydian."},
-  {id:"farahfaza", zh:"法拉赫法扎", en:"Farahfaza", g:"阿拉伯與中東", t:["1","2","♭3","4","5","♭6","♭7"], d:"納哈萬德家族的馬卡姆,音高與自然小調相同,差別在旋律的行進與終止習慣。", d_en:"A maqam of the Nahawand family — same pitches as natural minor, differing in melodic movement and cadence habits."},
-  {id:"shawqafza", zh:"蕭克阿夫扎", en:"Shawq Afza", g:"阿拉伯與中東", t:["1","2","3","4","5","♭6","7"], d:"阿賈姆家族的馬卡姆,上半部改用希賈茲四音列,音高與和聲大調相同。", d_en:"A maqam of the Ajam family — the upper half switches to a Hijaz tetrachord; same pitches as harmonic major."},
+  {id:"hijaz",      zh:"希賈茲",          en:"Hijaz",                g:"阿拉伯與中東", t:["1","♭2","3","4","5","♭6","♭7"],  lv:2, d:"最廣為人知的馬卡姆,♭2 到 3 的增二度就是「中東感」的來源。音高結構與弗里吉安屬音階相同。", d_en:"The best-known maqam — the augmented 2nd from ♭2 to 3 is the source of that \"Middle Eastern\" feeling. Same pitches as Phrygian Dominant."},
+  {id:"hijazkar",   zh:"希賈茲卡爾",      en:"Hijaz Kar",            g:"阿拉伯與中東", t:["1","♭2","3","4","5","♭6","7"],   lv:2, d:"上下半部都是希賈茲四音列,兩個增二度,又稱雙和聲大調、拜占庭音階。", d_en:"Both halves are Hijaz tetrachords, giving two augmented 2nds — also called double harmonic major or the Byzantine scale."},
+  {id:"nahawand",   zh:"納哈萬德",        en:"Nahawand",             g:"阿拉伯與中東", t:["1","2","♭3","4","5","♭6","7"],   lv:2, d:"阿拉伯音樂裡的小調,結構等同和聲小調,是最貼近西方耳朵的馬卡姆之一。", d_en:"The minor scale of Arabic music — structurally identical to harmonic minor, one of the maqamat closest to Western ears."},
+  {id:"kurd",       zh:"庫爾德",          en:"Kurd",                 g:"阿拉伯與中東", t:["1","♭2","♭3","4","5","♭6","♭7"], lv:2, d:"結構等同弗里吉安,現代阿拉伯流行歌大量使用。", d_en:"Structurally identical to Phrygian — used heavily in modern Arabic pop."},
+  {id:"ajam",       zh:"阿賈姆",          en:"Ajam",                 g:"阿拉伯與中東", t:["1","2","3","4","5","6","7"],      lv:2, d:"阿拉伯音樂裡的大調,結構等同 Ionian,明亮、節慶感。", d_en:"The major scale of Arabic music — structurally identical to Ionian, bright and festive."},
+  {id:"bayati",     zh:"巴亞提",          en:"Bayati",               g:"阿拉伯與中東", t:["1","2","♭3","4","5","♭6","♭7"],  lv:2, d:"最常用的馬卡姆之一。真正的巴亞提第二音是四分之一音(比 ♮2 略低),鋼琴彈不出來,這裡用最接近的十二平均律近似。", d_en:"One of the most-used maqamat. The true 2nd degree of Bayati is a quarter tone (slightly lower than ♮2), which a piano can't play — this is its closest 12-tone-equal-temperament approximation."},
+  {id:"rast",       zh:"拉斯特",          en:"Rast",                 g:"阿拉伯與中東", t:["1","2","3","4","5","6","♭7"],     lv:2, d:"馬卡姆體系的「基準音階」,三音與七音實際是四分之一音,鋼琴上以 Mixolydian 近似。", d_en:"The \"reference scale\" of the maqam system — the 3rd and 7th are actually quarter tones, approximated on piano as Mixolydian."},
+  {id:"saba",       zh:"薩巴",            en:"Saba",                 g:"阿拉伯與中東", t:["1","2","♭3","♭4","5","♭6","♭7"], lv:1, d:"四音就降下來(♭4),形成獨特的哀傷色彩,是最容易辨認的馬卡姆之一。", d_en:"The 4th degree drops a half step (♭4), giving it a distinctively mournful color — one of the most recognizable maqamat."},
+  {id:"nikriz",     zh:"尼克里茲",        en:"Nikriz",               g:"阿拉伯與中東", t:["1","2","♭3","♯4","5","6","♭7"],  lv:1, d:"♯4 配自然六度,結構等同烏克蘭小調,土耳其與巴爾幹音樂常見。", d_en:"♯4 paired with a natural 6th — structurally identical to Ukrainian Dorian, common in Turkish and Balkan music."},
+  {id:"nawaathar",  zh:"納瓦阿薩爾",      en:"Nawa Athar",           g:"阿拉伯與中東", t:["1","2","♭3","♯4","5","♭6","7"],  lv:1, d:"兩個增二度的小調型馬卡姆,結構等同匈牙利小調。", d_en:"A minor-type maqam with two augmented 2nds — structurally identical to Hungarian minor."},
+  {id:"suznak",     zh:"蘇茲納克",        en:"Suznak",               g:"阿拉伯與中東", t:["1","2","3","4","5","♭6","7"],     lv:1, d:"下半部是拉斯特、上半部是希賈茲,結構等同和聲大調。", d_en:"The lower half is Rast, the upper half is Hijaz — structurally identical to harmonic major."},
+  {id:"zanjaran",   zh:"贊賈蘭",          en:"Zanjaran",             g:"阿拉伯與中東", t:["1","♭2","3","4","5","6","♭7"],    lv:1, d:"希賈茲四音列配上明亮的自然六度,聽感比一般希賈茲開朗。", d_en:"A Hijaz tetrachord paired with a bright natural 6th — sounds more cheerful than typical Hijaz."},
+  {id:"atharkurd",  zh:"阿薩爾庫爾德",    en:"Athar Kurd",           g:"阿拉伯與中東", t:["1","♭2","♭3","♯4","5","♭6","7"], lv:1, d:"庫爾德起頭、增四度轉折,是馬卡姆裡結構最曲折的一支。", d_en:"Starts as Kurd, then turns through an augmented 4th — the most winding structure among the maqamat."},
+  {id:"persian",    zh:"波斯音階",        en:"Persian",              g:"阿拉伯與中東", t:["1","♭2","3","4","♭5","♭6","7"],  lv:1, d:"兩個增二度加減五度,異國情調濃厚,常見於電影配樂對「東方」的想像。", d_en:"Two augmented 2nds plus a diminished 5th — heavily exotic, often used in film scoring to evoke \"the East\"."},
+  {id:"jiharkah", zh:"賈哈爾卡", en:"Jiharkah", g:"阿拉伯與中東", t:["1","2","3","4","5","6","♭7"], lv:1, d:"阿賈姆家族的馬卡姆,以大調四音列起頭、七音降半音,音高與米索利地安相同。", d_en:"A maqam of the Ajam family — starts with a major tetrachord, 7th lowered a half step — the same pitches as Mixolydian."},
+  {id:"farahfaza", zh:"法拉赫法扎", en:"Farahfaza", g:"阿拉伯與中東", t:["1","2","♭3","4","5","♭6","♭7"], lv:1, d:"納哈萬德家族的馬卡姆,音高與自然小調相同,差別在旋律的行進與終止習慣。", d_en:"A maqam of the Nahawand family — same pitches as natural minor, differing in melodic movement and cadence habits."},
+  {id:"shawqafza", zh:"蕭克阿夫扎", en:"Shawq Afza", g:"阿拉伯與中東", t:["1","2","3","4","5","♭6","7"], lv:1, d:"阿賈姆家族的馬卡姆,上半部改用希賈茲四音列,音高與和聲大調相同。", d_en:"A maqam of the Ajam family — the upper half switches to a Hijaz tetrachord; same pitches as harmonic major."},
 
   // ── 印度與其他亞洲 ──
-  {id:"bilawal",    zh:"比拉瓦爾",        en:"Bilawal Thaat",        g:"印度與其他亞洲", t:["1","2","3","4","5","6","7"],      d:"印度十大塔特(音階母體)之一,結構等同大調,是其他塔特的參照點。", d_en:"One of the ten Hindustani thaats (parent scales) — structurally identical to the major scale, the reference point for the other thaats."},
-  {id:"khamaj",     zh:"卡瑪吉",          en:"Khamaj Thaat",         g:"印度與其他亞洲", t:["1","2","3","4","5","6","♭7"],     d:"結構等同 Mixolydian,輕快的半古典曲目(Thumri)常用。", d_en:"Structurally identical to Mixolydian — common in lighter semi-classical repertoire (thumri)."},
-  {id:"kafi",       zh:"卡菲",            en:"Kafi Thaat",           g:"印度與其他亞洲", t:["1","2","♭3","4","5","6","♭7"],    d:"結構等同多利安,是北印度音樂裡最常見的小調型塔特。", d_en:"Structurally identical to Dorian — the most common minor-type thaat in North Indian music."},
-  {id:"asavari",    zh:"阿薩瓦里",        en:"Asavari Thaat",        g:"印度與其他亞洲", t:["1","2","♭3","4","5","♭6","♭7"],   d:"結構等同自然小調,晨間拉格的典型音階。", d_en:"Structurally identical to natural minor — the typical scale of morning ragas."},
-  {id:"bhairavi",   zh:"拜拉維",          en:"Bhairavi Thaat",       g:"印度與其他亞洲", t:["1","♭2","♭3","4","5","♭6","♭7"],  d:"結構等同弗里吉安,音樂會通常以拜拉維作結。", d_en:"Structurally identical to Phrygian — concerts traditionally close with Bhairavi."},
-  {id:"bhairav",    zh:"拜拉夫",          en:"Bhairav Thaat",        g:"印度與其他亞洲", t:["1","♭2","3","4","5","♭6","7"],    d:"結構等同雙和聲大調,清晨演奏的莊嚴拉格。", d_en:"Structurally identical to double harmonic major — a solemn raga performed at dawn."},
-  {id:"kalyan",     zh:"卡揚",            en:"Kalyan Thaat",         g:"印度與其他亞洲", t:["1","2","3","♯4","5","6","7"],     d:"結構等同利底安,黃昏拉格的代表。", d_en:"Structurally identical to Lydian — representative of evening ragas."},
-  {id:"marwa",      zh:"馬爾瓦",          en:"Marwa Thaat",          g:"印度與其他亞洲", t:["1","♭2","3","♯4","5","6","7"],    d:"♭2 配 ♯4,刻意迴避五音,懸浮而不安定。", d_en:"♭2 paired with ♯4, deliberately avoiding the 5th — suspended and unsettled."},
-  {id:"purvi",      zh:"普爾維",          en:"Purvi Thaat",          g:"印度與其他亞洲", t:["1","♭2","3","♯4","5","♭6","7"],   d:"馬爾瓦再把六音降下來,日落時分的拉格。", d_en:"Marwa with the 6th also lowered — a raga for sunset."},
-  {id:"todi",       zh:"托迪",            en:"Todi Thaat",           g:"印度與其他亞洲", t:["1","♭2","♭3","♯4","5","♭6","7"],  d:"三個降音配一個升四,是十大塔特裡張力最強的一個。", d_en:"Three lowered tones paired with a raised 4th — the most tense of the ten thaats."},
-  {id:"gong",       zh:"宮調式",          en:"Gong (Chinese)",       g:"印度與其他亞洲", t:["1","2","3","5","6"],              d:"中國五聲調式的第一調,以宮為主音,結構等同大調五聲,端正明亮。", d_en:"The first mode of the Chinese pentatonic system, centered on gong — structurally identical to major pentatonic, upright and bright."},
-  {id:"shang",      zh:"商調式",          en:"Shang (Chinese)",      g:"印度與其他亞洲", t:["1","2","4","5","♭7"],             d:"以商為主音的五聲調式,沒有三音,聽感中性開闊。", d_en:"A pentatonic mode centered on shang — no 3rd, a neutral, open sound."},
-  {id:"jue",        zh:"角調式",          en:"Jue (Chinese)",        g:"印度與其他亞洲", t:["1","♭3","4","♭6","♭7"],           d:"以角為主音的五聲調式,五個音裡沒有純五度,是五個調式中最不穩定的。", d_en:"A pentatonic mode centered on jue — none of its five notes form a perfect 5th, making it the least stable of the five modes."},
-  {id:"zhi",        zh:"徵調式",          en:"Zhi (Chinese)",        g:"印度與其他亞洲", t:["1","2","4","5","6"],              d:"以徵為主音的五聲調式,結構等同律音階,平和舒展。", d_en:"A pentatonic mode centered on zhi — structurally identical to Ritsu, calm and expansive."},
-  {id:"yu",         zh:"羽調式",          en:"Yu (Chinese)",         g:"印度與其他亞洲", t:["1","♭3","4","5","♭7"],            d:"以羽為主音的五聲調式,結構等同小調五聲,是中國音樂裡的「小調」。", d_en:"A pentatonic mode centered on yu — structurally identical to minor pentatonic, the closest thing to a \"minor key\" in Chinese music."},
-  {id:"qingyue", zh:"清樂音階", en:"Qingyue (Chinese)", g:"印度與其他亞洲", t:["1","2","3","4","5","6","7"], d:"中國七聲之一,五聲加清角(4)與變宮(7),音高與大調相同,魏晉至南北朝的清商樂系統。", d_en:"One of the Chinese heptatonic scales — pentatonic plus qingjiao (4) and biangong (7); same pitches as the major scale — the Qingshang system from the Wei-Jin through Northern-and-Southern-Dynasties era."},
-  {id:"yayue", zh:"雅樂音階", en:"Yayue (Chinese)", g:"印度與其他亞洲", t:["1","2","3","♯4","5","6","7"], d:"中國七聲之一,五聲加變徵(♯4)與變宮(7),音高與利底安相同,古代宮廷雅樂所用。", d_en:"One of the Chinese heptatonic scales — pentatonic plus bianzhi (♯4) and biangong (7); same pitches as Lydian — used in ancient imperial court music."},
-  {id:"yanyue", zh:"燕樂音階", en:"Yanyue (Chinese)", g:"印度與其他亞洲", t:["1","2","3","4","5","6","♭7"], d:"中國七聲之一,五聲加清角(4)與閏(♭7),音高與米索利地安相同,隋唐燕樂所用。", d_en:"One of the Chinese heptatonic scales — pentatonic plus qingjiao (4) and run (♭7); same pitches as Mixolydian — used in the banquet music of the Sui and Tang dynasties."},
-  {id:"pelog",      zh:"貝洛(印尼)",      en:"Pelog",                g:"印度與其他亞洲", t:["1","♭2","♭3","5","♭6"],           d:"甘美朗的七聲音律取五個音的近似。真正的貝洛音程不均等、也不落在十二平均律上。", d_en:"A seven-note approximation reduced to five for gamelan tuning. The true Pelog intervals are uneven and don't fall on 12-tone equal temperament."},
-  {id:"slendro",    zh:"斯連德羅(印尼)",  en:"Slendro",              g:"印度與其他亞洲", t:["1","2","♭3","5","6"],             d:"甘美朗的另一套音律,五個音接近等分八度,這裡同樣是十二平均律的近似。", d_en:"Another gamelan tuning system — its five notes divide the octave almost equally; again approximated here in 12-tone equal temperament."},
+  {id:"bilawal",    zh:"比拉瓦爾",        en:"Bilawal Thaat",        g:"印度與其他亞洲", t:["1","2","3","4","5","6","7"],      lv:2, d:"印度十大塔特(音階母體)之一,結構等同大調,是其他塔特的參照點。", d_en:"One of the ten Hindustani thaats (parent scales) — structurally identical to the major scale, the reference point for the other thaats."},
+  {id:"khamaj",     zh:"卡瑪吉",          en:"Khamaj Thaat",         g:"印度與其他亞洲", t:["1","2","3","4","5","6","♭7"],     lv:1, d:"結構等同 Mixolydian,輕快的半古典曲目(Thumri)常用。", d_en:"Structurally identical to Mixolydian — common in lighter semi-classical repertoire (thumri)."},
+  {id:"kafi",       zh:"卡菲",            en:"Kafi Thaat",           g:"印度與其他亞洲", t:["1","2","♭3","4","5","6","♭7"],    lv:2, d:"結構等同多利安,是北印度音樂裡最常見的小調型塔特。", d_en:"Structurally identical to Dorian — the most common minor-type thaat in North Indian music."},
+  {id:"asavari",    zh:"阿薩瓦里",        en:"Asavari Thaat",        g:"印度與其他亞洲", t:["1","2","♭3","4","5","♭6","♭7"],   lv:1, d:"結構等同自然小調,晨間拉格的典型音階。", d_en:"Structurally identical to natural minor — the typical scale of morning ragas."},
+  {id:"bhairavi",   zh:"拜拉維",          en:"Bhairavi Thaat",       g:"印度與其他亞洲", t:["1","♭2","♭3","4","5","♭6","♭7"],  lv:2, d:"結構等同弗里吉安,音樂會通常以拜拉維作結。", d_en:"Structurally identical to Phrygian — concerts traditionally close with Bhairavi."},
+  {id:"bhairav",    zh:"拜拉夫",          en:"Bhairav Thaat",        g:"印度與其他亞洲", t:["1","♭2","3","4","5","♭6","7"],    lv:2, d:"結構等同雙和聲大調,清晨演奏的莊嚴拉格。", d_en:"Structurally identical to double harmonic major — a solemn raga performed at dawn."},
+  {id:"kalyan",     zh:"卡揚",            en:"Kalyan Thaat",         g:"印度與其他亞洲", t:["1","2","3","♯4","5","6","7"],     lv:2, d:"結構等同利底安,黃昏拉格的代表。", d_en:"Structurally identical to Lydian — representative of evening ragas."},
+  {id:"marwa",      zh:"馬爾瓦",          en:"Marwa Thaat",          g:"印度與其他亞洲", t:["1","♭2","3","♯4","5","6","7"],    lv:1, d:"♭2 配 ♯4,刻意迴避五音,懸浮而不安定。", d_en:"♭2 paired with ♯4, deliberately avoiding the 5th — suspended and unsettled."},
+  {id:"purvi",      zh:"普爾維",          en:"Purvi Thaat",          g:"印度與其他亞洲", t:["1","♭2","3","♯4","5","♭6","7"],   lv:1, d:"馬爾瓦再把六音降下來,日落時分的拉格。", d_en:"Marwa with the 6th also lowered — a raga for sunset."},
+  {id:"todi",       zh:"托迪",            en:"Todi Thaat",           g:"印度與其他亞洲", t:["1","♭2","♭3","♯4","5","♭6","7"],  lv:1, d:"三個降音配一個升四,是十大塔特裡張力最強的一個。", d_en:"Three lowered tones paired with a raised 4th — the most tense of the ten thaats."},
+  {id:"gong",       zh:"宮調式",          en:"Gong (Chinese)",       g:"印度與其他亞洲", t:["1","2","3","5","6"],              lv:2, d:"中國五聲調式的第一調,以宮為主音,結構等同大調五聲,端正明亮。", d_en:"The first mode of the Chinese pentatonic system, centered on gong — structurally identical to major pentatonic, upright and bright."},
+  {id:"shang",      zh:"商調式",          en:"Shang (Chinese)",      g:"印度與其他亞洲", t:["1","2","4","5","♭7"],             lv:1, d:"以商為主音的五聲調式,沒有三音,聽感中性開闊。", d_en:"A pentatonic mode centered on shang — no 3rd, a neutral, open sound."},
+  {id:"jue",        zh:"角調式",          en:"Jue (Chinese)",        g:"印度與其他亞洲", t:["1","♭3","4","♭6","♭7"],           lv:1, d:"以角為主音的五聲調式,五個音裡沒有純五度,是五個調式中最不穩定的。", d_en:"A pentatonic mode centered on jue — none of its five notes form a perfect 5th, making it the least stable of the five modes."},
+  {id:"zhi",        zh:"徵調式",          en:"Zhi (Chinese)",        g:"印度與其他亞洲", t:["1","2","4","5","6"],              lv:1, d:"以徵為主音的五聲調式,結構等同律音階,平和舒展。", d_en:"A pentatonic mode centered on zhi — structurally identical to Ritsu, calm and expansive."},
+  {id:"yu",         zh:"羽調式",          en:"Yu (Chinese)",         g:"印度與其他亞洲", t:["1","♭3","4","5","♭7"],            lv:2, d:"以羽為主音的五聲調式,結構等同小調五聲,是中國音樂裡的「小調」。", d_en:"A pentatonic mode centered on yu — structurally identical to minor pentatonic, the closest thing to a \"minor key\" in Chinese music."},
+  {id:"qingyue", zh:"清樂音階", en:"Qingyue (Chinese)", g:"印度與其他亞洲", t:["1","2","3","4","5","6","7"], lv:1, d:"中國七聲之一,五聲加清角(4)與變宮(7),音高與大調相同,魏晉至南北朝的清商樂系統。", d_en:"One of the Chinese heptatonic scales — pentatonic plus qingjiao (4) and biangong (7); same pitches as the major scale — the Qingshang system from the Wei-Jin through Northern-and-Southern-Dynasties era."},
+  {id:"yayue", zh:"雅樂音階", en:"Yayue (Chinese)", g:"印度與其他亞洲", t:["1","2","3","♯4","5","6","7"], lv:1, d:"中國七聲之一,五聲加變徵(♯4)與變宮(7),音高與利底安相同,古代宮廷雅樂所用。", d_en:"One of the Chinese heptatonic scales — pentatonic plus bianzhi (♯4) and biangong (7); same pitches as Lydian — used in ancient imperial court music."},
+  {id:"yanyue", zh:"燕樂音階", en:"Yanyue (Chinese)", g:"印度與其他亞洲", t:["1","2","3","4","5","6","♭7"], lv:1, d:"中國七聲之一,五聲加清角(4)與閏(♭7),音高與米索利地安相同,隋唐燕樂所用。", d_en:"One of the Chinese heptatonic scales — pentatonic plus qingjiao (4) and run (♭7); same pitches as Mixolydian — used in the banquet music of the Sui and Tang dynasties."},
+  {id:"pelog",      zh:"貝洛(印尼)",      en:"Pelog",                g:"印度與其他亞洲", t:["1","♭2","♭3","5","♭6"],           lv:2, d:"甘美朗的七聲音律取五個音的近似。真正的貝洛音程不均等、也不落在十二平均律上。", d_en:"A seven-note approximation reduced to five for gamelan tuning. The true Pelog intervals are uneven and don't fall on 12-tone equal temperament."},
+  {id:"slendro",    zh:"斯連德羅(印尼)",  en:"Slendro",              g:"印度與其他亞洲", t:["1","2","♭3","5","6"],             lv:2, d:"甘美朗的另一套音律,五個音接近等分八度,這裡同樣是十二平均律的近似。", d_en:"Another gamelan tuning system — its five notes divide the octave almost equally; again approximated here in 12-tone equal temperament."},
 
   // ── 非洲音階 ──
-  {id:"tizita", zh:"提濟塔", en:"Tizita", g:"非洲音階", t:["1","2","3","5","6"], d:"衣索比亞四大 qenet 之一,懷舊與思念的代名詞,音高與大調五聲相同。", d_en:"One of Ethiopia's four great qenet — synonymous with nostalgia and longing, same pitches as major pentatonic."},
-  {id:"tizitaMin", zh:"提濟塔(小調)", en:"Tizita Minor", g:"非洲音階", t:["1","2","♭3","5","♭6"], d:"提濟塔的小調變體,♭3 與 ♭6 讓同一套旋律轉為哀傷。", d_en:"The minor variant of Tizita — ♭3 and ♭6 turn the same melodic material melancholy."},
-  {id:"bati", zh:"巴提", en:"Bati", g:"非洲音階", t:["1","3","4","5","7"], d:"衣索比亞四大 qenet 之一,以大三度與導音構成明亮開闊的色彩。", d_en:"One of Ethiopia's four great qenet — built from a major 3rd and a leading tone for a bright, open color."},
-  {id:"batiMin", zh:"巴提(小調)", en:"Bati Minor", g:"非洲音階", t:["1","♭3","4","5","♭7"], d:"巴提的小調變體,音高與小調五聲相同,是 Ethio-jazz 最常見的底色。", d_en:"The minor variant of Bati — same pitches as minor pentatonic, the most common backdrop in Ethio-jazz."},
-  {id:"ambassel", zh:"安巴塞爾", en:"Ambassel", g:"非洲音階", t:["1","♭2","4","5","♭6"], d:"衣索比亞四大 qenet 之一,♭2 與 ♭6 讓它聽起來接近中東音階。", d_en:"One of Ethiopia's four great qenet — ♭2 and ♭6 make it sound close to a Middle Eastern scale."},
-  {id:"anchihoye", zh:"安奇霍耶", en:"Anchihoye", g:"非洲音階", t:["1","♭2","4","♭5","6"], d:"衣索比亞四大 qenet 之一,♭5 讓它在四個 qenet 裡最不穩定、最具異國感。", d_en:"One of Ethiopia's four great qenet — the ♭5 makes it the most unstable and exotic-sounding of the four."},
+  {id:"tizita", zh:"提濟塔", en:"Tizita", g:"非洲音階", t:["1","2","3","5","6"], lv:2, d:"衣索比亞四大 qenet 之一,懷舊與思念的代名詞,音高與大調五聲相同。", d_en:"One of Ethiopia's four great qenet — synonymous with nostalgia and longing, same pitches as major pentatonic."},
+  {id:"tizitaMin", zh:"提濟塔(小調)", en:"Tizita Minor", g:"非洲音階", t:["1","2","♭3","5","♭6"], lv:2, d:"提濟塔的小調變體,♭3 與 ♭6 讓同一套旋律轉為哀傷。", d_en:"The minor variant of Tizita — ♭3 and ♭6 turn the same melodic material melancholy."},
+  {id:"bati", zh:"巴提", en:"Bati", g:"非洲音階", t:["1","3","4","5","7"], lv:1, d:"衣索比亞四大 qenet 之一,以大三度與導音構成明亮開闊的色彩。", d_en:"One of Ethiopia's four great qenet — built from a major 3rd and a leading tone for a bright, open color."},
+  {id:"batiMin", zh:"巴提(小調)", en:"Bati Minor", g:"非洲音階", t:["1","♭3","4","5","♭7"], lv:1, d:"巴提的小調變體,音高與小調五聲相同,是 Ethio-jazz 最常見的底色。", d_en:"The minor variant of Bati — same pitches as minor pentatonic, the most common backdrop in Ethio-jazz."},
+  {id:"ambassel", zh:"安巴塞爾", en:"Ambassel", g:"非洲音階", t:["1","♭2","4","5","♭6"], lv:1, d:"衣索比亞四大 qenet 之一,♭2 與 ♭6 讓它聽起來接近中東音階。", d_en:"One of Ethiopia's four great qenet — ♭2 and ♭6 make it sound close to a Middle Eastern scale."},
+  {id:"anchihoye", zh:"安奇霍耶", en:"Anchihoye", g:"非洲音階", t:["1","♭2","4","♭5","6"], lv:1, d:"衣索比亞四大 qenet 之一,♭5 讓它在四個 qenet 裡最不穩定、最具異國感。", d_en:"One of Ethiopia's four great qenet — the ♭5 makes it the most unstable and exotic-sounding of the four."},
 
   // ── 對稱音階 ──
-  {id:"wholeTone",  zh:"全音音階",        en:"Whole Tone",           g:"對稱音階", t:["1","2","3","♯4","♯5","♭7"],           d:"全部由全音構成,只有兩組不同的全音音階存在。無中心感,對應 7♯5,德布西的印象派語彙。", d_en:"Built entirely from whole steps — only two distinct whole-tone scales exist. No tonal center; matches 7♯5, the vocabulary of Debussy's impressionism."},
-  {id:"dimHW",      zh:"減音階(半全)",    en:"Half-Whole Diminished",g:"對稱音階", t:["1","♭2","♯2","3","♯4","5","6","♭7"],  d:"半音、全音交替的八聲音階,含 ♭9 ♯9 ♯11 13,是 7♭9 與 7♯11 的標準選擇。", d_en:"An eight-note scale alternating half and whole steps, containing ♭9, ♯9, ♯11, and 13 — the standard choice for 7♭9 and 7♯11."},
-  {id:"dimWH",      zh:"減音階(全半)",    en:"Whole-Half Diminished",g:"對稱音階", t:["1","2","♭3","4","♭5","♭6","6","7"],   d:"全音、半音交替,主和弦是 dim7,四個小三度對稱,轉位後仍是同一組音。", d_en:"Alternating whole and half steps; its tonic chord is dim7. Four minor 3rds in symmetry, so the same pitches survive any inversion."},
-  {id:"augmented",  zh:"增音階",          en:"Augmented",            g:"對稱音階", t:["1","♯2","3","5","♯5","7"],            d:"小三度與半音交替的六聲音階,對應 maj7♯5,現代爵士的對稱素材。", d_en:"A six-note scale alternating minor 3rds and half steps, matching maj7♯5 — symmetric material in modern jazz."},
-  {id:"chromatic",  zh:"半音階",          en:"Chromatic",            g:"對稱音階", t:["1","♭2","2","♭3","3","4","♭5","5","♭6","6","♭7","7"], d:"十二個半音全用,沒有調性中心,實務上當作經過音的來源而不是即興的骨架。", d_en:"Uses all twelve half steps with no tonal center — in practice a source of passing tones rather than a skeleton for improvising."},
+  {id:"wholeTone",  zh:"全音音階",        en:"Whole Tone",           g:"對稱音階", t:["1","2","3","♯4","♯5","♭7"],           lv:2, d:"全部由全音構成,只有兩組不同的全音音階存在。無中心感,對應 7♯5,德布西的印象派語彙。", d_en:"Built entirely from whole steps — only two distinct whole-tone scales exist. No tonal center; matches 7♯5, the vocabulary of Debussy's impressionism."},
+  {id:"dimHW",      zh:"減音階(半全)",    en:"Half-Whole Diminished",g:"對稱音階", t:["1","♭2","♯2","3","♯4","5","6","♭7"],  lv:2, d:"半音、全音交替的八聲音階,含 ♭9 ♯9 ♯11 13,是 7♭9 與 7♯11 的標準選擇。", d_en:"An eight-note scale alternating half and whole steps, containing ♭9, ♯9, ♯11, and 13 — the standard choice for 7♭9 and 7♯11."},
+  {id:"dimWH",      zh:"減音階(全半)",    en:"Whole-Half Diminished",g:"對稱音階", t:["1","2","♭3","4","♭5","♭6","6","7"],   lv:2, d:"全音、半音交替,主和弦是 dim7,四個小三度對稱,轉位後仍是同一組音。", d_en:"Alternating whole and half steps; its tonic chord is dim7. Four minor 3rds in symmetry, so the same pitches survive any inversion."},
+  {id:"augmented",  zh:"增音階",          en:"Augmented",            g:"對稱音階", t:["1","♯2","3","5","♯5","7"],            lv:1, d:"小三度與半音交替的六聲音階,對應 maj7♯5,現代爵士的對稱素材。", d_en:"A six-note scale alternating minor 3rds and half steps, matching maj7♯5 — symmetric material in modern jazz."},
+  {id:"chromatic",  zh:"半音階",          en:"Chromatic",            g:"對稱音階", t:["1","♭2","2","♭3","3","4","♭5","5","♭6","6","♭7","7"], lv:1, d:"十二個半音全用,沒有調性中心,實務上當作經過音的來源而不是即興的骨架。", d_en:"Uses all twelve half steps with no tonal center — in practice a source of passing tones rather than a skeleton for improvising."},
 
   // ── 其他七聲音階 ──
-  {id:"harmMajor2", zh:"匈牙利大調",      en:"Hungarian Major",      g:"其他七聲音階", t:["1","♯2","3","♯4","5","6","♭7"],    d:"增二度起頭配 ♯4,李斯特筆下吉普賽風格的大調版本。", d_en:"Opens with an augmented 2nd paired with ♯4 — the major-key version of Liszt's Gypsy style."},
-  {id:"neapMinor",  zh:"拿坡里小調",      en:"Neapolitan Minor",     g:"其他七聲音階", t:["1","♭2","♭3","4","5","♭6","7"],     d:"和聲小調配 ♭2,古典裡與拿坡里六和弦(♭II)一同出現。", d_en:"Harmonic minor with a ♭2 — appears in classical music alongside the Neapolitan sixth chord (♭II)."},
-  {id:"neapMajor",  zh:"拿坡里大調",      en:"Neapolitan Major",     g:"其他七聲音階", t:["1","♭2","♭3","4","5","6","7"],      d:"旋律小調配 ♭2,下半部是小調、上半部是大調的混血音階。", d_en:"Melodic minor with a ♭2 — a hybrid scale, minor in the lower half and major in the upper half."},
-  {id:"romanianMaj", zh:"羅馬尼亞大調", en:"Romanian Major", g:"其他七聲音階", t:["1","♭2","3","♯4","5","6","♭7"], d:"♭2 配 ♯4 的屬和弦色彩,巴爾幹與克萊茲梅爾音樂的常見素材。", d_en:"♭2 paired with ♯4 for a dominant-chord color — common material in Balkan and klezmer music."},
-  {id:"locrianMaj", zh:"大洛克里安",      en:"Locrian Major",        g:"其他七聲音階", t:["1","2","3","4","♭5","♭6","♭7"],    d:"大三度配減五度,和聲大調的第五級,用在 7♭5 這類和弦上。", d_en:"A major 3rd paired with a diminished 5th — the 5th degree of harmonic major, used over 7♭5-type chords."},
+  {id:"harmMajor2", zh:"匈牙利大調",      en:"Hungarian Major",      g:"其他七聲音階", t:["1","♯2","3","♯4","5","6","♭7"],    lv:2, d:"增二度起頭配 ♯4,李斯特筆下吉普賽風格的大調版本。", d_en:"Opens with an augmented 2nd paired with ♯4 — the major-key version of Liszt's Gypsy style."},
+  {id:"neapMinor",  zh:"拿坡里小調",      en:"Neapolitan Minor",     g:"其他七聲音階", t:["1","♭2","♭3","4","5","♭6","7"],     lv:2, d:"和聲小調配 ♭2,古典裡與拿坡里六和弦(♭II)一同出現。", d_en:"Harmonic minor with a ♭2 — appears in classical music alongside the Neapolitan sixth chord (♭II)."},
+  {id:"neapMajor",  zh:"拿坡里大調",      en:"Neapolitan Major",     g:"其他七聲音階", t:["1","♭2","♭3","4","5","6","7"],      lv:1, d:"旋律小調配 ♭2,下半部是小調、上半部是大調的混血音階。", d_en:"Melodic minor with a ♭2 — a hybrid scale, minor in the lower half and major in the upper half."},
+  {id:"romanianMaj", zh:"羅馬尼亞大調", en:"Romanian Major", g:"其他七聲音階", t:["1","♭2","3","♯4","5","6","♭7"], lv:1, d:"♭2 配 ♯4 的屬和弦色彩,巴爾幹與克萊茲梅爾音樂的常見素材。", d_en:"♭2 paired with ♯4 for a dominant-chord color — common material in Balkan and klezmer music."},
+  {id:"locrianMaj", zh:"大洛克里安",      en:"Locrian Major",        g:"其他七聲音階", t:["1","2","3","4","♭5","♭6","♭7"],    lv:1, d:"大三度配減五度,和聲大調的第五級,用在 7♭5 這類和弦上。", d_en:"A major 3rd paired with a diminished 5th — the 5th degree of harmonic major, used over 7♭5-type chords."},
 
   // ── Bebop 八聲音階 ──
-  {id:"bebopDom",   zh:"屬七 Bebop",      en:"Bebop Dominant",       g:"Bebop 八聲音階", t:["1","2","3","4","5","6","♭7","7"],   d:"米索利地安加一顆經過性的大七度,八個音剛好讓和弦內音落在正拍上。", d_en:"Mixolydian plus a passing major 7th — eight notes that land chord tones squarely on the beat."},
-  {id:"bebopMaj",   zh:"大調 Bebop",      en:"Bebop Major",          g:"Bebop 八聲音階", t:["1","2","3","4","5","♯5","6","7"],   d:"大調在五音與六音之間插入 ♯5,八分音符跑句時和弦音自動對齊拍點。", d_en:"The major scale with a ♯5 inserted between the 5th and 6th — chord tones automatically align to the beat in eighth-note runs."},
-  {id:"bebopDor",   zh:"多利安 Bebop",    en:"Bebop Dorian",         g:"Bebop 八聲音階", t:["1","2","♭3","3","4","5","6","♭7"],  d:"多利安在 ♭3 與 4 之間插入自然三度,是 ii 級跑句最順手的音階。", d_en:"Dorian with a natural 3rd inserted between ♭3 and 4 — the smoothest-running scale for ii-chord lines."},
-  {id:"bebopMel",   zh:"旋律小調 Bebop",  en:"Bebop Melodic Minor",  g:"Bebop 八聲音階", t:["1","2","♭3","4","5","♯5","6","7"],  d:"旋律小調插入 ♯5 經過音,小調長樂句的節奏對位工具。", d_en:"Melodic minor with a ♯5 passing tone inserted — a rhythmic-alignment tool for long minor-key phrases."},
+  {id:"bebopDom",   zh:"屬七 Bebop",      en:"Bebop Dominant",       g:"Bebop 八聲音階", t:["1","2","3","4","5","6","♭7","7"],   lv:2, d:"米索利地安加一顆經過性的大七度,八個音剛好讓和弦內音落在正拍上。", d_en:"Mixolydian plus a passing major 7th — eight notes that land chord tones squarely on the beat."},
+  {id:"bebopMaj",   zh:"大調 Bebop",      en:"Bebop Major",          g:"Bebop 八聲音階", t:["1","2","3","4","5","♯5","6","7"],   lv:2, d:"大調在五音與六音之間插入 ♯5,八分音符跑句時和弦音自動對齊拍點。", d_en:"The major scale with a ♯5 inserted between the 5th and 6th — chord tones automatically align to the beat in eighth-note runs."},
+  {id:"bebopDor",   zh:"多利安 Bebop",    en:"Bebop Dorian",         g:"Bebop 八聲音階", t:["1","2","♭3","3","4","5","6","♭7"],  lv:2, d:"多利安在 ♭3 與 4 之間插入自然三度,是 ii 級跑句最順手的音階。", d_en:"Dorian with a natural 3rd inserted between ♭3 and 4 — the smoothest-running scale for ii-chord lines."},
+  {id:"bebopMel",   zh:"旋律小調 Bebop",  en:"Bebop Melodic Minor",  g:"Bebop 八聲音階", t:["1","2","♭3","4","5","♯5","6","7"],  lv:2, d:"旋律小調插入 ♯5 經過音,小調長樂句的節奏對位工具。", d_en:"Melodic minor with a ♯5 passing tone inserted — a rhythmic-alignment tool for long minor-key phrases."},
 
   // ── 進階與罕用 ──
-  {id:"algerian",   zh:"阿爾及利亞音階",  en:"Algerian",             g:"進階與罕用", t:["1","2","♭3","♯4","5","♭6","7"],    d:"匈牙利小調的別名系統,北非與地中海音樂的常見素材。", d_en:"An alias system for Hungarian minor — common material in North African and Mediterranean music."},
-  {id:"prometheus", zh:"普羅米修斯音階",  en:"Prometheus / Mystic",  g:"進階與罕用", t:["1","2","3","♯4","6","♭7"],         d:"史克里亞賓的「神祕和弦」拆成音階,六個音全部可以疊成四度,無調性但不刺耳。", d_en:"Scriabin's \"Mystic chord\" unpacked into a scale — all six notes stack in 4ths, atonal but not harsh."},
-  {id:"enigmatic",  zh:"謎音階",          en:"Enigmatic",            g:"進階與罕用", t:["1","♭2","3","♯4","♯5","♯6","7"],   d:"威爾第出的作曲謎題,前半像弗里吉安、後半像全音,沒有任何一個標準和弦能完整支撐它。", d_en:"Verdi's compositional riddle — the lower half sounds like Phrygian, the upper half like whole tone; no standard chord can fully support it."},
-  {id:"tritoneSc",  zh:"三全音音階",      en:"Tritone Scale",        g:"進階與罕用", t:["1","♭2","3","♭5","5","♭7"],        d:"以三全音為週期的六聲對稱音階,兩個大三和弦相隔三全音疊起來的效果。", d_en:"A six-note symmetric scale with a tritone period — the effect of two major triads stacked a tritone apart."},
-  {id:"istrian",    zh:"伊斯特里亞音階",  en:"Istrian",              g:"進階與罕用", t:["1","♭2","♭3","♭4","♭5","♭7"],      d:"克羅埃西亞伊斯特里亞半島的傳統音階,已列入聯合國非物質文化遺產。", d_en:"A traditional scale from Croatia's Istrian peninsula, inscribed on UNESCO's Intangible Cultural Heritage list."},
-  {id:"leadWhole",  zh:"導音全音音階",    en:"Leading Whole Tone",   g:"進階與罕用", t:["1","2","3","♯4","♯5","♭7","7"],    d:"全音音階最上面補一個導音,讓它終於有了解決的方向。", d_en:"The whole-tone scale with a leading tone added on top, finally giving it a sense of resolution."},
-  {id:"sixSym",     zh:"六聲對稱音階",    en:"Six Tone Symmetrical", g:"進階與罕用", t:["1","♭2","3","4","♯5","6"],         d:"半音與小三度交替的對稱音階,每隔大三度就重複一次。", d_en:"A symmetric scale alternating half steps and minor 3rds, repeating every major 3rd."},
-  {id:"blues9",     zh:"九聲藍調",        en:"Nine Tone Blues",      g:"進階與罕用", t:["1","2","♭3","3","4","♭5","5","6","♭7"], d:"大調藍調與小調藍調疊在一起,九個音幾乎涵蓋整個藍調語彙,實務上當素材庫用。", d_en:"Major blues and minor blues stacked together — nine notes covering almost the entire blues vocabulary, used in practice as a reference pool."},
-  {id:"flamenco", zh:"佛朗明哥調式", en:"Flamenco Mode", g:"進階與罕用", t:["1","♭2","♭3","3","4","5","♭6","♭7"], d:"弗里吉安同時保留 ♭3 與 3 的八音變體,佛朗明哥吉他在同一個調裡自由切換兩種三度。", d_en:"An eight-note variant of Phrygian that keeps both ♭3 and 3 — flamenco guitar freely switches between the two thirds within the same key."},
-  {id:"messiaen3",  zh:"梅湘第三模式",    en:"Messiaen Mode 3",      g:"進階與罕用", t:["1","2","♭3","3","♯4","5","6","♭7","7"], d:"以大三度為週期的九聲音階,梅湘「有限移調模式」的第三個。", d_en:"A nine-note scale with a major-3rd period — the third of Messiaen's \"modes of limited transposition\"."},
-  {id:"messiaen4",  zh:"梅湘第四模式",    en:"Messiaen Mode 4",      g:"進階與罕用", t:["1","♭2","2","4","♭5","5","6","7"],  d:"以三全音為週期的八聲音階,兩個半音群夾一個大跳。", d_en:"An eight-note scale with a tritone period — two half-step clusters flanking a large leap."},
-  {id:"messiaen5",  zh:"梅湘第五模式",    en:"Messiaen Mode 5",      g:"進階與罕用", t:["1","♭2","4","♭5","5","7"],         d:"梅湘模式裡音最少的一個,半音—大三度—半音的對稱結構。", d_en:"The sparsest of Messiaen's modes — a symmetric half-step / major-3rd / half-step structure."},
-  {id:"messiaen6",  zh:"梅湘第六模式",    en:"Messiaen Mode 6",      g:"進階與罕用", t:["1","2","3","4","♭5","♭6","♭7","7"], d:"全音音階裡插進兩個半音,保留全音的漂浮感又多了落點。", d_en:"Two half steps inserted into the whole-tone scale — keeps the floating whole-tone feel while adding more landing points."},
-  {id:"messiaen7",  zh:"梅湘第七模式",    en:"Messiaen Mode 7",      g:"進階與罕用", t:["1","♭2","2","♭3","4","♭5","5","♭6","6","7"], d:"十個音的有限移調模式,只差兩個音就是半音階,梅湘用它寫最濃密的色塊。", d_en:"A ten-note mode of limited transposition, two notes short of the full chromatic scale — Messiaen used it for his densest color blocks."}
+  {id:"algerian",   zh:"阿爾及利亞音階",  en:"Algerian",             g:"進階與罕用", t:["1","2","♭3","♯4","5","♭6","7"],    lv:1, d:"匈牙利小調的別名系統,北非與地中海音樂的常見素材。", d_en:"An alias system for Hungarian minor — common material in North African and Mediterranean music."},
+  {id:"prometheus", zh:"普羅米修斯音階",  en:"Prometheus / Mystic",  g:"進階與罕用", t:["1","2","3","♯4","6","♭7"],         lv:1, d:"史克里亞賓的「神祕和弦」拆成音階,六個音全部可以疊成四度,無調性但不刺耳。", d_en:"Scriabin's \"Mystic chord\" unpacked into a scale — all six notes stack in 4ths, atonal but not harsh."},
+  {id:"enigmatic",  zh:"謎音階",          en:"Enigmatic",            g:"進階與罕用", t:["1","♭2","3","♯4","♯5","♯6","7"],   lv:1, d:"威爾第出的作曲謎題,前半像弗里吉安、後半像全音,沒有任何一個標準和弦能完整支撐它。", d_en:"Verdi's compositional riddle — the lower half sounds like Phrygian, the upper half like whole tone; no standard chord can fully support it."},
+  {id:"tritoneSc",  zh:"三全音音階",      en:"Tritone Scale",        g:"進階與罕用", t:["1","♭2","3","♭5","5","♭7"],        lv:1, d:"以三全音為週期的六聲對稱音階,兩個大三和弦相隔三全音疊起來的效果。", d_en:"A six-note symmetric scale with a tritone period — the effect of two major triads stacked a tritone apart."},
+  {id:"istrian",    zh:"伊斯特里亞音階",  en:"Istrian",              g:"進階與罕用", t:["1","♭2","♭3","♭4","♭5","♭7"],      lv:1, d:"克羅埃西亞伊斯特里亞半島的傳統音階,已列入聯合國非物質文化遺產。", d_en:"A traditional scale from Croatia's Istrian peninsula, inscribed on UNESCO's Intangible Cultural Heritage list."},
+  {id:"leadWhole",  zh:"導音全音音階",    en:"Leading Whole Tone",   g:"進階與罕用", t:["1","2","3","♯4","♯5","♭7","7"],    lv:1, d:"全音音階最上面補一個導音,讓它終於有了解決的方向。", d_en:"The whole-tone scale with a leading tone added on top, finally giving it a sense of resolution."},
+  {id:"sixSym",     zh:"六聲對稱音階",    en:"Six Tone Symmetrical", g:"進階與罕用", t:["1","♭2","3","4","♯5","6"],         lv:1, d:"半音與小三度交替的對稱音階,每隔大三度就重複一次。", d_en:"A symmetric scale alternating half steps and minor 3rds, repeating every major 3rd."},
+  {id:"blues9",     zh:"九聲藍調",        en:"Nine Tone Blues",      g:"進階與罕用", t:["1","2","♭3","3","4","♭5","5","6","♭7"], lv:1, d:"大調藍調與小調藍調疊在一起,九個音幾乎涵蓋整個藍調語彙,實務上當素材庫用。", d_en:"Major blues and minor blues stacked together — nine notes covering almost the entire blues vocabulary, used in practice as a reference pool."},
+  {id:"flamenco", zh:"佛朗明哥調式", en:"Flamenco Mode", g:"進階與罕用", t:["1","♭2","♭3","3","4","5","♭6","♭7"], lv:1, d:"弗里吉安同時保留 ♭3 與 3 的八音變體,佛朗明哥吉他在同一個調裡自由切換兩種三度。", d_en:"An eight-note variant of Phrygian that keeps both ♭3 and 3 — flamenco guitar freely switches between the two thirds within the same key."},
+  {id:"messiaen3",  zh:"梅湘第三模式",    en:"Messiaen Mode 3",      g:"進階與罕用", t:["1","2","♭3","3","♯4","5","6","♭7","7"], lv:1, d:"以大三度為週期的九聲音階,梅湘「有限移調模式」的第三個。", d_en:"A nine-note scale with a major-3rd period — the third of Messiaen's \"modes of limited transposition\"."},
+  {id:"messiaen4",  zh:"梅湘第四模式",    en:"Messiaen Mode 4",      g:"進階與罕用", t:["1","♭2","2","4","♭5","5","6","7"],  lv:1, d:"以三全音為週期的八聲音階,兩個半音群夾一個大跳。", d_en:"An eight-note scale with a tritone period — two half-step clusters flanking a large leap."},
+  {id:"messiaen5",  zh:"梅湘第五模式",    en:"Messiaen Mode 5",      g:"進階與罕用", t:["1","♭2","4","♭5","5","7"],         lv:1, d:"梅湘模式裡音最少的一個,半音—大三度—半音的對稱結構。", d_en:"The sparsest of Messiaen's modes — a symmetric half-step / major-3rd / half-step structure."},
+  {id:"messiaen6",  zh:"梅湘第六模式",    en:"Messiaen Mode 6",      g:"進階與罕用", t:["1","2","3","4","♭5","♭6","♭7","7"], lv:1, d:"全音音階裡插進兩個半音,保留全音的漂浮感又多了落點。", d_en:"Two half steps inserted into the whole-tone scale — keeps the floating whole-tone feel while adding more landing points."},
+  {id:"messiaen7",  zh:"梅湘第七模式",    en:"Messiaen Mode 7",      g:"進階與罕用", t:["1","♭2","2","♭3","4","♭5","5","♭6","6","7"], lv:1, d:"十個音的有限移調模式,只差兩個音就是半音階,梅湘用它寫最濃密的色塊。", d_en:"A ten-note mode of limited transposition, two notes short of the full chromatic scale — Messiaen used it for his densest color blocks."}
 ];
 
 /* 和弦 → 建議音階(點一下可以直接跳到那個音階看組成音) */
@@ -1772,6 +1788,7 @@ const STATE = {
   filtersOpen: false,  // 篩選預設收合
   group: { chord: "", scale: "" },  // 目前顯示哪一個家族/系統("" = 全部),兩個分頁各自記住
   groupOpen: false,   // 窄螢幕:分類面板是否展開
+  rareOpen: new Set(),// 哪幾組把「進階變化」展開了
   hideDup: 0,  // 音階:隱藏與其他條目同音高的重複條目
   findSel: new Set(),
   findSpell: "sharp"
@@ -2077,27 +2094,56 @@ function buildTypeList(){
       }
       wrap.appendChild(title);
     }
-    const chips = document.createElement("div");
-    chips.className = isChord ? "chips" : "chips wide";
-    for (const it of g.items) {
-      const b = document.createElement("button");
-      b.className = "chip";
-      b.setAttribute("aria-pressed", String(it.id === selId));
-      if (it.lv) b.dataset.lv = it.lv;
-      const same = SAME_PITCH.get(it.id);
-      if (same) { b.dataset.dup = "1"; b.title = t("dupOfLabel", { name: localName(same) }); }
-      b.innerHTML = "<b></b><i></i>";
-      b.querySelector("b").textContent = isChord ? rootName() + it.sym : localName(it);
-      b.querySelector("i").textContent = isChord ? localName(it) : otherName(it);
-      // 點名稱就直接發聲。已經選中的再點一次就是重播,不需要另外一顆播放鈕
-      b.onclick = () => {
-        if (isChord) STATE.chordId = it.id; else STATE.scaleId = it.id;
-        render();
-        playCurrent();
+    const mkChips = arr => {
+      const chips = document.createElement("div");
+      chips.className = isChord ? "chips" : "chips wide";
+      for (const it of arr) {
+        const b = document.createElement("button");
+        b.className = "chip";
+        b.setAttribute("aria-pressed", String(it.id === selId));
+        if (it.lv) b.dataset.lv = it.lv;
+        const same = SAME_PITCH.get(it.id);
+        if (same) { b.dataset.dup = "1"; b.title = t("dupOfLabel", { name: localName(same) }); }
+        b.innerHTML = "<b></b><i></i>";
+        b.querySelector("b").textContent = isChord ? rootName() + it.sym : localName(it);
+        b.querySelector("i").textContent = isChord ? localName(it) : otherName(it);
+        // 點名稱就直接發聲。已經選中的再點一次就是重播,不需要另外一顆播放鈕
+        b.onclick = () => {
+          if (isChord) STATE.chordId = it.id; else STATE.scaleId = it.id;
+          render();
+          playCurrent();
+        };
+        chips.appendChild(b);
+      }
+      return chips;
+    };
+    // 組內再分成「常用」與「進階變化」。屬和弦系 25 個裡有 17 個是變化音,
+    // 全部平鋪出來,想找 C7 的人得先掃過 7♭5♯9 這種一輩子用不到幾次的東西。
+    // 罕用的收在展開鈕後面——沒有刪掉,只是預設不擋路
+    const common = g.items.filter(it => (it.lv || 2) >= 2);
+    const rare   = g.items.filter(it => (it.lv || 2) < 2);
+    // 搜尋時、以及整組本來就都是進階時(增六和弦、進階與罕用),不收合,
+    // 不然會出現「這一組看起來是空的」
+    if (STATE.search || !common.length || !rare.length) {
+      wrap.appendChild(mkChips(g.items));
+    } else {
+      wrap.appendChild(mkChips(common));
+      // 選中的項目正好是罕用的(從順階和弦表或上下鍵跳過來)就自動展開,
+      // 否則會「選好了卻在清單上看不到它」
+      const open = STATE.rareOpen.has(g.name) || rare.some(it => it.id === selId);
+      const tg = document.createElement("button");
+      tg.className = "rare-toggle";
+      tg.setAttribute("aria-expanded", String(open));
+      tg.innerHTML = '<span class="chev">›</span><span></span>';
+      tg.children[1].textContent = t("rareToggle", { n: rare.length });
+      tg.onclick = () => {
+        if (STATE.rareOpen.has(g.name)) STATE.rareOpen.delete(g.name);
+        else STATE.rareOpen.add(g.name);
+        buildTypeList();
       };
-      chips.appendChild(b);
+      wrap.appendChild(tg);
+      if (open) wrap.appendChild(mkChips(rare));
     }
-    wrap.appendChild(chips);
     list.appendChild(wrap);
   }
 }
