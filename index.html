@@ -325,19 +325,19 @@ main{
   font-size:var(--fs-2xs);letter-spacing:.12em;color:var(--muted);font-weight:700;
   margin-bottom:8px;padding:4px 0;
 }
-/* 「進階變化」的展開鈕。做得比晶片輕(只有一條文字 + 箭頭),
+/* 每一層(必學 / 常用 / 進階)的展開鈕。做得比晶片輕(只有一條文字 + 箭頭),
    讓它讀起來像分隔線而不是又一個可以選的項目 */
-.rare-toggle{
+.tier-toggle{
   display:flex;align-items:center;gap:6px;width:100%;margin-top:8px;
   background:transparent;border:0;border-top:1px solid var(--line);
   padding:9px 2px 0;font-family:inherit;font-size:var(--fs-2xs);
   color:var(--muted);cursor:pointer;transition:color .15s;
 }
-.rare-toggle:hover{color:var(--gold)}
-.rare-toggle .chev{display:inline-block;font-size:13px;line-height:1;transition:transform .2s}
-.rare-toggle[aria-expanded="true"]{color:var(--gold)}
-.rare-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
-.rare-toggle + .chips{margin-top:8px}
+.tier-toggle:hover{color:var(--gold)}
+.tier-toggle .chev{display:inline-block;font-size:13px;line-height:1;transition:transform .2s}
+.tier-toggle[aria-expanded="true"]{color:var(--gold)}
+.tier-toggle[aria-expanded="true"] .chev{transform:rotate(90deg)}
+.tier-toggle + .chips{margin-top:8px}
 
 /* 等寬格線排列。原本用 flex 讓晶片各自照文字長度決定寬度,每一列的數量與寬度都不一樣,
    整片看起來參差不齊;改成固定欄寬的 grid,行列自然對齊,長短名稱都排得整整齊齊 */
@@ -687,7 +687,6 @@ const I18N = {
     spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
     searchPlaceholder: "搜尋名稱、符號或公式",
     filterToggleText: "篩選",
-    rareToggle: "進階變化 {n} 種",
     accFlat: "♭ 降", accNatural: "♮ 原", accSharp: "♯ 升",
     filterStyle: "風格", filterLevel: "程度", filterSize: "編制", filterEnharmonic: "同音",
     hideDupBadge: "隱藏重複",
@@ -695,7 +694,9 @@ const I18N = {
     filterHintScale: '右上角 <b>≡</b> = 與其他音階同音高(例如庫爾德 ≡ 弗里吉安),點進去看得到全部別名',
     filterHintChord: '左上角 <b>★</b> = 必學　·　右上角 <b>≡</b> = 與其他和弦同音高',
     styleCl: "古典", stylePop: "流行搖滾", styleJz: "爵士", styleBl: "藍調靈魂", styleFilm: "影視配樂",
-    levelEssential: "★ 必學", levelCommon: "常見以上",
+    levelEssential: "★ 必學", levelCommon: "常用", levelAdvanced: "進階",
+    tierEssential: "必學", tierCommon: "常用", tierAdvanced: "進階",
+    tierToggle: "{name} {n} 種",
     sizeTriad: "三和弦", size7th: "七和弦與加音", sizeExt: "延伸與變化",
     dupOptLabel: "隱藏同音重複",
     groupAll: "全部",
@@ -741,7 +742,6 @@ const I18N = {
     spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
     searchPlaceholder: "Search name, symbol, or formula",
     filterToggleText: "Filter",
-    rareToggle: "{n} advanced variants",
     accFlat: "♭ Flat", accNatural: "♮ Natural", accSharp: "♯ Sharp",
     filterStyle: "Style", filterLevel: "Level", filterSize: "Size", filterEnharmonic: "Enh.",
     hideDupBadge: "Hiding dups",
@@ -749,7 +749,9 @@ const I18N = {
     filterHintScale: 'Top-right <b>≡</b> = same pitches as another scale (e.g. Kurd ≡ Phrygian) — open it to see all aliases',
     filterHintChord: 'Top-left <b>★</b> = essential　·　Top-right <b>≡</b> = same pitches as another chord',
     styleCl: "Classical", stylePop: "Pop/Rock", styleJz: "Jazz", styleBl: "Blues/Soul", styleFilm: "Film Score",
-    levelEssential: "★ Essential", levelCommon: "Common+",
+    levelEssential: "★ Essential", levelCommon: "Common", levelAdvanced: "Advanced",
+    tierEssential: "essential", tierCommon: "common", tierAdvanced: "advanced",
+    tierToggle: "{n} more {name}",
     sizeTriad: "Triads", size7th: "7ths & Adds", sizeExt: "Extensions",
     dupOptLabel: "Hide enharmonic dups",
     groupAll: "All",
@@ -1242,7 +1244,10 @@ const GROUP_NOTE = {
    不做成分組——分組放錯會把和弦藏起來,篩選只是縮小範圍 */
 /* 第二個欄位存的是 I18N 的 key,不是直接寫死的文字——顯示時要透過 t() 換成目前語言 */
 const STYLES = [["cl","styleCl"],["pop","stylePop"],["jz","styleJz"],["bl","styleBl"],["film","styleFilm"]];
-const LEVELS = [[3,"levelEssential"],[2,"levelCommon"]];
+/* 第二條軸:程度。刻意做成「單選一層」而不是「以上」的門檻——
+   門檻式(≥2、≥3)永遠取不到「只有進階」那一層,而且「常見以上」會被讀成「全部」,
+   實際上它做的是「排除進階」,意思剛好相反 */
+const LEVELS = [[3,"levelEssential"],[2,"levelCommon"],[1,"levelAdvanced"]];
 /* 第三條軸:編制。家族分組把三和弦與七和弦排在同一組(因為它們本來就是同一個家族,
    三和弦是種子、七和弦與延伸是往上疊的張力音),但「我現在只要三和弦」仍然是很常見的需求。
    同樣用篩選解決,而不是為它另開分組——分組一旦按音數切,家族就又被拆散了 */
@@ -1788,7 +1793,7 @@ const STATE = {
   filtersOpen: false,  // 篩選預設收合
   group: { chord: "", scale: "" },  // 目前顯示哪一個家族/系統("" = 全部),兩個分頁各自記住
   groupOpen: false,   // 窄螢幕:分類面板是否展開
-  rareOpen: new Set(),// 哪幾組把「進階變化」展開了
+  tierOpen: new Set(),// 哪幾組的哪一層展開了(鍵是「分組|程度」)
   hideDup: 0,  // 音階:隱藏與其他條目同音高的重複條目
   findSel: new Set(),
   findSpell: "sharp"
@@ -1901,7 +1906,7 @@ function matchesSearch(item, q){
 /* 風格與常用度的篩選只套用在和弦(音階是按母音階系統與文化來源分組,本來就沒有這兩個欄位) */
 function chordPasses(c, style, level, size){
   if (style && !(c.st || "").split(" ").includes(style)) return false;
-  if (level && (c.lv || 0) < level) return false;
+  if (level && (c.lv || 2) !== level) return false;
   if (size && sizeBucket(c.t.length) !== size) return false;
   return true;
 }
@@ -2117,32 +2122,36 @@ function buildTypeList(){
       }
       return chips;
     };
-    // 組內再分成「常用」與「進階變化」。屬和弦系 25 個裡有 17 個是變化音,
-    // 全部平鋪出來,想找 C7 的人得先掃過 7♭5♯9 這種一輩子用不到幾次的東西。
-    // 罕用的收在展開鈕後面——沒有刪掉,只是預設不擋路
-    const common = g.items.filter(it => (it.lv || 2) >= 2);
-    const rare   = g.items.filter(it => (it.lv || 2) < 2);
-    // 搜尋時、以及整組本來就都是進階時(增六和弦、進階與罕用),不收合,
-    // 不然會出現「這一組看起來是空的」
-    if (STATE.search || !common.length || !rare.length) {
+    // 組內照程度切成三層:必學 ★ / 常用 / 進階。最基本的那一層攤開,其餘收在展開鈕後面。
+    // 屬和弦系 25 個裡有 17 個是變化音,全部平鋪出來,想找 C7 的人得先掃過 7♭5♯9。
+    // 三層與「程度」篩選是同一套語意(不是兩套各藏各的),所以每一層都指得到、也都打得開
+    const TIERS = [[3, "tierEssential"], [2, "tierCommon"], [1, "tierAdvanced"]];
+    const tiers = TIERS
+      .map(([lv, key]) => ({ lv, key, items: g.items.filter(it => (it.lv || 2) === lv) }))
+      .filter(x => x.items.length);
+    // 搜尋時、或者篩選已經指定了某一層、或者整組只剩一層時,就不必再收合
+    if (STATE.search || STATE.level || tiers.length < 2) {
       wrap.appendChild(mkChips(g.items));
     } else {
-      wrap.appendChild(mkChips(common));
-      // 選中的項目正好是罕用的(從順階和弦表或上下鍵跳過來)就自動展開,
-      // 否則會「選好了卻在清單上看不到它」
-      const open = STATE.rareOpen.has(g.name) || rare.some(it => it.id === selId);
-      const tg = document.createElement("button");
-      tg.className = "rare-toggle";
-      tg.setAttribute("aria-expanded", String(open));
-      tg.innerHTML = '<span class="chev">›</span><span></span>';
-      tg.children[1].textContent = t("rareToggle", { n: rare.length });
-      tg.onclick = () => {
-        if (STATE.rareOpen.has(g.name)) STATE.rareOpen.delete(g.name);
-        else STATE.rareOpen.add(g.name);
-        buildTypeList();
-      };
-      wrap.appendChild(tg);
-      if (open) wrap.appendChild(mkChips(rare));
+      tiers.forEach((tier, i) => {
+        const k = g.name + "|" + tier.lv;
+        // 第一層(這一組最基本的那一層)預設攤開;選中的項目在哪一層就展開哪一層,
+        // 否則會「選好了卻在清單上看不到它」
+        const open = i === 0 || STATE.tierOpen.has(k) || tier.items.some(it => it.id === selId);
+        if (i > 0) {
+          const tg = document.createElement("button");
+          tg.className = "tier-toggle";
+          tg.setAttribute("aria-expanded", String(open));
+          tg.innerHTML = '<span class="chev">›</span><span></span>';
+          tg.children[1].textContent = t("tierToggle", { name: t(tier.key), n: tier.items.length });
+          tg.onclick = () => {
+            if (STATE.tierOpen.has(k)) STATE.tierOpen.delete(k); else STATE.tierOpen.add(k);
+            buildTypeList();
+          };
+          wrap.appendChild(tg);
+        }
+        if (open) wrap.appendChild(mkChips(tier.items));
+      });
     }
     list.appendChild(wrap);
   }
