@@ -65,7 +65,10 @@ body.light{
   --stage-glow:#FFFDF6;
   color-scheme:light;
 }
-*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+/* touch-action:manipulation 只關掉「雙擊放大」這個手勢,雙指縮放完全不受影響——
+   跟直接鎖 viewport 的 user-scalable=no 不一樣,那個連縮放需求的使用者也會一起擋掉。
+   #keyboardCanvas 自己的 touch-action:manipulation 已經是同一個值,不衝突 */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 html{height:100%}
 body{
   min-height:100%;
