@@ -604,7 +604,7 @@ footer{
 
     <div class="card" id="findCard" hidden>
       <div class="card-title" data-i18n="findChordTitle">反查和弦</div>
-      <div class="desc" style="margin-top:0" data-i18n="findCardDesc">直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音就是低音:低音不是根音時會寫成斜線和弦(E G C 是 C/E),低音當根音的寫法排在前面。</div>
+      <div class="desc" style="margin-top:0" data-i18n="findCardDesc">點鍵盤上的琴鍵選音。最低的音當低音,不是根音時寫成斜線和弦(E G C → C/E)。</div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="btn small ghost" id="findClear" data-i18n="clearSelection">清除選音</button>
         <select class="mini" id="findSpell">
@@ -687,7 +687,7 @@ const I18N = {
     playModeLabel: "播放方式",
     rootCardTitle: "根音",
     findChordTitle: "反查和弦",
-    findCardDesc: "直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音就是低音:低音不是根音時會寫成斜線和弦(E G C 是 C/E),低音當根音的寫法排在前面。",
+    findCardDesc: "點鍵盤上的琴鍵選音。最低的音當低音,不是根音時寫成斜線和弦(E G C → C/E)。",
     clearSelection: "清除選音",
     spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
     searchPlaceholder: "搜尋名稱、符號或公式",
@@ -743,7 +743,7 @@ const I18N = {
     playModeLabel: "Playback",
     rootCardTitle: "Root",
     findChordTitle: "Reverse Lookup",
-    findCardDesc: "Tap keys on the keyboard to pick notes — every matching chord name appears below. The lowest note is the bass: when it isn't the root the chord is named as a slash chord (E G C is C/E), and names with the root in the bass are listed first.",
+    findCardDesc: "Tap keys on the keyboard to pick notes. The lowest note is the bass — when it isn't the root you get a slash chord (E G C → C/E).",
     clearSelection: "Clear notes",
     spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
     searchPlaceholder: "Search name, symbol, or formula",
