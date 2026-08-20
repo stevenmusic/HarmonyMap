@@ -670,7 +670,7 @@ const $ = id => document.getElementById(id);
    只維護「一份」DOM——所有靜態文字掛 data-i18n / data-i18n-attr,
    applyLanguage() 統一走一遍 DOM 換字,不是中英文各刻一份畫面。
    和弦/音階本身的名稱字典裡本來就同時有 zh/en 兩個欄位(見下面第 2、3 節),
-   那些是樂理名詞、不是介面文字,不進這份字典,用 localName()/otherName() 挑欄位。
+   那些是樂理名詞、不是介面文字,不進這份字典,用 localName()/subName() 挑欄位。
    ══════════════════════════════════════════════════════════════ */
 const LANG_KEY = "sm_lang"; // 與 ScrollScore / SightScore / LoudMaster / Hub 共用同一把 key
 let LANG = localStorage.getItem(LANG_KEY) === "en" ? "en" : "zh"; // 沒存過或存的不是 en,一律回中文
@@ -712,7 +712,7 @@ const I18N = {
     formulaLabel: "公式", semitoneStepsLabel: "半音間隔",
     suggestedScales: "可以搭配的音階",
     otherChordNames: "同樣這幾個音的其他和弦名稱",
-    aliasLabel: "別名",
+    aliasLabel: "別名", listSep: "、",
     otherScaleNames: "同樣這幾個音的其他名稱",
     noTertianTable: "{n} 個音的音階不是照三度堆疊建構的,沒有標準的順階和弦表。直接看上面的組成音來配和弦即可。",
     diatonicChordsTitle: "順階和弦",
@@ -752,7 +752,7 @@ const I18N = {
     hideDupBadge: "Hiding dups",
     hideDupTooltip: "Many Arabic and Indian scales share pitches with Western scales. Turning this on keeps only one representative entry (search still finds all of them).",
     filterHintScale: 'Top-right <b>≡</b> = same pitches as another scale (e.g. Kurd ≡ Phrygian) — open it to see all aliases',
-    filterHintChord: 'Top-left <b>★</b> = essential　·　Top-right <b>≡</b> = same pitches as another chord',
+    filterHintChord: 'Top-left <b>★</b> = essential &nbsp;·&nbsp; Top-right <b>≡</b> = same pitches as another chord',
     styleCl: "Classical", stylePop: "Pop/Rock", styleJz: "Jazz", styleBl: "Blues/Soul", styleFilm: "Film Score",
     levelEssential: "★ Essential", levelCommon: "Common", levelAdvanced: "Advanced",
     tierEssential: "essential", tierCommon: "common", tierAdvanced: "advanced",
@@ -767,7 +767,7 @@ const I18N = {
     formulaLabel: "Formula", semitoneStepsLabel: "Semitone steps",
     suggestedScales: "Scales that fit this chord",
     otherChordNames: "Other names for the same notes",
-    aliasLabel: "aka",
+    aliasLabel: "aka", listSep: ", ",
     otherScaleNames: "Other names for the same notes",
     noTertianTable: "This {n}-note scale isn't built in stacked thirds, so there's no standard diatonic chord table. Just use the notes above to build chords.",
     diatonicChordsTitle: "Diatonic Chords",
@@ -795,10 +795,14 @@ function t(key, vars){
   return s;
 }
 /* 和弦/音階字典本身每一條目已經同時有 zh/en 兩個欄位(不是介面文字,是樂理名詞),
-   所以不走 I18N,直接依目前語言挑欄位。localName = 目前語言的主要名稱,
-   otherName = 另一個語言,拿來當副標或括號註記,兩種語言互看都看得到對照 */
+   所以不走 I18N,直接依目前語言挑欄位。localName = 目前語言的主要名稱。
+   subName = 副標用的對照名稱:中文介面附上英文原名(查資料、看譜都用得到),
+   英文介面則**不附中文名**——英文版裡冒出一個中文名稱讀不出任何資訊,只是雜訊。
+   所以 subName 在英文介面回傳空字串,呼叫端要連分隔號一起省略,
+   不然會留下孤零零的「 · 」(用 nameWithSub() 就不必每個地方各判斷一次) */
 function localName(def){ return LANG === "en" ? (def.en || def.zh) : def.zh; }
-function otherName(def){ return LANG === "en" ? def.zh : (def.en || def.zh); }
+function subName(def){ return LANG === "en" ? "" : (def.en || def.zh); }
+function nameWithSub(main, def){ const s = subName(def); return s ? main + " · " + s : main; }
 /* 每個和弦/音階的長篇說明(def.d)也有對應的英文版 def.d_en,挑法跟 localName 一樣。
    沒有 d_en 就退回中文,不要讓面板開天窗(200 條理論上都已經補好了) */
 function localDesc(def){ return LANG === "en" ? (def.d_en || def.d) : def.d; }
@@ -1017,7 +1021,7 @@ const CHORDS = [
   {id:"7sus2", sym:"7sus2",  zh:"屬七掛留二",   en:"Dominant 7 sus2",  g:"無三度和弦", t:["1","2","5","♭7"],       alias:[], lv:1, st:"pop", d:"用二音取代三音的屬七,聲響比 7sus4 更開闊,吉他刷和弦常見。", d_en:"A dominant 7th with the 2nd replacing the 3rd — an even more open sound than 7sus4, common in guitar strumming."},
   {id:"7sus4", sym:"7sus4",  zh:"屬七掛留四",   en:"Dominant 7 sus4",  g:"無三度和弦", t:["1","4","5","♭7"],       alias:["7sus"], lv:2, st:"pop jz bl", d:"屬七和弦沒有三音、改用四音,張力被軟化,常寫成「ii7/V」的形式當作延遲解決。", d_en:"A dominant 7th with no 3rd, using the 4th instead — the tension is softened, often written as a \"ii7/V\" delayed resolution."},
   {id:"maj7sus4",sym:"maj7sus4",zh:"大七掛留四",en:"Major 7 sus4",     g:"無三度和弦", t:["1","4","5","7"],        alias:["△7sus4"], lv:1, st:"jz film", d:"四音與大七度同時存在,是「四度堆疊」聲位的自然結果,現代爵士鋼琴很愛用。", d_en:"The 4th coexists with a major 7th — the natural result of a \"fourths-stacked\" voicing, a favorite of modern jazz piano."},
-  {id:"quartal", sym:"四度堆疊", zh:"四度和弦", en:"Quartal", g:"無三度和弦", t:["1","4","♭7"], alias:["sus4(no5)"], lv:1, st:"jz film", d:"兩個完全四度疊起來,是現代爵士鋼琴與配樂的基本聲響,調性歸屬刻意模糊。", d_en:"Two perfect 4ths stacked — the basic sound of modern jazz piano and film scoring, deliberately blurring tonal center."},
+  {id:"quartal", sym:"7sus4(no5)", zh:"四度和弦", en:"Quartal", g:"無三度和弦", t:["1","4","♭7"], alias:["sus4(no5)"], lv:1, st:"jz film", d:"兩個完全四度疊起來,是現代爵士鋼琴與配樂的基本聲響,調性歸屬刻意模糊。", d_en:"Two perfect 4ths stacked — the basic sound of modern jazz piano and film scoring, deliberately blurring tonal center."},
   {id:"9sus4", sym:"9sus4",  zh:"屬九掛留四",   en:"9 sus4",           g:"無三度和弦", t:["1","4","5","♭7","9"],    alias:["11"], lv:2, st:"pop jz", d:"實務上就是把 ii 級小七和弦架在 V 的根音上,爵士鋼琴的經典開放聲位。", d_en:"In practice this is just a minor ii7 chord placed over the root of V — a classic open jazz-piano voicing."},
   {id:"11",    sym:"11",     zh:"屬十一和弦",   en:"Dominant 11th",    g:"無三度和弦", t:["1","5","♭7","9","11"],       alias:[], lv:2, st:"pop jz", d:"完整的十一和弦會讓三音與十一音打架,所以標準做法是省略三音,聽起來接近 9sus4。", d_en:"A full 11th chord would clash the 3rd against the 11th, so standard practice omits the 3rd, making it sound close to a 9sus4."},
   {id:"7sus4b9",sym:"7sus4♭9",zh:"掛留四降九",  en:"7 sus4 ♭9",        g:"無三度和弦", t:["1","4","5","♭7","♭9"],      alias:["phryg"], lv:1, st:"jz", d:"又稱弗里吉安和弦,沒有三音但有 ♭9,佛朗明哥與現代爵士都常用。", d_en:"Also called the Phrygian chord — no 3rd but has a ♭9, common in flamenco and modern jazz alike."},
@@ -2114,9 +2118,12 @@ function buildTypeList(){
         if (it.lv) b.dataset.lv = it.lv;
         const same = SAME_PITCH.get(it.id);
         if (same) { b.dataset.dup = "1"; b.title = t("dupOfLabel", { name: localName(same) }); }
-        b.innerHTML = "<b></b><i></i>";
+        // 晶片第二行:和弦是名稱、音階是對照名稱。英文介面的音階沒有對照名稱,
+        // 空的 <i> 會被 flex 的 gap 撐出一條空隙,所以乾脆不要產生它
+        const subText = isChord ? localName(it) : subName(it);
+        b.innerHTML = "<b></b>" + (subText ? "<i></i>" : "");
         b.querySelector("b").textContent = isChord ? rootName() + it.sym : localName(it);
-        b.querySelector("i").textContent = isChord ? localName(it) : otherName(it);
+        if (subText) b.querySelector("i").textContent = subText;
         // 點名稱就直接發聲。已經選中的再點一次就是重播,不需要另外一顆播放鈕
         b.onclick = () => {
           if (isChord) STATE.chordId = it.id; else STATE.scaleId = it.id;
@@ -2214,11 +2221,16 @@ function renderReadout(){
   const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
   const notes = currentNotes();
   const title = isChord ? (rootName() + def.sym) : (rootName() + " " + localName(def));
-  const sub = isChord
-    ? localName(def) + " · " + otherName(def) + (def.alias && def.alias.length ? " · " + t("aliasLabel") + " " + def.alias.map(a => rootName() + a).join("、") : "")
-    : otherName(def);
+  // 副標是「名稱 · 對照名稱 · 別名」,任何一段可能是空的(英文介面沒有對照名稱、
+  // 也不是每個和弦都有 alias),所以先收成陣列再濾掉空字串,免得留下多餘的分隔號
+  const subParts = isChord ? [localName(def), subName(def)] : [subName(def)];
+  if (isChord && def.alias && def.alias.length) {
+    subParts.push(t("aliasLabel") + " " + def.alias.map(a => rootName() + a).join(t("listSep")));
+  }
+  const sub = subParts.filter(Boolean).join(" · ");
 
-  let html = '<div class="rt-head"><div class="rt-name"></div><div class="rt-sub"></div></div>';
+  // 英文介面的音階沒有副標(不附中文名),空的 .rt-sub 就不要產生
+  let html = '<div class="rt-head"><div class="rt-name"></div>' + (sub ? '<div class="rt-sub"></div>' : '') + '</div>';
   html += '<div class="note-strip">';
   const shown = displayNotes();
   let prevOct = null;
@@ -2245,7 +2257,7 @@ function renderReadout(){
   html += '<div class="desc">' + localDesc(def) + '</div>';
   ro.innerHTML = html;
   ro.querySelector(".rt-name").textContent = title;
-  ro.querySelector(".rt-sub").textContent = sub;
+  if (sub) ro.querySelector(".rt-sub").textContent = sub;
   ro.querySelectorAll(".note-cell").forEach(el => {
     el.style.cursor = "pointer";
     el.onclick = () => playSingle(+el.dataset.midi);
@@ -2260,7 +2272,7 @@ function renderReadout(){
       e += '<div class="card-title">' + t("suggestedScales") + '</div><div class="link-chips">';
       for (const sid of ids) {
         const s = scaleById(sid);
-        if (s) e += '<button class="link-chip" data-scale="' + sid + '">' + rootName() + " " + localName(s) + " · " + otherName(s) + '</button>';
+        if (s) e += '<button class="link-chip" data-scale="' + sid + '">' + nameWithSub(rootName() + " " + localName(s), s) + '</button>';
       }
       e += '</div>';
     }
@@ -2283,7 +2295,7 @@ function renderReadout(){
     const dia = diatonicChords(def);
     const sameHtml = alsoKnown.length
       ? '<div class="card-title" style="margin-top:16px">' + t("otherScaleNames") + '</div><div class="link-chips">' +
-        alsoKnown.map(x => '<button class="link-chip" data-scale="' + x.id + '">' + localName(x) + ' · ' + otherName(x) + '</button>').join("") +
+        alsoKnown.map(x => '<button class="link-chip" data-scale="' + x.id + '">' + nameWithSub(localName(x), x) + '</button>').join("") +
         '</div>'
       : "";
     if (!dia) {
@@ -2504,17 +2516,19 @@ function renderSummary(){
     const isChord = STATE.tab === "chord";
     const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
     name = isChord ? rootName() + def.sym : rootName() + " " + localName(def);
-    zh = isChord ? localName(def) : otherName(def);
+    zh = isChord ? localName(def) : subName(def);
     tones = currentNotes().map(n => STATE.label === "do" ? toSolfege(n.name) : n.name).join(" ");
   }
-  el.innerHTML = '<b></b><span class="zh"></span><span class="tones"></span>' +
+  // 摘要列是 flex + gap,空的 .zh 會白白撐出一段間距(英文介面的音階就沒有對照名稱),
+  // 所以沒有內容時連 span 都不要產生
+  el.innerHTML = '<b></b>' + (zh ? '<span class="zh"></span>' : '') + '<span class="tones"></span>' +
     // 齒輪圖示照抄 ScrollScore 的設定鈕(同一組 24 格線稿、stroke-width 2、圓端點),
     // 兩個工具放在一起看要是同一個產品。原本用 ⚙ 字元,粗細與字型會隨系統跑掉
     '<button class="kb-gear" id="kbGear" aria-label="' + t("kbGearLabel") + '" title="' + t("kbGearTitle") + '">' +
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>' +
     '</button>';
   el.querySelector("b").textContent = name;
-  el.querySelector(".zh").textContent = zh;
+  if (zh) el.querySelector(".zh").textContent = zh;
   el.querySelector(".tones").textContent = tones;
   el.querySelector("#kbGear").onclick = ev => { ev.stopPropagation(); toggleKbPopover(); };
 }
