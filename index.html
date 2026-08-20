@@ -2632,10 +2632,27 @@ document.addEventListener("pointerdown", ev => {
 });
 document.addEventListener("keydown", ev => { if (ev.key === "Escape") toggleKbPopover(false); });
 
-/* ── 主題 ── */
-const THEME_KEY = "harmonymap.light";
+/* ── 主題 ──
+   sm_theme 跟 sm_lang 一樣是四個工具共用的 localStorage key,值只有 "light" / "dark"。
+   四個工具同一個 origin,在任一個切過主題,其他三個打開就是同一個。沒存過的時候用本
+   工具自己的預設(深色)——共用的是「使用者的選擇」,不是「還沒選之前的預設」。
+
+   舊版把這個值存在 "harmonymap.light"("1"/"0")。既有使用者升上來時 sm_theme 還是空的,
+   所以讀舊 key 當備援,不然人家設好的淺色會被默默重設成深色。舊 key 只讀不寫,
+   使用者下次切換就會寫進 sm_theme。 */
+const THEME_KEY = "sm_theme";
+const LEGACY_THEME_KEY = "harmonymap.light";
+function themeIsLight(){
+  try {
+    const v = localStorage.getItem(THEME_KEY);
+    if (v === "light" || v === "dark") return v === "light";
+    const legacy = localStorage.getItem(LEGACY_THEME_KEY);
+    if (legacy === "1" || legacy === "0") return legacy === "1";
+  } catch (e) {}
+  return false;
+}
 function applyTheme(){
-  const on = localStorage.getItem(THEME_KEY) === "1";
+  const on = themeIsLight();
   document.body.classList.toggle("light", on);
   $("themeToggle").setAttribute("aria-pressed", String(on));
   const meta = document.querySelector('meta[name="theme-color"]');
@@ -2644,7 +2661,7 @@ function applyTheme(){
   drawKeyboardLive();
 }
 $("themeToggle").onclick = () => {
-  localStorage.setItem(THEME_KEY, localStorage.getItem(THEME_KEY) === "1" ? "0" : "1");
+  try { localStorage.setItem(THEME_KEY, themeIsLight() ? "dark" : "light"); } catch (e) {}
   applyTheme();
 };
 
