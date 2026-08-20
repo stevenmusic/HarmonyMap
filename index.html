@@ -722,6 +722,7 @@ const I18N = {
     findHelpText: "在上面的鍵盤點幾個音,這裡就會列出所有名字符合的和弦。例如點 C E G B♭ 會得到 <strong>C7</strong>,再加一個 D 就變成 <strong>C9</strong>。",
     selectedNotesLabel: "已選 {n} 個音 · {m} 個不同音級",
     bassInRoot: "根音在低音", inversion: "轉位",
+    inv1: "第一轉位", inv2: "第二轉位", inv3: "第三轉位",
     noExactMatch: "這組音沒有完全對應的標準和弦名稱。下面列出「包含這幾個音」的和弦,可以當作候選。",
     couldBelongTo: "這些音可以屬於(還差幾個音)",
     missingNotes: "還差 {n} 音",
@@ -777,6 +778,7 @@ const I18N = {
     findHelpText: "Tap a few notes on the keyboard above and every matching chord name shows up here. For example C E G B♭ gives <strong>C7</strong>; add a D and it becomes <strong>C9</strong>.",
     selectedNotesLabel: "{n} notes selected · {m} distinct pitch classes",
     bassInRoot: "Root in bass", inversion: "Inversion",
+    inv1: "1st inversion", inv2: "2nd inversion", inv3: "3rd inversion",
     noExactMatch: "No standard chord name matches this exact set of notes. Chords that contain these notes are listed below as candidates.",
     couldBelongTo: "Could belong to (notes still missing)",
     missingNotes: "{n} note(s) short",
@@ -2352,6 +2354,17 @@ function findChordName(rootPc, chord, bassPc, spellPref){
   const sp = chordSpelling(rootPc, chord, spellPref).get(bassPc);
   return name + "/" + (sp ? sp.name : simpleName(bassPc, spellPref));
 }
+/* 轉位編號看的是「低音是第幾級」:三音 = 第一轉位、五音 = 第二轉位、七音 = 第三轉位。
+   升降不影響編號(♭3 一樣是第一轉位)。
+   2/4/6/9/11/13 在低音**沒有**標準的轉位編號——那些是掛留音與延伸音,不是三度堆疊的
+   其中一層,C13/A 講「第五轉位」是自己發明的說法。這種情形只寫「轉位」,
+   斜線和弦名稱已經把低音是誰講清楚了,寧可少說也不要編一個不存在的名字 */
+const INVERSION_KEY = { 1: "bassInRoot", 3: "inv1", 5: "inv2", 7: "inv3" };
+function inversionLabel(rootPc, chord, bassPc, spellPref){
+  if (bassPc === null || bassPc === rootPc) return t("bassInRoot");
+  const sp = chordSpelling(rootPc, chord, spellPref).get(bassPc);
+  return t((sp && INVERSION_KEY[parseToken(sp.tok).deg]) || "inversion");
+}
 /* 反查的分析結果:選了哪些音、符合哪些和弦、每個音級該怎麼拼寫。
    鍵盤標籤與下方面板共用同一份結果,兩邊的音名才不會不一致 */
 function findAnalysis(){
@@ -2401,7 +2414,7 @@ function renderFindReadout(ro, ex){
       const nm = findChordName(r.rootPc, r.chord, an.bassPc, spellPref);
       html += '<div class="find-item"><span class="fname">' + nm + '</span>' +
               '<span class="fzh">' + localName(r.chord) + '</span>' +
-              '<span class="ftag exact">' + (r.isBass ? t("bassInRoot") : t("inversion")) + '</span></div>';
+              '<span class="ftag exact">' + inversionLabel(r.rootPc, r.chord, an.bassPc, spellPref) + '</span></div>';
     }
     html += '</div>';
   } else {
