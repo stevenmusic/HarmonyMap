@@ -604,7 +604,7 @@ footer{
 
     <div class="card" id="findCard" hidden>
       <div class="card-title" data-i18n="findChordTitle">反查和弦</div>
-      <div class="desc" style="margin-top:0" data-i18n="findCardDesc">直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音會被當成低音來排序。</div>
+      <div class="desc" style="margin-top:0" data-i18n="findCardDesc">直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音就是低音:低音不是根音時會寫成斜線和弦(E G C 是 C/E),低音當根音的寫法排在前面。</div>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="btn small ghost" id="findClear" data-i18n="clearSelection">清除選音</button>
         <select class="mini" id="findSpell">
@@ -687,7 +687,7 @@ const I18N = {
     playModeLabel: "播放方式",
     rootCardTitle: "根音",
     findChordTitle: "反查和弦",
-    findCardDesc: "直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音會被當成低音來排序。",
+    findCardDesc: "直接點鍵盤上的琴鍵選音,下面會列出所有符合的和弦名稱。最低的音就是低音:低音不是根音時會寫成斜線和弦(E G C 是 C/E),低音當根音的寫法排在前面。",
     clearSelection: "清除選音",
     spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
     searchPlaceholder: "搜尋名稱、符號或公式",
@@ -742,7 +742,7 @@ const I18N = {
     playModeLabel: "Playback",
     rootCardTitle: "Root",
     findChordTitle: "Reverse Lookup",
-    findCardDesc: "Tap keys on the keyboard to pick notes — every matching chord name appears below. The lowest note picked is treated as the bass for sorting.",
+    findCardDesc: "Tap keys on the keyboard to pick notes — every matching chord name appears below. The lowest note is the bass: when it isn't the root the chord is named as a slash chord (E G C is C/E), and names with the root in the bass are listed first.",
     clearSelection: "Clear notes",
     spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
     searchPlaceholder: "Search name, symbol, or formula",
@@ -2328,6 +2328,30 @@ function renderReadout(){
     }
   }
 }
+/* 照某個和弦的級數推算它每個音的拼寫,回傳「音級 → { 音名, 級數 }」。
+   反查的音名列與斜線和弦的低音都走這裡,兩邊才不會一邊寫 E♭、另一邊寫 D♯ */
+function chordSpelling(rootPc, chord, spellPref){
+  const map = new Map();
+  const rn = simpleName(rootPc, spellPref);
+  const li = LETTERS.indexOf(rn[0]);
+  const ac = (rn.match(/♯/g) || []).length - (rn.match(/♭/g) || []).length;
+  for (const tok of chord.t) {
+    const sp = spell(li, ac, tok);
+    const pc = ((LETTER_PC[li] + ac + sp.semi) % 12 + 12) % 12;
+    if (!map.has(pc)) map.set(pc, { name: sp.name, tok });
+  }
+  return map;
+}
+/* 反查列出來的和弦名稱。低音不是根音時要寫成斜線和弦:E G C 是 C/E,不是 C。
+   和弦名稱說的是「這是哪一組音」,斜線後面說的是「最低的是哪一個音」,
+   兩件事都得說——只寫 C 的話,照著彈出來的聲音跟使用者選的根本不一樣。
+   低音的拼寫照這個和弦自己的級數推(C/E 不會變成 C/F♭) */
+function findChordName(rootPc, chord, bassPc, spellPref){
+  const name = simpleName(rootPc, spellPref) + chord.sym;
+  if (bassPc === null || bassPc === rootPc) return name;
+  const sp = chordSpelling(rootPc, chord, spellPref).get(bassPc);
+  return name + "/" + (sp ? sp.name : simpleName(bassPc, spellPref));
+}
 /* 反查的分析結果:選了哪些音、符合哪些和弦、每個音級該怎麼拼寫。
    鍵盤標籤與下方面板共用同一份結果,兩邊的音名才不會不一致 */
 function findAnalysis(){
@@ -2346,13 +2370,8 @@ function findAnalysis(){
   const nameByPc = new Map(), tokByPc = new Map();
   if (results.length) {
     const best = results[0];
-    const rn = simpleName(best.rootPc, STATE.findSpell);
-    const li = LETTERS.indexOf(rn[0]);
-    const ac = (rn.match(/♯/g) || []).length - (rn.match(/♭/g) || []).length;
-    for (const tok of best.chord.t) {
-      const s = spell(li, ac, tok);
-      const pc = ((LETTER_PC[li] + ac + s.semi) % 12 + 12) % 12;
-      if (!nameByPc.has(pc)) { nameByPc.set(pc, s.name); tokByPc.set(pc, tok); }
+    for (const [pc, sp] of chordSpelling(best.rootPc, best.chord, STATE.findSpell)) {
+      nameByPc.set(pc, sp.name); tokByPc.set(pc, sp.tok);
     }
   }
   for (const p of pcs) if (!nameByPc.has(p)) nameByPc.set(p, simpleName(p, STATE.findSpell));
@@ -2379,7 +2398,7 @@ function renderFindReadout(ro, ex){
   if (results.length) {
     html += '<div class="find-list">';
     for (const r of results.slice(0, 12)) {
-      const nm = simpleName(r.rootPc, spellPref) + r.chord.sym;
+      const nm = findChordName(r.rootPc, r.chord, an.bassPc, spellPref);
       html += '<div class="find-item"><span class="fname">' + nm + '</span>' +
               '<span class="fzh">' + localName(r.chord) + '</span>' +
               '<span class="ftag exact">' + (r.isBass ? t("bassInRoot") : t("inversion")) + '</span></div>';
@@ -2403,7 +2422,7 @@ function renderFindReadout(ro, ex){
   if (supers.length) {
     let e = '<div class="card-title">' + t("couldBelongTo") + '</div><div class="find-list">';
     for (const s of supers.slice(0, 10)) {
-      e += '<div class="find-item"><span class="fname">' + simpleName(s.rootPc, spellPref) + s.chord.sym + '</span>' +
+      e += '<div class="find-item"><span class="fname">' + findChordName(s.rootPc, s.chord, an.bassPc, spellPref) + '</span>' +
            '<span class="fzh">' + localName(s.chord) + '</span>' +
            '<span class="ftag">' + t("missingNotes", { n: s.missing }) + '</span></div>';
     }
@@ -2510,7 +2529,11 @@ function renderSummary(){
     const seen = new Set();
     tones = an.sel.map(m => ((m % 12) + 12) % 12).filter(p => !seen.has(p) && seen.add(p))
               .map(p => an.nameByPc.get(p)).join(" ");
-    if (an.results.length) { name = simpleName(an.results[0].rootPc, STATE.findSpell) + an.results[0].chord.sym; zh = localName(an.results[0].chord); }
+    if (an.results.length) {
+      const r0 = an.results[0];
+      name = findChordName(r0.rootPc, r0.chord, an.bassPc, STATE.findSpell);
+      zh = localName(r0.chord);
+    }
     else { name = an.sel.length ? "?" : t("findPickNotes"); zh = an.sel.length ? t("findNoMatch") : t("findTapStart"); }
   } else {
     const isChord = STATE.tab === "chord";
