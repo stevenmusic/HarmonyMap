@@ -557,13 +557,15 @@ footer{
     <span class="tagline" data-i18n="tagline">和弦與音階地圖</span>
   </div>
   <div class="header-right">
-    <button class="btn" id="langToggle" aria-pressed="false" data-i18n-attr="aria-label:langToggleLabel,title:langToggleTitle" data-i18n="langToggleText">EN</button>
+    <!-- 主題在前、語言在後,跟 ScrollScore / LoudMaster 的 header-right 同一個順序。
+         這裡原本是反過來的,四個工具並排時只有這一頁的兩顆鈕位置對調 -->
     <button class="btn" id="themeToggle" aria-label="淺色模式" aria-pressed="false" data-i18n-attr="aria-label:themeToggleLabel,title:themeToggleTitle" title="切換淺色/深色主題">
       <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="9"/>
         <path d="M12 3a9 9 0 000 18z" fill="currentColor" stroke="none"/>
       </svg>
     </button>
+    <button class="btn" id="langToggle" aria-pressed="false" data-i18n-attr="aria-label:langToggleLabel,title:langToggleTitle" data-i18n="langToggleText">EN</button>
   </div>
 </header>
 
