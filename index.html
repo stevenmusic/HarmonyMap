@@ -1804,7 +1804,7 @@ const STATE = {
   filtersOpen: false,  // 篩選預設收合
   group: { chord: "", scale: "" },  // 目前顯示哪一個家族/系統("" = 全部),兩個分頁各自記住
   groupOpen: false,   // 窄螢幕:分類面板是否展開
-  tierOpen: new Set(),// 哪幾組的哪一層展開了(鍵是「分組|程度」)
+  tierClosed: new Set(),// 哪幾組的哪一層被使用者手動收合了(鍵是「分組|程度」,預設全部展開)
   hideDup: 0,  // 音階:隱藏與其他條目同音高的重複條目
   findSel: new Set(),
   findSpell: "sharp"
@@ -2149,21 +2149,20 @@ function buildTypeList(){
     } else {
       tiers.forEach((tier, i) => {
         const k = g.name + "|" + tier.lv;
-        // 第一層(這一組最基本的那一層)預設攤開;選中的項目在哪一層就展開哪一層,
+        // 每一層預設全部攤開(沒有選程度時就是要一次看到所有和弦);
+        // 使用者可以自己收合某一層,選中的項目在哪一層就強制展開哪一層,
         // 否則會「選好了卻在清單上看不到它」
-        const open = i === 0 || STATE.tierOpen.has(k) || tier.items.some(it => it.id === selId);
-        if (i > 0) {
-          const tg = document.createElement("button");
-          tg.className = "tier-toggle";
-          tg.setAttribute("aria-expanded", String(open));
-          tg.innerHTML = '<span class="chev">›</span><span></span>';
-          tg.children[1].textContent = t("tierToggle", { name: t(tier.key), n: tier.items.length });
-          tg.onclick = () => {
-            if (STATE.tierOpen.has(k)) STATE.tierOpen.delete(k); else STATE.tierOpen.add(k);
-            buildTypeList();
-          };
-          wrap.appendChild(tg);
-        }
+        const open = !STATE.tierClosed.has(k) || tier.items.some(it => it.id === selId);
+        const tg = document.createElement("button");
+        tg.className = "tier-toggle";
+        tg.setAttribute("aria-expanded", String(open));
+        tg.innerHTML = '<span class="chev">›</span><span></span>';
+        tg.children[1].textContent = t("tierToggle", { name: t(tier.key), n: tier.items.length });
+        tg.onclick = () => {
+          if (STATE.tierClosed.has(k)) STATE.tierClosed.delete(k); else STATE.tierClosed.add(k);
+          buildTypeList();
+        };
+        wrap.appendChild(tg);
         if (open) wrap.appendChild(mkChips(tier.items));
       });
     }
