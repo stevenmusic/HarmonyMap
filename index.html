@@ -1751,7 +1751,8 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
      但通常用三根手指按,畫一條橫槓反而誤導;超過四個按弦音(F、Bm),或沒有空弦、
      一指壓三條以上(Dmaj7 的 × 5 7 6 7 5)才是橫按和弦 */
   const barreShown = barre && (fretted.length > 4 || (!frets.some(f => f === 0) && barreHi - barreLo >= 2));
-  return { frets: frets.slice(), cost, missing, barre, barreShown, barreLo, barreHi, bassIsRoot, minF };
+  const span = fretted.length ? Math.max(...fretted.map(s => frets[s])) - minF : 0;
+  return { frets: frets.slice(), cost, missing, barre, barreShown, barreLo, barreHi, bassIsRoot, minF, fingers, span };
 }
 
 /* 列出這個和弦在標準調音下彈得到的指法:先窮舉(每條弦只考慮組成音所在的格子,
@@ -1772,8 +1773,9 @@ function shapeTemplates(def, bassIv){
 }
 function matchesShape(frets, rPc, templates){
   return templates.some(tp => {
-    const k = pcOf(rPc - tp.pc);
-    return tp.frets.every((f, s) => f < 0 ? frets[s] < 0 : frets[s] === f + k);
+    // 平移 k 格或 k + 12 格(E 的六弦封閉和弦在第 12 格,就是 E 形本身往上推一個八度)
+    return [pcOf(rPc - tp.pc), pcOf(rPc - tp.pc) + 12].some(k => k > 0 &&
+      tp.frets.every((f, s) => f < 0 ? frets[s] < 0 : frets[s] === f + k));
   });
 }
 /* 標準開放和弦:哪幾個開放指法是「大家都這樣彈」的,是教學傳統,不是從音推得出來的
@@ -1903,24 +1905,48 @@ function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
     const isOpenPos = v => v.frets.some(f => f === 0) && Math.max(...v.frets) <= 4;
     const closed = v => !v.frets.some(f => f === 0);
     const lowStr = v => v.frets.findIndex(f => f >= 0);
-    const coversTop = v => v.frets[5] >= 0 || !byPc.has(pcOf(GTR_OPEN[5] + v.minF));
-    const bestOf = arr => {
-      const good = arr.filter(coversTop);
-      return (good.length ? good : arr)[0] || null;   // all 已照分數排好
+    /* 食指橫按「壓得到 1 弦卻不彈 1 弦」的不收(8 10 9 9 8 × 反而要另外悶 1 弦)。
+       只管有橫按的;而且只在橫按真的延伸得到 1 弦時才要求:中間經過的每條弦在橫按那格要嘛有按更高的格,
+       要嘛本來就是和弦音——Cdim 的 8 9 10 8 × × 延伸下去會壓到 2 弦的 G(不是和弦音),1 弦本來就只能悶 */
+    const coversTop = v => {
+      if (!v.barreShown || v.frets[5] >= 0) return true;
+      for (let s = v.barreHi + 1; s <= 5; s++) {
+        if (v.frets[s] >= v.minF) continue;
+        if (!byPc.has(pcOf(GTR_OPEN[s] + v.minF))) return true;   // 延伸不過去,1 弦只能悶
+      }
+      return false;
     };
+    const bestOf = arr => arr.filter(coversTop)[0] || null;   // all 已照分數排好;沒有合格的就不列
     // 不在開放和弦表裡的和弦:資料庫的第一名剛好是開放指法時才算「最常用的開放和弦」
+    /* 「真的有人這樣彈」的封閉和弦才列,沒有就不列,不硬湊(使用者要求):
+       資料庫有列,或是這種和弦自己的 E/A 開放形狀往上推;而且手按得到——
+       最多 4 指(相鄰幾條弦同一格可以用一指壓,例如 C6 的 × 3 5 5 5 5 無名指一次壓四條),
+       食指橫按時不能再撐到第 4 格(Cadd9 的 8 7 10 7 8 × 太難) */
+    const handFingers = v => {
+      const rest = [];
+      v.frets.forEach((f, s) => { if (f > 0 && !(v.barreShown && f === v.minF && s >= v.barreLo && s <= v.barreHi)) rest.push([s, f]); });
+      let runs = 0;
+      rest.forEach(([s, f], i) => { if (!(i && rest[i - 1][0] === s - 1 && rest[i - 1][1] === f)) runs++; });
+      return runs + (v.barreShown ? 1 : 0);
+    };
+    // E/A 形本身就是開放和弦把上弦枕換成食指,開放時按得到,推上去就按得到(A 形 sus4 的 × 7 9 9 10 7);
+    // 「橫按又撐 4 格」只擋資料庫裡其他的指法
+    const realClosed = v => handFingers(v) <= 4 && (v.shape || (v.ref && !(v.barreShown && v.span >= 3)));
     const open = canon ? all.find(v => v.canon) : canon === undefined ? pool.find(v => v.ref === 1 && isOpenPos(v)) : null;
     // 封閉和弦的根音在最低那條弦上,食指(或中指)就壓在根音那一格附近:最低格不能比根音低超過 1 格
     // (C9 的 × 3 2 3 3 3 可以;C5 的 8 × 5 5 8 8 手根本不在根音上,不算)
-    const onRoot = (v, str, rf) => closed(v) && lowStr(v) === str && v.frets[str] === rf && v.minF >= rf - 1;
+    const onRoot = (v, str, rf) => closed(v) && lowStr(v) === str && v.frets[str] === rf && v.minF >= rf - 1 && realClosed(v);
     const rf5 = pcOf(rPc - 9) || 12, rf6 = pcOf(rPc - 4) || 12;
     const five = bestOf(pool.filter(v => onRoot(v, 1, rf5)));
     const six = bestOf(pool.filter(v => onRoot(v, 0, rf6)));
     for (const v of [open, five, six]) if (v && !picked.includes(v)) picked.push(v);
+    // 三種都沒有(罕用和弦):只列一個——資料庫第一名,沒有資料就列評分最好的那一個
+    let fallback = false;
+    if (!picked.length && pool.length) { picked.push(pool.find(v => v.ref === 1) || pool[0]); fallback = true; }
     if (picked.length) {
       const best = open || picked.slice().sort((a, b) => a.cost - b.cost)[0];
       picked.sort((a, b) => (b === open) - (a === open) || a.minF - b.minF);
-      const res = { list: picked, best: picked.indexOf(best) };
+      const res = { list: picked, best: picked.indexOf(best), fallback };
       VOICING_CACHE.set(key, res);
       return res;
     }

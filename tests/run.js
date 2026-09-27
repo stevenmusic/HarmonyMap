@@ -210,12 +210,19 @@ async function openPage(browser, opts = {}){
           if (!k) { if (vs.list.length > 1) fails.push(tag + ": " + gtrTabText(f) + " 不屬於三種"); continue; }
           if (kinds.includes(k)) fails.push(tag + ": 重複的 " + k);
           kinds.push(k);
+          // 封閉和弦不硬湊:要嘛資料庫有列,要嘛是這種和弦自己的 E/A 開放形狀往上推
+          if (vs.fallback) continue;   // 三種都沒有時只列一個(資料庫第一名或評分最好的),不算硬湊
+          if (k !== "open" && !v.ref && !v.shape) fails.push(tag + ": " + gtrTabText(f) + " 資料庫沒有、也不是 E/A 形");
+          if (k !== "open" && !v.shape && v.barreShown && v.span >= 3) fails.push(tag + ": " + gtrTabText(f) + " 橫按又撐 4 格");
         }
-        // 1 弦:同一類裡有「1 弦也彈」的指法時,不能選「1 弦不彈」的
+        // 1 弦:食指橫按的封閉和弦,1 弦在橫按那格是和弦音就一定要彈
         const all = [];
         for (const v of vs.list) {
           const f = v.frets;
-          if (!f.some(x => x === 0) && f[5] < 0 && pcs.has(pcOf(GTR_OPEN[5] + v.minF))) all.push(gtrTabText(f));
+          if (!v.barreShown || f.some(x => x === 0) || f[5] >= 0 || vs.fallback) continue;
+          let canReach = true;   // 橫按延伸得到 1 弦(中間每條弦要嘛按更高格、要嘛在橫按那格是和弦音)
+          for (let s = v.barreHi + 1; s <= 5; s++) if (f[s] < v.minF && !pcs.has(pcOf(GTR_OPEN[s] + v.minF))) canReach = false;
+          if (canReach) all.push(gtrTabText(f));
         }
         if (all.length) fails.push(tag + ": 封閉和弦 1 弦沒彈 " + all.join(", "));
       }
