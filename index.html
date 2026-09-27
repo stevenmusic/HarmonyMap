@@ -1615,7 +1615,7 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc){
 
   const fretted = [];
   for (let s = 0; s < 6; s++) if (frets[s] > 0) fretted.push(s);
-  let minF = 0, fingers = 0, barre = false;
+  let minF = 0, fingers = 0, barre = false, barreLo = -1, barreHi = -1;
   if (fretted.length) {
     minF = Math.min(...fretted.map(s => frets[s]));
     const maxF = Math.max(...fretted.map(s => frets[s]));
@@ -1625,7 +1625,7 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc){
       // 橫按:食指壓住最低格上最外側兩條弦之間的每一條弦,這段範圍裡不能有空弦或不彈的弦
       let ok = true;
       for (let s = atMin[0]; s <= atMin[atMin.length - 1]; s++) if (frets[s] < minF) ok = false;
-      if (ok) { fingers = fretted.length - atMin.length + 1; barre = true; }
+      if (ok) { fingers = fretted.length - atMin.length + 1; barre = true; barreLo = atMin[0]; barreHi = atMin[atMin.length - 1]; }
     }
     if (fingers > 4) return null;
     cost += minF * 1.2 + (maxF - minF) * 1.5 + fingers + (barre ? 2 : 0);
@@ -1643,14 +1643,63 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc){
   }
   cost += 3 * (6 - played.length);
   for (let s = lowS; s <= highS; s++) if (frets[s] < 0) cost += 20; // 中間夾一條不彈的弦要另外用手指悶住
-  return { frets: frets.slice(), cost, missing, barre, bassIsRoot, minF };
+  /* 畫成直排、標成「橫按」的條件:真的非橫按不可才算。× 0 2 2 2 0 雖然可以一指壓三條,
+     但通常用三根手指按,畫一條橫槓反而誤導;超過四個按弦音(F、Bm),或沒有空弦、
+     一指壓三條以上(Dmaj7 的 × 5 7 6 7 5)才是橫按和弦 */
+  const barreShown = barre && (fretted.length > 4 || (!frets.some(f => f === 0) && barreHi - barreLo >= 2));
+  return { frets: frets.slice(), cost, missing, barre, barreShown, barreLo, barreHi, bassIsRoot, minF };
 }
 
 /* 列出這個和弦在標準調音下彈得到的指法:先窮舉(每條弦只考慮組成音所在的格子,
    按弦跨度超過 3 格就剪枝),再挑出彼此把位相差兩格以上的幾個,由低把位排到高把位 */
 const VOICING_CACHE = new Map();
-function chordVoicingsFor(rPc, def, bassPc = null){
-  const key = rPc + "|" + def.id + "|" + bassPc;
+/* 橫按和弦的「正統」形狀,就是 E 與 A 開放和弦整個往上推(F = E 形推一格、Cm = Am 形推三格)。
+   這裡不另外存形狀表:同一種和弦在根音 E、A 上算出來的開放指法就是它的樣板,
+   空弦變成食指橫按的那一格。符合樣板的指法優先,否則評分會挑出 × 3 1 0 1 × 這種
+   彈得到、但沒有人這樣教的 Cm */
+function shapeTemplates(def, bassIv){
+  const out = [];
+  for (const pc of [4, 9]) { // E、A
+    const vs = chordVoicingsFor(pc, def, bassIv == null ? null : pcOf(pc + bassIv), true);
+    const v = vs.list[vs.best];
+    if (v && v.frets.some(f => f === 0) && v.minF <= 4) out.push({ pc, frets: v.frets });
+  }
+  return out;
+}
+function matchesShape(frets, rPc, templates){
+  return templates.some(tp => {
+    const k = pcOf(rPc - tp.pc);
+    return tp.frets.every((f, s) => f < 0 ? frets[s] < 0 : frets[s] === f + k);
+  });
+}
+/* 標準開放和弦:哪幾個開放指法是「大家都這樣彈」的,是教學傳統,不是從音推得出來的
+   (Cm 的 × 3 1 0 1 × 彈得到、音也對,但沒有教材這樣教)。所以這裡是唯一的一張指法表,
+   只收初學教材裡那一批 C/A/G/E/D 家族的開放和弦。表裡有這種和弦的話,
+   低把位帶空弦的指法只有表上的算開放和弦,其餘一律讓給橫按形狀。
+   表上每一個指法都還是要通過窮舉與評分(音對、手指夠),表只是決定優先順序 */
+const OPEN_CANON = {
+  maj:  { C: "x32010", A: "x02220", G: "320003", E: "022100", D: "xx0232" },
+  min:  { A: "x02210", E: "022000", D: "xx0231" },
+  "7":  { C: "x32310", A: "x02020", G: "320001", E: "020100", D: "xx0212", B: "x21202" },
+  maj7: { C: "x32000", A: "x02120", G: "320002", E: "021100", D: "xx0222", F: "xx3210" },
+  m7:   { A: "x02010", E: "020000", D: "xx0211" },
+  "6":  { C: "x32210", A: "x02222", G: "320000", E: "022120", D: "xx0202" },
+  m6:   { A: "x02212", E: "022020", D: "xx0201" },
+  add9: { C: "x32033", A: "x02420", G: "320203", E: "024100" },
+  sus2: { A: "x02200", D: "xx0230" },
+  sus4: { A: "x02230", E: "022200", D: "xx0233" },
+  "7sus4": { A: "x02030", E: "020200", D: "xx0213" },
+  pow:  { E: "022xxx", A: "x022xx", D: "xx023x" }
+};
+const OPEN_CANON_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function openCanon(rPc, id){
+  const tbl = OPEN_CANON[id];
+  if (!tbl) return undefined; // 這種和弦沒有公認的開放指法表,照評分走
+  for (const L in tbl) if (OPEN_CANON_PC[L] === rPc) return tbl[L].split("").map(c => c === "x" ? -1 : +c);
+  return null;                // 有表、但這個根音沒有標準開放和弦(Cm、Gm、Bm…)
+}
+function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
+  const key = rPc + "|" + def.id + "|" + bassPc + (noShapes ? "|raw" : "");
   if (VOICING_CACHE.has(key)) return VOICING_CACHE.get(key);
   const byPc = new Map();
   for (const tok of def.t) {
@@ -1678,11 +1727,25 @@ function chordVoicingsFor(rPc, def, bassPc = null){
       dfs(s + 1, nlo, nhi);
     }
   })(0, Infinity, -Infinity);
+  const canon = bassPc == null ? openCanon(rPc, def.id) : undefined;
+  if (canon !== undefined) for (const v of all) {
+    if (!(v.minF < 3 && v.frets.some(f => f === 0))) continue;
+    if (canon && canon.every((f, s) => f === v.frets[s])) { v.cost -= 50; v.canon = true; } // 有標準開放和弦就排第一
+    else v.cost += 5;
+  }
+  if (!noShapes) {
+    const tps = shapeTemplates(def, bassPc == null ? null : pcOf(bassPc - rPc));
+    for (const v of all) if (matchesShape(v.frets, rPc, tps)) { v.cost -= 3; v.shape = true; } // 有開放和弦可彈時仍以開放和弦為先(B7 的 × 2 1 2 0 2)
+  }
   all.sort((a, b) => a.cost - b.cost || a.minF - b.minF || gtrTabText(a.frets).localeCompare(gtrTabText(b.frets)));
   const picked = [];
-  for (const v of all) {
+  // 沒有指定低音時,最低音不是根音的指法聽起來是轉位、不是這個和弦,有別的選擇就不列
+  const pool = bassPc == null && all.some(v => v.bassIsRoot) ? all.filter(v => v.bassIsRoot) : all;
+  for (const v of pool) {
     if (picked.length >= 6) break;
-    if (picked.length && v.cost > picked[0].cost + 30) break;
+    // 門檻用的是加分前的分數,否則標準開放和弦的 -50 會把其他把位全部擋掉
+    const raw = x => x.cost + (x.canon ? 50 : 0);
+    if (picked.length && raw(v) > raw(picked[0]) + 30) break;
     if (picked.every(p => Math.abs(p.minF - v.minF) >= 2)) picked.push(v);
   }
   const best = picked[0] || null;
@@ -1712,7 +1775,7 @@ function chordTitle(def){
    不為每個名稱各存一份指法 */
 function voicingLabel(v){
   const hasOpen = v.frets.some(f => f === 0);
-  let s = hasOpen && v.minF <= 4 ? t("vOpen") : v.barre ? t("vBarre", { n: v.minF }) : t("vPos", { n: Math.max(1, v.minF) });
+  let s = hasOpen && v.minF <= 4 ? t("vOpen") : v.barreShown ? t("vBarre", { n: v.minF }) : t("vPos", { n: Math.max(1, v.minF) });
   const rs = v.frets.findIndex((f, i) => f >= 0 && pcOf(GTR_OPEN[i] + f) === rootPc());
   if (rs >= 0) s += " · " + t("vRootOn", { n: 6 - rs });
   return s;
@@ -1764,7 +1827,7 @@ function guitarView(){
       if (f === 0) markers[s] = { type: "open", midi, root: x.root, text: lab(x) };
       else dots.push({ s, f, midi, root: x.root, text: lab(x) });
     }
-    return { frets, dots, ghosts, markers };
+    return { frets, dots, ghosts, markers, barre: null };
   }
   const b = bassInfo();
   if (b && !info.has(b.pc)) info.set(b.pc, { name: b.name, tok: b.tok, root: false });
@@ -1778,6 +1841,8 @@ function guitarView(){
     if (mk === "open") markers[s] = { type: "open", midi, root: x.root, text: lab(x) };
     else dots.push({ s, f, midi, root: x.root, text: lab(x) });
   });
+  // 橫按:食指一次壓住的那幾條弦畫成一整條直排,不是幾顆分開的點(Dmaj7 × 5 7 6 7 5 是一指壓五條)
+  const barre = v.barreShown ? { f: v.minF, lo: v.barreLo, hi: v.barreHi } : null;
   // 同一個和弦在指板上其他位置的組成音淡淡畫出來,看得到「換把位時手要往哪裡去」
   for (let s = 0; s < 6; s++) for (let f = 1; f <= frets; f++) {
     if (f === v.frets[s]) continue;
@@ -1785,7 +1850,7 @@ function guitarView(){
     const x = info.get(pc);
     if (x && !(b && !b.chordTone && pc === b.pc)) ghosts.push({ s, f, root: x.root });
   }
-  return { frets, dots, ghosts, markers };
+  return { frets, dots, ghosts, markers, barre };
 }
 
 function fretboardLayout(w, h, nFrets){
@@ -1805,8 +1870,11 @@ function fretboardLayout(w, h, nFrets){
 function drawFretboard(ctx, w, h, gv){
   const L = fretboardLayout(w, h, gv.frets);
   const { nutX, right, top, bottom, sp } = L;
-  ctx.fillStyle = "#0C0A07";
-  ctx.fillRect(0, 0, w, h);
+  /* 指板本身是木頭,兩種主題都一樣;指板外面(○/× 欄、格數)不塗底色,
+     透出 .kb-wrap 的主題背景,文字與記號也改讀主題色,淺色模式才不會是一塊黑框 */
+  const cs = getComputedStyle(document.body);
+  const cv = n => cs.getPropertyValue(n).trim();
+  const TH = { muted: cv("--muted-bright") || "#B6A576", gold: cv("--gold") || "#C9A24B", teal: cv("--teal") || "#3FBFAE" };
   const wood = ctx.createLinearGradient(0, top, 0, bottom);
   wood.addColorStop(0, "#3A2717"); wood.addColorStop(1, "#24170C");
   ctx.fillStyle = wood;
@@ -1837,7 +1905,7 @@ function drawFretboard(ctx, w, h, gv){
   const nfs = Math.max(9, Math.min(12, L.numH * 0.75));
   ctx.font = "500 " + nfs + "px 'Noto Serif TC', serif";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = "rgba(182,165,118,0.85)";
+  ctx.fillStyle = TH.muted;
   for (const f of [1, 3, 5, 7, 9, 12, 15]) if (f <= gv.frets) ctx.fillText(String(f), L.xOf(f), bottom + L.numH / 2 + 1);
 
   const r = Math.max(5, Math.min(sp * 0.44, L.fretW * 0.4));
@@ -1850,6 +1918,16 @@ function drawFretboard(ctx, w, h, gv){
   for (const g of gv.ghosts) {
     ctx.fillStyle = g.root ? "rgba(242,185,75,0.30)" : "rgba(63,191,174,0.30)";
     dot(L.xOf(g.f), L.yOf(g.s), r * 0.34); ctx.fill();
+  }
+  // 橫按的直排:畫在音點底下,音點(根音金色、其他青色)照樣疊在上面標出每條弦是什麼音
+  if (gv.barre) {
+    const x = L.xOf(gv.barre.f), y1 = L.yOf(gv.barre.hi), y2 = L.yOf(gv.barre.lo);
+    const bw = r * 1.5;
+    ctx.fillStyle = "rgba(232,220,192,0.88)";
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x - bw / 2, y1 - bw / 2, bw, y2 - y1 + bw, bw / 2);
+    else ctx.rect(x - bw / 2, y1 - bw / 2, bw, y2 - y1 + bw);
+    ctx.fill();
   }
   // 按弦的音
   for (const d of gv.dots) {
@@ -1873,15 +1951,16 @@ function drawFretboard(ctx, w, h, gv){
     const x = L.xOf(0), y = L.yOf(s), rr = Math.min(r, L.colW * 0.42);
     if (mk.type === "mute") {
       const k = rr * 0.5;
-      ctx.strokeStyle = mk.faint ? "rgba(182,165,118,0.35)" : "rgba(214,196,150,0.9)";
+      ctx.strokeStyle = TH.muted;
+      ctx.globalAlpha = mk.faint ? 0.35 : 1;
       ctx.lineWidth = 2; ctx.lineCap = "round";
       ctx.beginPath(); ctx.moveTo(x - k, y - k); ctx.lineTo(x + k, y + k);
       ctx.moveTo(x + k, y - k); ctx.lineTo(x - k, y + k); ctx.stroke();
-      ctx.lineCap = "butt";
+      ctx.lineCap = "butt"; ctx.globalAlpha = 1;
     } else {
       const attack = isSounding(mk.midi);
-      const col = mk.root ? (attack ? "#FFE39A" : "#F2B94B") : (attack ? "#8FFFF0" : "#3FBFAE");
-      ctx.strokeStyle = col; ctx.lineWidth = attack ? 3 : 2;
+      const col = mk.root ? TH.gold : TH.teal;
+      ctx.strokeStyle = col; ctx.lineWidth = attack ? 3.5 : 2;
       dot(x, y, rr - 1); ctx.stroke();
       if (mk.text) {
         fitText(mk.text, rr * 1.5, Math.max(7, rr * 0.85));
