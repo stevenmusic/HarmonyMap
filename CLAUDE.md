@@ -173,3 +173,14 @@ prefers-reduced-motion:reduce
 `C 大調順階七和弦 = Cmaj7 Dm7 Em7 Fmaj7 G7 Am7 Bm7♭5`
 改完雙語相關的程式後,把語言切到英文,把兩個分頁的分類全部展開、每個條目都點一次,
 確認畫面上除了語言切換鈕的「中」以外沒有任何中文字。
+
+## 吉他版
+- 跟鋼琴共用同一張畫布與同一個 `render()`,樂器切換(`STATE.inst`)只換畫法:`drawFretboard` /
+  `guitarView` / `fretAt` 是另外一組函式,照抄 ScrollScore 的鍵盤程式一行都沒動
+- 指法**不是查表**,是照和弦公式在標準調音上窮舉再評分(`chordVoicingsFor`):
+  按弦跨度 ≤ 3 格、手指 ≤ 4(橫按算一指)、最低音要是根音、五音最先省略。
+  改評分之後要確認 C/G/D/A/E/Am/Em/Dm/F/E7/Cmaj7/B7/A7/D7/G7 仍然是標準開放和弦的指法
+- ○/× 只能從 `gtrMarkers(frets)` 來:0 = ○、-1 = ×、其他 = 按弦。
+  音階沒有「不彈」,空弦不在音階裡就什麼都不標(不是畫 ×)
+- 吉他取樣三套(民謠/古典/電吉他)來自 npm 的 tonejs-instrument-guitar-*,經 jsDelivr、版本釘死。
+  檔名清單照套件內容列出;古典吉他的 D5.mp3 實測差 100 cents,刻意排除
