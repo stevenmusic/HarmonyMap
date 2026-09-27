@@ -1953,24 +1953,23 @@ function drawFretboard(ctx, w, h, gv){
     const y = L.yOf(s), vib = STRING_VIB[s];
     const age = vib ? now - vib.t0 : Infinity;
     const live = age < VIB_MS;
-    const decay = live ? Math.exp(-age / (VIB_MS / 4)) : 0;
+    const decay = live ? Math.exp(-age / (VIB_MS / 3)) : 0;
     ctx.strokeStyle = live ? "rgba(255,244,214," + (0.8 + 0.2 * decay) + ")" : "rgba(214,205,186,0.8)";
     ctx.lineWidth = 2.3 - s * 0.3;
-    ctx.beginPath(); ctx.moveTo(nutX - 4, y);
+    ctx.beginPath(); ctx.moveTo(nutX - 4, y); ctx.lineTo(right, y); ctx.stroke();
+    /* 振動畫成「殘影」而不是讓線上下跳:真的弦振動時肉眼看到的是一條微微變寬、
+       發亮的梭形帶子(兩端固定、中間最寬),不會一直晃。上下跳的畫法看起來很抖(使用者回報過) */
     if (live && !REDUCED_MOTION.matches) {
-      const x0 = vib.f > 0 ? nutX + vib.f * L.fretW : nutX; // 按住的那一格的琴格(音由那裡往琴橋振動)
-      ctx.lineTo(x0, y);
-      // 駐波:兩端固定、中間振幅最大;低音弦振得慢、高音弦振得快
-      const amp = Math.min(sp * 0.4, 7) * decay * Math.cos(age / 1000 * 2 * Math.PI * (11 + s * 2.5));
-      const N = 28;
-      for (let i = 1; i <= N; i++) {
-        const x = x0 + (right - x0) * i / N;
-        ctx.lineTo(x, y + amp * Math.sin(Math.PI * i / N));
-      }
-    } else {
-      ctx.lineTo(right, y);
+      const x0 = vib.f > 0 ? nutX + vib.f * L.fretW : nutX; // 按住那一格往琴橋那段才振動
+      const amp = Math.min(sp * 0.16, 2.5) * decay;
+      const N = 24;
+      ctx.beginPath();
+      for (let i = 0; i <= N; i++) ctx.lineTo(x0 + (right - x0) * i / N, y - amp * Math.sin(Math.PI * i / N));
+      for (let i = N; i >= 0; i--) ctx.lineTo(x0 + (right - x0) * i / N, y + amp * Math.sin(Math.PI * i / N));
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,244,214," + (0.35 * decay) + ")";
+      ctx.fill();
     }
-    ctx.stroke();
   }
   // 格數
   const nfs = Math.max(9, Math.min(12, L.numH * 0.75));
@@ -2043,7 +2042,7 @@ function drawFretboard(ctx, w, h, gv){
   return L;
 }
 /* 弦的振動動畫:記下每條弦最後一次被撥的時間與按住的格數,畫的時候依經過時間算振幅 */
-const VIB_MS = 1200;
+const VIB_MS = 900;
 const STRING_VIB = [null, null, null, null, null, null];
 const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
 let vibAnim = 0;
