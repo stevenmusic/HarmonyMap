@@ -1947,11 +1947,30 @@ function drawFretboard(ctx, w, h, gv){
   // 上弦枕
   ctx.fillStyle = "#E8DCC0";
   ctx.fillRect(nutX - 4, top, 4, bottom - top);
-  // 琴弦:低音弦粗、高音弦細
+  // 琴弦:低音弦粗、高音弦細。剛撥過的弦從按弦那一格到琴橋那一段會振動(空弦是整條)
+  const now = performance.now();
   for (let s = 0; s < 6; s++) {
-    const y = L.yOf(s);
-    ctx.strokeStyle = "rgba(214,205,186,0.8)"; ctx.lineWidth = 2.3 - s * 0.3;
-    ctx.beginPath(); ctx.moveTo(nutX - 4, y); ctx.lineTo(right, y); ctx.stroke();
+    const y = L.yOf(s), vib = STRING_VIB[s];
+    const age = vib ? now - vib.t0 : Infinity;
+    const live = age < VIB_MS;
+    const decay = live ? Math.exp(-age / (VIB_MS / 4)) : 0;
+    ctx.strokeStyle = live ? "rgba(255,244,214," + (0.8 + 0.2 * decay) + ")" : "rgba(214,205,186,0.8)";
+    ctx.lineWidth = 2.3 - s * 0.3;
+    ctx.beginPath(); ctx.moveTo(nutX - 4, y);
+    if (live && !REDUCED_MOTION.matches) {
+      const x0 = vib.f > 0 ? nutX + vib.f * L.fretW : nutX; // 按住的那一格的琴格(音由那裡往琴橋振動)
+      ctx.lineTo(x0, y);
+      // 駐波:兩端固定、中間振幅最大;低音弦振得慢、高音弦振得快
+      const amp = Math.min(sp * 0.4, 7) * decay * Math.cos(age / 1000 * 2 * Math.PI * (11 + s * 2.5));
+      const N = 28;
+      for (let i = 1; i <= N; i++) {
+        const x = x0 + (right - x0) * i / N;
+        ctx.lineTo(x, y + amp * Math.sin(Math.PI * i / N));
+      }
+    } else {
+      ctx.lineTo(right, y);
+    }
+    ctx.stroke();
   }
   // 格數
   const nfs = Math.max(9, Math.min(12, L.numH * 0.75));
@@ -2022,6 +2041,22 @@ function drawFretboard(ctx, w, h, gv){
     }
   }
   return L;
+}
+/* 弦的振動動畫:記下每條弦最後一次被撥的時間與按住的格數,畫的時候依經過時間算振幅 */
+const VIB_MS = 1200;
+const STRING_VIB = [null, null, null, null, null, null];
+const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)");
+let vibAnim = 0;
+function vibrateString(s, f){
+  STRING_VIB[s] = { t0: performance.now(), f };
+  if (vibAnim) return;
+  const step = () => {
+    drawKeyboardLive();
+    const alive = STRING_VIB.some(v => v && performance.now() - v.t0 < VIB_MS);
+    vibAnim = alive && STATE.inst === "guitar" ? requestAnimationFrame(step) : 0;
+    if (!vibAnim) drawKeyboardLive(); // 最後一格畫回靜止的直線
+  };
+  vibAnim = requestAnimationFrame(step);
 }
 /* 點指板:反推是哪一條弦、第幾格(0 = 點在琴頸左邊那一欄,代表空弦) */
 function fretAt(px, py){
@@ -3366,6 +3401,7 @@ function keyAt(px, py){
 function pluckString(s){
   const v = currentVoicing();
   if (!v || v.frets[s] < 0) return;
+  vibrateString(s, v.frets[s]);
   playSingle(GTR_OPEN[s] + v.frets[s]);
 }
 $("keyboardCanvas").addEventListener("pointermove", ev => {
@@ -3391,7 +3427,7 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
       // 一條弦同一時間只能發一個音:點同一格是取消,點別格是移過去
       STATE.findFrets[hit.s] = STATE.findFrets[hit.s] === hit.f ? null : hit.f;
       syncFindFromFrets();
-      if (STATE.findFrets[hit.s] != null) playSingle(midi);
+      if (STATE.findFrets[hit.s] != null) { vibrateString(hit.s, hit.f); playSingle(midi); }
       render();
     } else if (STATE.tab === "chord") {
       // 和弦:左手已經按好整個和弦,右手撥哪條弦就響那條弦「按住的音」,
@@ -3400,6 +3436,7 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
       cv._strum = hit.s;
       try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
     } else {
+      vibrateString(hit.s, hit.f);
       playSingle(midi);
     }
     return;
