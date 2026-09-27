@@ -434,6 +434,8 @@ html[data-lang="en"] .chip i{white-space:normal}
   color:var(--gold-bright);flex:none;
 }
 .kb-summary .zh{font-size:var(--fs-xs);color:var(--muted);flex:none}
+.kb-summary .tn{cursor:pointer;border-radius:4px;padding:2px 1px}
+.kb-summary .tn:hover{color:var(--gold-bright)}
 .kb-summary .tones{
   font-size:var(--fs-sm);color:var(--ivory);letter-spacing:.06em;
   flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;
@@ -3334,12 +3336,12 @@ function render(){
 /* 釘在鍵盤下的那一行:名稱 + 組成音,固定一行高度 */
 function renderSummary(){
   const el = $("kbSummary");
-  let name = "", zh = "", tones = "";
+  let name = "", zh = "", tones = [];  // tones:[{text, midi}],每個音名自己是一顆按鈕
   if (STATE.tab === "find") {
     const an = findAnalysis();
     const seen = new Set();
-    tones = an.sel.map(m => ((m % 12) + 12) % 12).filter(p => !seen.has(p) && seen.add(p))
-              .map(p => an.nameByPc.get(p)).join(" ");
+    tones = an.sel.filter(m => !seen.has(pcOf(m)) && seen.add(pcOf(m)))
+              .map(m => ({ text: an.nameByPc.get(pcOf(m)), midi: m }));
     if (an.results.length) {
       const r0 = an.results[0];
       name = findChordName(r0.rootPc, r0.chord, an.bassPc, STATE.findSpell);
@@ -3352,7 +3354,13 @@ function renderSummary(){
     name = isChord ? chordTitle(def) : rootName() + " " + localName(def);
     zh = isChord ? localName(def) : subName(def);
     // 和弦用 displayNotes:斜線和弦的低音排在最前面(C/B → B C E G)
-    tones = (isChord ? displayNotes() : currentNotes()).map(n => STATE.label === "do" ? toSolfege(n.name) : n.name).join(" ");
+    // 吉他和弦:點音名發出「這個指法裡那個音」(在哪條弦上就撥哪條),不是另一個八度的音
+    const v = isChord && STATE.inst === "guitar" ? currentVoicing() : null;
+    tones = (isChord ? displayNotes() : currentNotes()).map(n => {
+      let midi = n.midi, str = -1;
+      if (v) v.frets.forEach((f, si) => { if (str < 0 && f >= 0 && pcOf(GTR_OPEN[si] + f) === pcOf(n.midi)) { str = si; midi = GTR_OPEN[si] + f; } });
+      return { text: STATE.label === "do" ? toSolfege(n.name) : n.name, midi, str };
+    });
   }
   // 摘要列是 flex + gap,空的 .zh 會白白撐出一段間距(英文介面的音階就沒有對照名稱),
   // 所以沒有內容時連 span 都不要產生
@@ -3371,7 +3379,21 @@ function renderSummary(){
     '</button>';
   el.querySelector("b").textContent = name;
   if (zh) el.querySelector(".zh").textContent = zh;
-  el.querySelector(".tones").textContent = tones;
+  /* 摘要列整條點下去是「重播整個和弦」,但裡面的音名看起來就是個別的音:
+     點 Cmaj7 的 B 卻四個音一起響,使用者會以為壞了(回報過)。所以每個音名各自攔下點擊、只播那一個音 */
+  const tw = el.querySelector(".tones");
+  tones.forEach((tn, i) => {
+    if (i) tw.appendChild(document.createTextNode(" "));
+    const sp = document.createElement("span");
+    sp.className = "tn";
+    sp.textContent = tn.text;
+    sp.onclick = ev => {
+      ev.stopPropagation();
+      if (tn.str >= 0) vibrateString(tn.str, tn.midi - GTR_OPEN[tn.str]);
+      playSingle(tn.midi);
+    };
+    tw.appendChild(sp);
+  });
   el.querySelector("#kbGear").onclick = ev => { ev.stopPropagation(); toggleKbPopover(); };
   if (nav) {
     const step = d => ev => {
