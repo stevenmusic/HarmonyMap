@@ -862,6 +862,7 @@ const I18N = {
     practiceBad: "看不懂:{x}", practiceHint: "節拍器第一拍是重音,換和弦就在那一拍。先放慢,換得乾淨再加速。",
     bassLabel: "低音", bassRoot: "根音", bassOther: "其他音…",
     bassNonChord: "低音不是和弦內音(例如 D/C),斜線後面的音是另外加的",
+    vClosed6: "六弦封閉和弦 · 第 {n} 格", vClosed5: "五弦封閉和弦 · 第 {n} 格",
     vOpen: "開放和弦", vBarre: "橫按 · 第 {n} 格", vPos: "第 {n} 把位", vRootOn: "根音在 {n} 弦",
     loadingPiano: "載入鋼琴音色中…", pianoLoadFailed: "音色載入失敗,使用合成音色",
     iosMuteHint: "聽不到聲音?請關閉 iPhone 側邊的靜音開關",
@@ -938,6 +939,7 @@ const I18N = {
     practiceBad: "Not a chord: {x}", practiceHint: "Beat one is accented and is where the chord changes. Start slow; speed up once the change is clean.",
     bassLabel: "Bass", bassRoot: "Root", bassOther: "Other note…",
     bassNonChord: "The bass is not a chord tone (e.g. D/C); the note after the slash is added",
+    vClosed6: "6th-string barre · fret {n}", vClosed5: "5th-string barre · fret {n}",
     vOpen: "Open chord", vBarre: "Barre · fret {n}", vPos: "Position {n}", vRootOn: "root on string {n}",
     loadingPiano: "Loading piano samples…", pianoLoadFailed: "Sample load failed, using synth fallback",
     iosMuteHint: "No sound? Turn off the silent switch on the side of your iPhone",
@@ -1742,7 +1744,9 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
     if (minF >= 3) cost += 4 * frets.filter(f => f === 0).length;
   }
   cost += 3 * (6 - played.length);
-  for (let s = lowS; s <= highS; s++) if (frets[s] < 0) cost += 20; // 中間夾一條不彈的弦要另外用手指悶住
+  // 中間夾一條不彈的弦要另外用手指悶住。例外:根音在 6 弦、5 弦不彈是爵士的標準按法
+  // (m7♭5 的 7 × 7 7 6 ×、dim7 的 8 × 7 8 7 ×),6 弦的手指順便就把 5 弦悶掉了
+  for (let s = lowS; s <= highS; s++) if (frets[s] < 0) cost += (s === 1 && lowS === 0) ? 6 : 20;
   /* 畫成直排、標成「橫按」的條件:真的非橫按不可才算。× 0 2 2 2 0 雖然可以一指壓三條,
      但通常用三根手指按,畫一條橫槓反而誤導;超過四個按弦音(F、Bm),或沒有空弦、
      一指壓三條以上(Dmaj7 的 × 5 7 6 7 5)才是橫按和弦 */
@@ -1887,6 +1891,40 @@ function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
   const picked = [];
   // 沒有指定低音時,最低音不是根音的指法聽起來是轉位、不是這個和弦,有別的選擇就不列
   const pool = bassPc == null && all.some(v => v.bassIsRoot) ? all.filter(v => v.bassIsRoot) : all;
+  /* 每個和弦只給三種指法(使用者要求,多了太亂):
+       1. 最常用的開放和弦:開放和弦表有的就用表上的;這種和弦不在表裡時,只收資料庫有的開放指法;
+          表裡有這種和弦、但這個根音沒有(Cm)就不給
+       2. 五弦封閉和弦:根音在 5 弦、6 弦不彈、沒有空弦
+       3. 六弦封閉和弦:根音在 6 弦、沒有空弦
+     封閉和弦的食指橫按要一路壓到 1 弦:1 弦在橫按那一格是和弦音的話,不彈 1 弦的指法不收
+     (8 10 9 9 8 × 反而難彈,要另外悶掉 1 弦)。斜線和弦照原本的方式挑 */
+  if (bassPc == null) {
+    // 開放和弦 = 有空弦、而且整個和弦都在前 4 格內(× 3 0 0 5 5 雖然有空弦,手已經在第 5 格)
+    const isOpenPos = v => v.frets.some(f => f === 0) && Math.max(...v.frets) <= 4;
+    const closed = v => !v.frets.some(f => f === 0);
+    const lowStr = v => v.frets.findIndex(f => f >= 0);
+    const coversTop = v => v.frets[5] >= 0 || !byPc.has(pcOf(GTR_OPEN[5] + v.minF));
+    const bestOf = arr => {
+      const good = arr.filter(coversTop);
+      return (good.length ? good : arr)[0] || null;   // all 已照分數排好
+    };
+    // 不在開放和弦表裡的和弦:資料庫的第一名剛好是開放指法時才算「最常用的開放和弦」
+    const open = canon ? all.find(v => v.canon) : canon === undefined ? pool.find(v => v.ref === 1 && isOpenPos(v)) : null;
+    // 封閉和弦的根音在最低那條弦上,食指(或中指)就壓在根音那一格附近:最低格不能比根音低超過 1 格
+    // (C9 的 × 3 2 3 3 3 可以;C5 的 8 × 5 5 8 8 手根本不在根音上,不算)
+    const onRoot = (v, str, rf) => closed(v) && lowStr(v) === str && v.frets[str] === rf && v.minF >= rf - 1;
+    const rf5 = pcOf(rPc - 9) || 12, rf6 = pcOf(rPc - 4) || 12;
+    const five = bestOf(pool.filter(v => onRoot(v, 1, rf5)));
+    const six = bestOf(pool.filter(v => onRoot(v, 0, rf6)));
+    for (const v of [open, five, six]) if (v && !picked.includes(v)) picked.push(v);
+    if (picked.length) {
+      const best = open || picked.slice().sort((a, b) => a.cost - b.cost)[0];
+      picked.sort((a, b) => (b === open) - (a === open) || a.minF - b.minF);
+      const res = { list: picked, best: picked.indexOf(best) };
+      VOICING_CACHE.set(key, res);
+      return res;
+    }
+  }
   for (const v of pool) {
     if (picked.length >= 6) break;
     // 門檻用的是加分前的分數,否則標準開放和弦與資料庫的加分會把其他把位全部擋掉
@@ -1921,7 +1959,12 @@ function chordTitle(def){
    不為每個名稱各存一份指法 */
 function voicingLabel(v){
   const hasOpen = v.frets.some(f => f === 0);
-  let s = hasOpen && v.minF <= 4 ? t("vOpen") : v.barreShown ? t("vBarre", { n: v.minF }) : t("vPos", { n: Math.max(1, v.minF) });
+  const low = v.frets.findIndex(f => f >= 0);
+  const rootLow = low >= 0 && pcOf(GTR_OPEN[low] + v.frets[low]) === rootPc();
+  if (hasOpen && v.minF <= 4) return t("vOpen");
+  if (!hasOpen && rootLow && low === 0) return t("vClosed6", { n: v.minF });
+  if (!hasOpen && rootLow && low === 1) return t("vClosed5", { n: v.minF });
+  let s = v.barreShown ? t("vBarre", { n: v.minF }) : t("vPos", { n: Math.max(1, v.minF) });
   const rs = v.frets.findIndex((f, i) => f >= 0 && pcOf(GTR_OPEN[i] + f) === rootPc());
   if (rs >= 0) s += " · " + t("vRootOn", { n: 6 - rs });
   return s;

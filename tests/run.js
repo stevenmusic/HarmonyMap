@@ -171,7 +171,9 @@ async function openPage(browser, opts = {}){
         if (bass === "") {
           const canon = openCanon(+key, id);
           const openPos = f => { const fr = f.filter(x => x > 0); return (fr.length ? Math.min(...fr) : 0) < 3 && f.some(x => x === 0); };
-          let exp = canon || ref[0];
+          // 開放和弦表優先;否則資料庫第一名只要屬於「開放 / 五弦封閉 / 六弦封閉」三種之一,就要排第一
+          // (第一名是 4 弦根音或高把位混空弦的指法時不在三種裡,不檢查)
+          let exp = canon || (vs.list.some(v => v.frets.join(",") === ref[0].join(",")) ? ref[0] : null);
           if (!canon && canon === null && openPos(ref[0])) exp = null;   // Cm 規則:不檢查
           if (exp) { total++; if (exp.join(",") !== got.join(",")) fails.push(tag + ": " + gtrTabText(got) + " ≠ " + gtrTabText(exp) + (canon ? "(開放和弦表)" : "(資料庫第一名)")); }
         } else {
@@ -182,6 +184,44 @@ async function openPage(browser, opts = {}){
       return { total, fails };
     });
     report("和弦資料庫一致", r.total, r.fails);
+  }
+
+  /* ── 3c. 每個和弦只給三種指法:最常用的開放和弦、五弦封閉、六弦封閉(使用者要求) ──
+     封閉和弦:根音在最低那條弦、沒有空弦、最低格不比根音低超過 1 格;
+     1 弦在橫按那一格是和弦音時,1 弦一定要彈(食指整排壓下去) */
+  {
+    const r = await p.evaluate(() => {
+      VOICING_CACHE.clear();
+      const fails = [];
+      let total = 0;
+      for (const c of CHORDS) for (let rp = 0; rp < 12; rp++) {
+        const vs = chordVoicingsFor(rp, c);
+        const tag = simpleName(rp, "flat") + c.sym;
+        const pcs = new Set(c.t.map(t => pcOf(rp + tokenSemi(t))));
+        total++;
+        if (vs.list.length > 3) fails.push(tag + ": 列了 " + vs.list.length + " 個指法");
+        const kinds = [];
+        for (const v of vs.list) {
+          const f = v.frets, low = f.findIndex(x => x >= 0), hasOpen = f.some(x => x === 0);
+          const rf = [pcOf(rp - 4) || 12, pcOf(rp - 9) || 12];
+          let k = null;
+          if (hasOpen && Math.max(...f) <= 4) k = "open";
+          else if (!hasOpen && low <= 1 && f[low] === rf[low] && v.minF >= rf[low] - 1) k = low === 0 ? "six" : "five";
+          if (!k) { if (vs.list.length > 1) fails.push(tag + ": " + gtrTabText(f) + " 不屬於三種"); continue; }
+          if (kinds.includes(k)) fails.push(tag + ": 重複的 " + k);
+          kinds.push(k);
+        }
+        // 1 弦:同一類裡有「1 弦也彈」的指法時,不能選「1 弦不彈」的
+        const all = [];
+        for (const v of vs.list) {
+          const f = v.frets;
+          if (!f.some(x => x === 0) && f[5] < 0 && pcs.has(pcOf(GTR_OPEN[5] + v.minF))) all.push(gtrTabText(f));
+        }
+        if (all.length) fails.push(tag + ": 封閉和弦 1 弦沒彈 " + all.join(", "));
+      }
+      return { total, fails };
+    });
+    report("指法只有三種", r.total, r.fails);
   }
 
   /* ── 4. 搜尋框的和弦名稱解析 ── */
