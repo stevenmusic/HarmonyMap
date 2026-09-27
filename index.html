@@ -446,6 +446,19 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-pad .quick-grid{margin-top:8px;padding-top:8px}
 .pr-edit{display:flex;gap:6px;align-items:center;margin-bottom:8px}
 .pr-edit .pr-steps{flex:1;min-width:0;margin:0}
+.gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px 10px 0}
+.gtr-dgs[hidden]{display:none}
+.gtr-dgs .gd{border:1px solid var(--line);border-radius:var(--radius-md);padding:6px 6px 2px;cursor:pointer;
+             touch-action:none;background:var(--surface-inset);min-width:0}
+.gtr-dgs .gd.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
+.gtr-dgs .gd-lab{font-size:var(--fs-2xs);color:var(--muted-bright);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gtr-dgs .gd.on .gd-lab{color:var(--gold)}
+.gtr-dgs svg{display:block;width:100%;max-width:150px;height:auto;margin:0 auto}
+/* 撥弦時那條弦亮一下(根音金色、其他青色),0.9 秒淡掉;系統減少動態時 animation 會被縮成一瞬間 */
+.gtr-dgs line.str.ring{animation:strRing .9s ease-out}
+.gtr-dgs line.str.ring.root{animation-name:strRingRoot}
+@keyframes strRing{0%{stroke:var(--teal);stroke-width:4;filter:drop-shadow(0 0 4px var(--teal))}100%{}}
+@keyframes strRingRoot{0%{stroke:var(--gold);stroke-width:4;filter:drop-shadow(0 0 4px var(--gold))}100%{}}
 .kb-stage{border:1px solid var(--line);border-radius:var(--radius-md);padding:10px;background:var(--panel)}
 .kb-stage[hidden],.kb-wrap[hidden]{display:none}
 .kb-stage .pr-now > div{cursor:pointer}
@@ -703,6 +716,8 @@ footer{
     <div class="kb-wrap">
       <canvas id="keyboardCanvas"></canvas>
       <span id="audioStatus" class="audio-status" hidden></span>
+      <!-- 吉他和弦分頁:這個和弦的每一種指法排在一起,取代長指板(renderGuitarGallery 填) -->
+      <div class="gtr-dgs" id="gtrDiagrams" hidden></div>
       <div class="kb-summary" id="kbSummary"></div>
       <!-- 起始八度/標示方式/播放方式都是「設一次就不太會再動」的設定,
            不該常駐在最貴的釘住區裡,收進這個浮動面板 -->
@@ -878,6 +893,7 @@ const I18N = {
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
+    gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
     practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
@@ -958,6 +974,7 @@ const I18N = {
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
+    gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
     practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
@@ -3506,6 +3523,10 @@ function render(){
   $("typeCard").hidden = findMode || practicing;
   $("practiceCard").hidden = !practicing;
   document.querySelector(".kb-wrap").hidden = practicing;
+  const gallery = guitarGalleryMode();
+  $("keyboardCanvas").style.display = gallery ? "none" : "";
+  $("gtrDiagrams").hidden = !gallery;
+  if (gallery) renderGuitarGallery();
   $("practiceStage").hidden = !practicing;
   // 練習時結果面板(公式、組成音、低音、音階)用不到,收起來;桌機讓練習卡片佔滿兩欄
   document.querySelector(".info").hidden = practicing;
@@ -3642,16 +3663,21 @@ function guitarDiagramSVG(){
   const b = bassInfo();
   const vs = chordVoicingsFor(rootPc(), chordById(STATE.chordId), b ? b.pc : null);
   const v = vs.list[vs.best];
-  if (!v) return "";
-  const rp = rootPc();
+  return v ? voicingSVG(v, rootPc()) : "";
+}
+/* 直式和弦圖:左邊 6 弦、右邊 1 弦。練習卡片與吉他和弦分頁共用。
+   弦的 x 座標(VSVG.x0 + 弦 × VSVG.gap,viewBox 座標)也拿來反推點到哪一條弦 */
+const VSVG = { x0: 16, gap: 18, y0: 26, rowH: 20, rows: 4 };
+VSVG.W = VSVG.x0 + VSVG.gap * 5 + 30; VSVG.H = VSVG.y0 + VSVG.rowH * VSVG.rows + 8;
+function voicingSVG(v, rp){
   const fr = v.frets.filter(f => f > 0);
   const maxF = fr.length ? Math.max(...fr) : 0, minF = fr.length ? Math.min(...fr) : 0;
   const base = maxF <= 4 ? 1 : minF;
-  const x0 = 16, gap = 18, y0 = 26, rowH = 20, rows = 4, W = x0 + gap * 5 + 30, H = y0 + rowH * rows + 8;
+  const { x0, gap, y0, rowH, rows, W, H } = VSVG;
   const xs = s => x0 + s * gap, yOf = f => y0 + (f - base + 0.5) * rowH;
   let g = '<rect x="' + x0 + '" y="' + y0 + '" width="' + gap * 5 + '" height="' + rowH * rows + '" fill="var(--surface-inset)"/>';
   for (let r = 0; r <= rows; r++) g += '<line x1="' + x0 + '" x2="' + (x0 + gap * 5) + '" y1="' + (y0 + r * rowH) + '" y2="' + (y0 + r * rowH) + '" stroke="var(--muted)" stroke-width="' + (r === 0 && base === 1 ? 4 : 1.2) + '"/>';
-  for (let s = 0; s < 6; s++) g += '<line x1="' + xs(s) + '" x2="' + xs(s) + '" y1="' + y0 + '" y2="' + (y0 + rowH * rows) + '" stroke="var(--muted-bright)" stroke-width="' + (1.8 - s * 0.2) + '"/>';
+  for (let s = 0; s < 6; s++) g += '<line class="str" data-s="' + s + '" x1="' + xs(s) + '" x2="' + xs(s) + '" y1="' + y0 + '" y2="' + (y0 + rowH * rows) + '" stroke="var(--muted-bright)" stroke-width="' + (1.8 - s * 0.2) + '"/>';
   if (base > 1) g += '<text x="' + (x0 + gap * 5 + 6) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="11" fill="var(--muted)">' + base + 'fr</text>';
   if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
   v.frets.forEach((f, s) => {
@@ -3691,6 +3717,66 @@ function pianoDiagramSVG(){
     g += '<rect x="' + ((i + 1) * ww - bw / 2 - 0.4) + '" y="0" width="' + bw + '" height="' + bh + '" rx="1" fill="' + fill + '"/>';
   }
   return '<svg class="dg kb" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + notes.map(n => n.name).join(" ") + '">' + g + '</svg>';
+}
+/* 吉他和弦分頁:上方不畫長指板,改成這個和弦的每一種指法(開放 / 五弦封閉 / 六弦封閉)排在一起。
+   點沒選中的圖 = 選它並刷一次;在選中的圖上點某一條弦 = 撥那條弦(左手按住的音),左右滑 = 刷弦。
+   音階與反查分頁仍然用長指板(音階要看整個指板上的分布,反查要點格子) */
+function guitarGalleryMode(){ return STATE.inst === "guitar" && STATE.tab === "chord" && !PRACTICE.open; }
+function renderGuitarGallery(){
+  const el = $("gtrDiagrams");
+  const vs = currentVoicingSet();
+  currentVoicing();   // 確保 STATE.vIdx 對應目前的和弦
+  const rp = rootPc();
+  el.innerHTML = "";
+  if (!vs.list.length) { el.innerHTML = '<div class="pr-empty">' + t("guitarNoVoicing") + '</div>'; return; }
+  vs.list.forEach((v, i) => {
+    const d = document.createElement("div");
+    d.className = "gd" + (i === STATE.vIdx ? " on" : "");
+    d.innerHTML = '<div class="gd-lab">' + galleryLabel(v, rp) + '</div>' + voicingSVG(v, rp);
+    const svg = d.querySelector("svg");
+    const strAt = ev => {
+      const r = svg.getBoundingClientRect();
+      const x = (ev.clientX - r.left) / r.width * VSVG.W;
+      return Math.max(0, Math.min(5, Math.round((x - VSVG.x0) / VSVG.gap)));
+    };
+    let last = null;
+    d.addEventListener("pointerdown", ev => {
+      if (i !== STATE.vIdx) { STATE.vIdx = i; render(); playCurrent(); return; }
+      last = strAt(ev);
+      pluckGallery(d, v, last);
+      try { d.setPointerCapture(ev.pointerId); } catch (e) {}
+    });
+    d.addEventListener("pointermove", ev => {
+      if (last == null) return;
+      const s = strAt(ev);
+      if (s === last) return;
+      const step = s > last ? 1 : -1;
+      for (let k = last + step; k !== s + step; k += step) pluckGallery(d, v, k);
+      last = s;
+    });
+    ["pointerup", "pointercancel"].forEach(tp => d.addEventListener(tp, () => { last = null; }));
+    el.appendChild(d);
+  });
+}
+function galleryLabel(v, rp){
+  const low = v.frets.findIndex(f => f >= 0), hasOpen = v.frets.some(f => f === 0);
+  const rootLow = low >= 0 && pcOf(GTR_OPEN[low] + v.frets[low]) === rp;
+  if (hasOpen && v.minF <= 4) return t("gdOpen");
+  if (!hasOpen && rootLow && low <= 1) return t(low === 0 ? "gd6" : "gd5", { n: v.minF });
+  return t("gdPos", { n: Math.max(1, v.minF) });
+}
+/* 撥一條弦:發出那條弦按住的音,圖上那條弦亮一下(顏色照音的角色) */
+function pluckGallery(card, v, s){
+  const f = v.frets[s];
+  if (f < 0) return;
+  const midi = GTR_OPEN[s] + f;
+  playSingle(midi);
+  const line = card.querySelector('line.str[data-s="' + s + '"]');
+  if (!line) return;
+  line.classList.remove("ring", "root");
+  void line.getBBox();
+  line.classList.add("ring");
+  if (pcOf(midi) === rootPc()) line.classList.add("root");
 }
 function renderPractice(){
   const c = $("practiceCard"), stage = $("practiceStage");
@@ -3834,7 +3920,7 @@ function renderSummary(){
   // 所以沒有內容時連 span 都不要產生
   const vs = STATE.inst === "guitar" && STATE.tab === "chord" ? currentVoicingSet() : null;
   const chev = d => '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
-  const nav = vs && vs.list.length > 1
+  const nav = vs && vs.list.length > 1 && !guitarGalleryMode()
     ? '<span class="vc-nav"><button id="vcPrev" aria-label="' + t("voicingPrev") + '" title="' + t("voicingPrev") + '">' + chev("M15 18l-6-6 6-6") + '</button>' +
       '<span class="n">' + (STATE.vIdx + 1) + '/' + vs.list.length + '</span>' +
       '<button id="vcNext" aria-label="' + t("voicingNext") + '" title="' + t("voicingNext") + '">' + chev("M9 18l6-6-6-6") + '</button></span>'

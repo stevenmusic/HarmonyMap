@@ -274,17 +274,29 @@ async function openPage(browser, opts = {}){
 
     await q.click("#instGuitar");
     await q.evaluate(() => { STATE.chordId = "maj"; render(); });
-    box = await q.locator("#keyboardCanvas").boundingBox();
-    const pt = (s, f) => q.evaluate(([s, f]) => { const L = $("keyboardCanvas")._fb; return [L.xOf(f), L.yOf(s)]; }, [s, f]);
-    const tapStr = async (s, f) => { const [x, y] = await pt(s, f); await q.mouse.click(box.x + x, box.y + y); };
-    await tapStr(1, 10); await expect("吉他 C 撥 5 弦(點第 10 格)", "s48");
-    await tapStr(0, 5); await expect("吉他 C 撥 6 弦(×)", "");
-    await tapStr(3, 7); await expect("吉他 C 撥 3 弦(空弦)", "s55");
-    const [x0, y0] = await pt(0, 4), [, y1] = await pt(5, 4);
-    await q.mouse.move(box.x + x0, box.y + y0); await q.mouse.down();
-    for (let i = 1; i <= 12; i++) await q.mouse.move(box.x + x0, box.y + y0 + (y1 - y0) * i / 12);
+    // 吉他和弦分頁:上方是這個和弦的每種指法排在一起(不是長指板)
+    const gal = await q.evaluate(() => ({ n: document.querySelectorAll("#gtrDiagrams .gd").length, list: currentVoicingSet().list.length,
+      canvas: $("keyboardCanvas").getBoundingClientRect().height, on: document.querySelectorAll("#gtrDiagrams .gd.on").length,
+      labels: [...document.querySelectorAll("#gtrDiagrams .gd-lab")].map(x => x.textContent).join(" / ") }));
+    total++; if (gal.n !== gal.list || gal.n < 2 || gal.canvas !== 0 || gal.on !== 1) fails.push("吉他和弦指法並排不對: " + JSON.stringify(gal));
+    // 在選中的那張圖(C 開放 × 3 2 0 1 0)上撥弦:點哪條弦響那條弦按住的音,× 不響,左右滑是刷弦
+    const svgBox = await q.locator("#gtrDiagrams .gd.on svg").boundingBox();
+    const W = await q.evaluate(() => VSVG.W), X0 = await q.evaluate(() => VSVG.x0), GAP = await q.evaluate(() => VSVG.gap);
+    const sx = s => svgBox.x + (X0 + s * GAP) / W * svgBox.width, sy = svgBox.y + svgBox.height * 0.6;
+    await q.mouse.click(sx(1), sy); await expect("吉他 C 撥 5 弦", "s48");
+    await q.mouse.click(sx(0), sy); await expect("吉他 C 撥 6 弦(×)", "");
+    await q.mouse.click(sx(3), sy); await expect("吉他 C 撥 3 弦(空弦)", "s55");
+    await q.mouse.move(sx(0), sy); await q.mouse.down();
+    for (let i = 1; i <= 12; i++) await q.mouse.move(sx(0) + (sx(5) - sx(0)) * i / 12, sy);
     await q.mouse.up();
     await expect("吉他 C 由 6 弦刷到 1 弦", "s48 s52 s55 s60 s64");
+    // 點另一張圖 = 選它並刷一次
+    await q.locator("#gtrDiagrams .gd").nth(1).click();
+    total++; if ((await q.evaluate(() => STATE.vIdx)) !== 1 || !(await take()).startsWith("n")) fails.push("點另一張指法圖沒有選它並發聲");
+    // 音階分頁仍然是長指板
+    await q.click("#tabScale");
+    total++; if (await q.evaluate(() => $("keyboardCanvas").getBoundingClientRect().height === 0 || !$("gtrDiagrams").hidden)) fails.push("音階分頁應該用長指板");
+    await q.click("#tabChord");
     total++;
     if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
     report("互動", total, fails);
