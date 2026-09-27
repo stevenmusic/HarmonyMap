@@ -342,13 +342,14 @@ async function openPage(browser, opts = {}){
       const ns = displayNotes().map(n => n.midi);
       const svg = pianoDiagramSVG();
       const whites = (svg.match(/<rect x="[\d.]+" y="0" width="13.2"/g) || []).length;
-      let lo = Math.min(...ns), hi = Math.max(...ns);
+      let lo = Math.min(...ns);
       while (![0, 5].includes(pcOf(lo))) lo--;
-      while (![4, 11].includes(pcOf(hi))) hi++;
-      let w = 0; for (let m = lo; m <= hi; m++) if (!isBlackKey(m)) w++;
-      return stepName(st) + ":" + (whites === w ? "ok" : whites + "≠" + w);
+      // 固定兩個八度 = 14 個白鍵(每張一樣大)
+      return stepName(st) + ":" + (whites === 14 ? "ok" : whites + "≠14");
     })));
-    if (kb.some(x => !x.endsWith(":ok"))) fails.push("小鍵盤起訖不是 C/F 到 E/B: " + kb.join(" "));
+    if (kb.some(x => !x.endsWith(":ok"))) fails.push("小鍵盤不是固定兩個八度: " + kb.join(" "));
+    const widths = await q.evaluate(() => [...document.querySelectorAll(".pr-now svg.dg")].map(x => Math.round(x.getBoundingClientRect().width) + "x" + Math.round(x.getBoundingClientRect().height)));
+    if (widths[0] !== widths[1]) fails.push("現在/下一個的小鍵盤大小不同: " + widths.join(" / "));
     const firstKey = await q.evaluate(() => { const st = PRACTICE.steps[2]; return withStep(st, () => { const ns = displayNotes().map(n => n.midi); let lo = Math.min(...ns); while (![0, 5].includes(pcOf(lo))) lo--; return simpleName(pcOf(lo), "sharp"); }); });
     if (firstKey !== "F") fails.push("Am 的小鍵盤應該從 F 開始,實際從 " + firstKey);
     await q.click("#instGuitar"); await q.click("#practiceOpen").catch(() => {});
@@ -389,7 +390,7 @@ async function openPage(browser, opts = {}){
     await q.click("#prClose");
     if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden)) fails.push("結束練習後沒有回到和弦清單");
     if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
-    report("換和弦練習", 19, fails);
+    report("換和弦練習", 20, fails);
     await q.close();
   }
 

@@ -425,8 +425,8 @@ html[data-lang="en"] .chip i{white-space:normal}
           color:var(--gold-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 「現在」與「下一個」字級一致(使用者要求);下一個只用顏色區分 */
 .pr-now .next b{color:var(--muted-bright)}
-.pr-now .dg{display:block;max-width:100%;height:auto;margin-top:6px}
-.pr-now svg.dg:not([width]){width:100%;max-width:150px}
+.pr-now .dg{display:block;height:auto;margin-top:6px;width:100%;max-width:150px}
+.pr-now .dg.kb{max-width:none}   /* 鋼琴小鍵盤撐滿格子,兩張一樣寬 */
 .pr-beats{display:flex;gap:8px;justify-content:center;margin:6px 0 12px}
 .pr-beats i{width:12px;height:12px;border-radius:50%;background:var(--line)}
 .pr-beats i.on{background:var(--teal)}
@@ -3667,9 +3667,13 @@ function pianoDiagramSVG(){
   const on = new Map(notes.map(n => [n.midi, n.deg === 1 && !n.isBass]));
   /* 鍵盤一定從 C 或 F 開始、到 E 或 B 結束(黑鍵兩個一組、三個一組都完整),
      看的人才認得出哪個鍵是哪個音。從 G 或 A 開始會被誤認(使用者回報過:Am 那張像是從別的音開始) */
-  let lo = Math.min(...notes.map(n => n.midi)), hi = Math.max(...notes.map(n => n.midi));
+  // 而且**每一張都畫固定的兩個八度**(14 個白鍵)、寬度撐滿格子:「現在」與「下一個」兩張一樣大,
+  // 不會因為 C 只用到幾個鍵、Gmaj7 用到將近兩個八度就一大一小(使用者回報過,很醜)
+  const top = Math.max(...notes.map(n => n.midi));
+  let lo = Math.min(...notes.map(n => n.midi));
   while (![0, 5].includes(pcOf(lo))) lo--;
-  while (![4, 11].includes(pcOf(hi))) hi++;
+  let hi = lo + 23;                       // C 開始到 B、F 開始到 E,剛好兩個八度
+  while (hi < top) hi += 12;              // 斜線和弦把低音拉很低時才可能放不下,多補一個八度
   const whites = [];
   for (let m = lo; m <= hi; m++) if (!isBlackKey(m)) whites.push(m);
   const ww = 14, W = whites.length * ww, H = 56, bh = 34, bw = 9;
@@ -3685,7 +3689,7 @@ function pianoDiagramSVG(){
     const fill = on.has(m) ? (on.get(m) ? "#C4901A" : "#22887A") : "#1C1A16";
     g += '<rect x="' + ((i + 1) * ww - bw / 2 - 0.4) + '" y="0" width="' + bw + '" height="' + bh + '" rx="1" fill="' + fill + '"/>';
   }
-  return '<svg class="dg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + notes.map(n => n.name).join(" ") + '">' + g + '</svg>';
+  return '<svg class="dg kb" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + notes.map(n => n.name).join(" ") + '">' + g + '</svg>';
 }
 function renderPractice(){
   const c = $("practiceCard");
