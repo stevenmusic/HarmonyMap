@@ -3727,7 +3727,9 @@ function pianoDiagramSVG(){
   return '<svg class="dg kb" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + notes.map(n => n.name).join(" ") + '">' + g + '</svg>';
 }
 /* 吉他和弦分頁:上方不畫長指板,改成這個和弦的每一種指法(開放 / 五弦封閉 / 六弦封閉)排在一起。
-   點沒選中的圖 = 選它並刷一次;在選中的圖上點某一條弦 = 撥那條弦(左手按住的音),左右滑 = 刷弦。
+   點一下(任何位置)= 整個和弦刷一次,六條弦依序亮;點沒選中的圖 = 選它並刷一次;
+   左右滑過弦 = 照手指的方向與速度一條一條撥(慢刷可以檢查每條弦有沒有按乾淨)。
+   不再有「點某條弦只響那條」:大多數時候點圖是想聽和弦,圖又小,單音改從摘要列的音名點(使用者決定)。
    音階與反查分頁仍然用長指板(音階要看整個指板上的分布,反查要點格子) */
 function guitarGalleryMode(){ return STATE.inst === "guitar" && STATE.tab === "chord" && !PRACTICE.open; }
 function renderGuitarGallery(){
@@ -3747,22 +3749,26 @@ function renderGuitarGallery(){
       const x = (ev.clientX - r.left) / r.width * VSVG.W;
       return Math.max(0, Math.min(5, Math.round((x - VSVG.x0) / VSVG.gap)));
     };
-    let last = null;
+    let last = null, moved = false;
     d.addEventListener("pointerdown", ev => {
       if (i !== STATE.vIdx) { STATE.vIdx = i; render(); playCurrent(); return; }
-      last = strAt(ev);
-      pluckGallery(d, v, last);
+      last = strAt(ev); moved = false;
       try { d.setPointerCapture(ev.pointerId); } catch (e) {}
     });
     d.addEventListener("pointermove", ev => {
       if (last == null) return;
       const s = strAt(ev);
       if (s === last) return;
+      if (!moved) { moved = true; pluckGallery(d, v, last); }   // 開始滑了:起點那條也要響
       const step = s > last ? 1 : -1;
       for (let k = last + step; k !== s + step; k += step) pluckGallery(d, v, k);
       last = s;
     });
-    ["pointerup", "pointercancel"].forEach(tp => d.addEventListener(tp, () => { last = null; }));
+    d.addEventListener("pointerup", () => {
+      if (last != null && !moved) strumGallery(d, v);
+      last = null;
+    });
+    d.addEventListener("pointercancel", () => { last = null; });
     el.appendChild(d);
   });
 }
@@ -3773,12 +3779,22 @@ function galleryLabel(v, rp){
   if (!hasOpen && rootLow && low <= 1) return t(low === 0 ? "gd6" : "gd5", { n: v.minF });
   return t("gdPos", { n: Math.max(1, v.minF) });
 }
+/* 點一下:整個和弦(照目前的播放方式,吉他的齊奏是刷弦),彈到的弦由低到高依序亮 */
+function strumGallery(card, v){
+  playCurrent();
+  const gap = STATE.playMode === "block" ? 35 : STATE.playMode === "arp" ? 160 : 300;
+  let k = 0;
+  v.frets.forEach((f, s) => { if (f >= 0) setTimeout(() => ringString(card, s, GTR_OPEN[s] + f), gap * k++); });
+}
 /* 撥一條弦:發出那條弦按住的音,圖上那條弦亮一下(顏色照音的角色) */
 function pluckGallery(card, v, s){
   const f = v.frets[s];
   if (f < 0) return;
   const midi = GTR_OPEN[s] + f;
   playSingle(midi);
+  ringString(card, s, midi);
+}
+function ringString(card, s, midi){
   const line = card.querySelector('line.str[data-s="' + s + '"]');
   if (!line) return;
   line.classList.remove("ring", "root");

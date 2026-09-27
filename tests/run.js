@@ -279,13 +279,12 @@ async function openPage(browser, opts = {}){
       canvas: $("keyboardCanvas").getBoundingClientRect().height, on: document.querySelectorAll("#gtrDiagrams .gd.on").length,
       labels: [...document.querySelectorAll("#gtrDiagrams .gd-lab")].map(x => x.textContent).join(" / ") }));
     total++; if (gal.n !== gal.list || gal.n < 2 || gal.canvas !== 0 || gal.on !== 1) fails.push("吉他和弦指法並排不對: " + JSON.stringify(gal));
-    // 在選中的那張圖(C 開放 × 3 2 0 1 0)上撥弦:點哪條弦響那條弦按住的音,× 不響,左右滑是刷弦
+    // 在選中的那張圖(C 開放 × 3 2 0 1 0)上:點一下 = 整個和弦(點在哪條弦都一樣),左右滑 = 一條一條撥
     const svgBox = await q.locator("#gtrDiagrams .gd.on svg").boundingBox();
     const W = await q.evaluate(() => VSVG.W), X0 = await q.evaluate(() => VSVG.x0), GAP = await q.evaluate(() => VSVG.gap);
     const sx = s => svgBox.x + (X0 + s * GAP) / W * svgBox.width, sy = svgBox.y + svgBox.height * 0.6;
-    await q.mouse.click(sx(1), sy); await expect("吉他 C 撥 5 弦", "s48");
-    await q.mouse.click(sx(0), sy); await expect("吉他 C 撥 6 弦(×)", "");
-    await q.mouse.click(sx(3), sy); await expect("吉他 C 撥 3 弦(空弦)", "s55");
+    await q.mouse.click(sx(1), sy); await expect("吉他 C 點和弦圖(5 弦位置)= 整個和弦", "n48,52,55,60,64");
+    await q.mouse.click(sx(0), sy); await expect("吉他 C 點和弦圖(× 的 6 弦位置)= 整個和弦", "n48,52,55,60,64");
     await q.mouse.move(sx(0), sy); await q.mouse.down();
     for (let i = 1; i <= 12; i++) await q.mouse.move(sx(0) + (sx(5) - sx(0)) * i / 12, sy);
     await q.mouse.up();
