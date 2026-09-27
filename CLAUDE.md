@@ -153,6 +153,8 @@ prefers-reduced-motion:reduce
 - 節拍器用 Web Audio 時鐘提前 0.1 秒排程點擊聲,畫面用 setTimeout 對齊;第一拍重音、在第一拍換和弦。
   點擊聲不進 `scheduledNodes`,所以換和弦時 `playCurrent()` 的 `stopAllSound()` 不會把節拍器切掉
 - 切到音階或反查分頁要停止節拍器(`practiceStop`)
+- 進行按鈕**不用羅馬數字**:寫「風格 · 這個調裡實際的和弦」(流行 · C G Am F、爵士 251),
+  換調時跟著換。流行樂手看的是和弦名稱,I–V–vi–IV 對他們沒有意義(使用者要求)
 
 ## 播放方式
 - 音階**不提供「齊奏」**:把一整個音階的音同時壓下去在音樂上沒有意義,

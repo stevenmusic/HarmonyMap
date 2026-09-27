@@ -860,8 +860,8 @@ const I18N = {
     practiceNow: "現在", practiceNext: "下一個", practiceCustom: "自訂進行",
     practiceCustomPh: "例如 C G Am F 或 C D/F# Em", practiceCustomApply: "套用",
     practiceBad: "看不懂:{x}", practiceHint: "節拍器第一拍是重音,換和弦就在那一拍。先放慢,換得乾淨再加速。",
-    pgPop: "I–V–vi–IV 流行", pg50s: "I–vi–IV–V 五〇年代", pgSad: "vi–IV–I–V", pgBasic: "I–IV–V–I 三和弦",
-    pgCanon: "卡農進行", pgJazz: "ii–V–I 爵士", pgBlues: "12 小節藍調",
+    pgPop: "流行", pg50s: "五〇年代", pgSad: "抒情", pgBasic: "民謠三和弦",
+    pgCanon: "卡農", pgJazz: "爵士 251", pgBlues: "12 小節藍調",
     bassLabel: "低音", bassRoot: "根音", bassOther: "其他音…",
     bassNonChord: "低音不是和弦內音(例如 D/C),斜線後面的音是另外加的",
     vOpen: "開放和弦", vBarre: "橫按 · 第 {n} 格", vPos: "第 {n} 把位", vRootOn: "根音在 {n} 弦",
@@ -938,8 +938,8 @@ const I18N = {
     practiceNow: "Now", practiceNext: "Next", practiceCustom: "Custom progression",
     practiceCustomPh: "e.g. C G Am F or C D/F# Em", practiceCustomApply: "Apply",
     practiceBad: "Not a chord: {x}", practiceHint: "Beat one is accented and is where the chord changes. Start slow; speed up once the change is clean.",
-    pgPop: "I–V–vi–IV Pop", pg50s: "I–vi–IV–V '50s", pgSad: "vi–IV–I–V", pgBasic: "I–IV–V–I Triads",
-    pgCanon: "Canon progression", pgJazz: "ii–V–I Jazz", pgBlues: "12-bar blues",
+    pgPop: "Pop", pg50s: "'50s", pgSad: "Ballad", pgBasic: "Folk three-chord",
+    pgCanon: "Canon", pgJazz: "Jazz 2-5-1", pgBlues: "12-bar blues",
     bassLabel: "Bass", bassRoot: "Root", bassOther: "Other note…",
     bassNonChord: "The bass is not a chord tone (e.g. D/C); the note after the slash is added",
     vOpen: "Open chord", vBarre: "Barre · fret {n}", vPos: "Position {n}", vRootOn: "root on string {n}",
@@ -3427,9 +3427,14 @@ const PRACTICE = { open: false, preset: 0, key: 0, bpm: 70, beats: 4, accomp: tr
 function practiceLoad(preset){
   PRACTICE.preset = preset;
   if (preset < 0) return;
+  PRACTICE.steps = practiceStepsFor(preset);
+  PRACTICE.step = 0;
+  practiceApply();
+}
+function practiceStepsFor(preset){
   const [L, a] = PRACTICE_KEYS[PRACTICE.key];
   const li = LETTERS.indexOf(L);
-  PRACTICE.steps = PROGRESSIONS[preset][1].map(([tok, id]) => {
+  return PROGRESSIONS[preset][1].map(([tok, id]) => {
     const sp = spell(li, a, tok);
     if (sp.acc === null || Math.abs(sp.acc) > 1) { // 需要重升降時退回等音(實務上的寫法)
       const pc = pcOf(LETTER_PC[li] + a + sp.semi), nm = simpleName(pc, a < 0 ? "flat" : "sharp");
@@ -3437,8 +3442,6 @@ function practiceLoad(preset){
     }
     return { letter: sp.letter, acc: sp.acc, id, bass: null };
   });
-  PRACTICE.step = 0;
-  practiceApply();
 }
 function practiceParseCustom(text){
   const bad = [], steps = [];
@@ -3537,7 +3540,10 @@ function renderPractice(){
   const pr = $("prPresets");
   PROGRESSIONS.forEach(([key], i) => {
     const b = document.createElement("button");
-    b.className = "filter-chip"; b.textContent = t(key);
+    // 按鈕寫「風格 · 這個調裡實際的和弦」(流行 · C G Am F),不用羅馬數字——
+    // 流行樂手看的是和弦名稱。藍調 12 小節太長,只寫名稱
+    const chords = PROGRESSIONS[i][1].length > 8 ? "" : " · " + practiceStepsFor(i).map(stepName).join(" ");
+    b.className = "filter-chip"; b.textContent = t(key) + chords;
     b.setAttribute("aria-pressed", String(i === P.preset));
     b.onclick = () => { P.custom = ""; P.bad = []; practiceLoad(i); render(); };
     pr.appendChild(b);

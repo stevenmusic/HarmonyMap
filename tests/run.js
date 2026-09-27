@@ -254,7 +254,9 @@ async function openPage(browser, opts = {}){
     const fails = [];
     const steps = () => q.evaluate(() => [...document.querySelectorAll("#prSteps span")].map(x => x.textContent).join(" "));
     const want = async (label, exp) => { const got = await steps(); if (got !== exp) fails.push(label + ": " + got + " ≠ " + exp); };
-    await want("C 大調 I–V–vi–IV", "C G Am F");
+    await want("C 大調 流行進行", "C G Am F");
+    const chip0 = await q.locator("#prPresets .filter-chip").first().innerText();
+    if (/\b(I|II|III|IV|V|VI|VII|ii|iii|vi)\b/.test(chip0) || chip0 !== "流行 · C G Am F") fails.push("進行按鈕不該用羅馬數字: " + chip0);
     await q.selectOption("#prKey", "1"); await want("G 大調 I–V–vi–IV", "G D Em C");
     await q.selectOption("#prKey", "10"); await want("B♭ 大調 I–V–vi–IV", "B♭ F Gm E♭");
     await q.selectOption("#prKey", "0");
@@ -280,7 +282,7 @@ async function openPage(browser, opts = {}){
     await q.click("#prClose");
     if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden)) fails.push("結束練習後沒有回到和弦清單");
     if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
-    report("換和弦練習", 12, fails);
+    report("換和弦練習", 13, fails);
     await q.close();
   }
 
