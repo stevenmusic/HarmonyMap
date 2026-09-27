@@ -72,6 +72,12 @@
 點指板任何一格就會發出那條弦那一格的聲音,音色可在 ⚙ 裡選民謠吉他(預設)、古典吉他、電吉他,
 都是真實錄音(tonejs-instruments,MIT),抓不到時退回鋼琴音色。
 
+吉他指法以三個公開和弦資料庫交叉比對為準:[chords-db](https://github.com/tombatossals/chords-db)
+(MIT © 2016 David Rubert)、instruments-chords(MIT © Angel Rangel)、guitar-chord-definitions
+(MIT © 2019 Jared Williams)。每個指法都先用本工具的樂理規則重驗,錯的(多了非和弦音、低音不對、
+升記號調的資料其實是 C 調…)不收;再依幾個來源都有、是不是來源的預設指法排序。
+必學和弦全部有資料或標準開放和弦表背書;資料庫沒收的罕用和弦才由演算法計算。
+
 **換和弦練習** — 和弦分頁的「練習」:選一組和弦進行(C G Am F、Dm7 G7 Cmaj7、12 小節藍調…)
 與調性,或自己打 `C G Am F`,跟著節拍器輪流換和弦。鍵盤/指板會跟著換到當下的和弦,
 卡片上顯示「現在 / 下一個」與目前第幾拍;速度與每個和弦幾拍都可以調。

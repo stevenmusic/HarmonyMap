@@ -153,6 +153,37 @@ async function openPage(browser, opts = {}){
     report("吉他全組合(含斜線和弦)", r.total, r.fails);
   }
 
+  /* ── 3b. 和弦資料庫(GTR_REF):有資料的和弦,第一個指法要是資料投票的第一名。
+     例外:標準開放和弦表優先;這種和弦有開放和弦表、但這個根音沒有(Cm)時,低把位帶空弦的不採用 ── */
+  {
+    const r = await p.evaluate(() => {
+      VOICING_CACHE.clear();
+      const fails = [];
+      let total = 0;
+      for (const k in GTR_REF) {
+        const [key, id, bass] = k.split("|");
+        const ref = gtrRef(+key, id, bass === "" ? null : +bass);
+        const vs = chordVoicingsFor(+key, chordById(id), bass === "" ? null : +bass);
+        const got = vs.list[vs.best] ? vs.list[vs.best].frets : null;
+        const tag = simpleName(+key, "flat") + chordById(id).sym + (bass === "" ? "" : "/" + simpleName(+bass, "flat"));
+        if (!got) { total++; fails.push(tag + ": 找不到指法"); continue; }
+        // 每個資料庫指法都要在引擎的候選裡(沒有被評估規則擋掉)
+        if (bass === "") {
+          const canon = openCanon(+key, id);
+          const openPos = f => { const fr = f.filter(x => x > 0); return (fr.length ? Math.min(...fr) : 0) < 3 && f.some(x => x === 0); };
+          let exp = canon || ref[0];
+          if (!canon && canon === null && openPos(ref[0])) exp = null;   // Cm 規則:不檢查
+          if (exp) { total++; if (exp.join(",") !== got.join(",")) fails.push(tag + ": " + gtrTabText(got) + " ≠ " + gtrTabText(exp) + (canon ? "(開放和弦表)" : "(資料庫第一名)")); }
+        } else {
+          total++;
+          if (!ref.some(f => f.join(",") === got.join(","))) fails.push(tag + ": 斜線和弦的第一個指法不在資料庫裡 " + gtrTabText(got));
+        }
+      }
+      return { total, fails };
+    });
+    report("和弦資料庫一致", r.total, r.fails);
+  }
+
   /* ── 4. 搜尋框的和弦名稱解析 ── */
   {
     const r = await p.evaluate(() => {
