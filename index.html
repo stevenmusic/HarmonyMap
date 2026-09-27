@@ -1969,6 +1969,17 @@ function drawFretboard(ctx, w, h, gv){
       ctx.closePath();
       ctx.fillStyle = "rgba(255,244,214," + (0.35 * decay) + ")";
       ctx.fill();
+      /* 光暈:振動那一段再描一次、帶 shadowBlur,顏色跟這個音的角色一致
+         (根音金色、其他組成音青色,跟指板上的音點同一套),隨振動一起淡出 */
+      const isRoot = STATE.tab !== "find" && pcOf(GTR_OPEN[s] + vib.f) === rootPc();
+      const rgb = isRoot ? "242,185,75" : "63,191,174";
+      ctx.save();
+      ctx.shadowColor = "rgba(" + rgb + "," + (0.9 * decay) + ")";
+      ctx.shadowBlur = 4 + 10 * decay;
+      ctx.strokeStyle = "rgba(" + rgb + "," + (0.75 * decay) + ")";
+      ctx.lineWidth = 2.3 - s * 0.3 + 1;
+      ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(right, y); ctx.stroke();
+      ctx.restore();
     }
   }
   // 格數
