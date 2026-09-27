@@ -361,15 +361,21 @@ async function openPage(browser, opts = {}){
     });
     if (nextTab[0] !== nextTab[1]) fails.push("下一個和弦的吉他圖不是指板上會用的指法: " + nextTab.join(" / "));
     await q.click("#instPiano"); await q.click("#practiceOpen").catch(() => {});
-    const chip0 = await q.locator("#prPresets .filter-chip").first().innerText();
+    const chip0 = (await q.locator("#prPreset option").first().innerText()).trim();
     if (/\b(I|II|III|IV|V|VI|VII|ii|iii|vi)\b/.test(chip0) || chip0 !== "C G Am F") fails.push("進行按鈕只寫和弦名稱: " + chip0);
-    const blues = await q.locator("#prPresets .filter-chip").nth(6).innerText();
+    const blues = (await q.locator("#prPreset option").nth(6).innerText()).trim();
     if (blues !== "C7 F7 C7 G7 F7 C7 G7") fails.push("藍調按鈕(連續重複只寫一次): " + blues);
     await q.selectOption("#prKey", "1"); await want("G 大調 I–V–vi–IV", "G D Em C");
     await q.selectOption("#prKey", "10"); await want("B♭ 大調 I–V–vi–IV", "B♭ F Gm E♭");
     await q.selectOption("#prKey", "0");
-    await q.locator("#prPresets .filter-chip").nth(5).click(); await want("C ii–V–I", "Dm7 G7 Cmaj7 Cmaj7");
-    await q.locator("#prPresets .filter-chip").nth(6).click(); await want("C 12 小節藍調", "C7 C7 C7 C7 F7 F7 C7 C7 G7 F7 C7 G7");
+    await q.selectOption("#prPreset", "5"); await want("C ii–V–I", "Dm7 G7 Cmaj7 Cmaj7");
+    await q.selectOption("#prPreset", "6"); await want("C 12 小節藍調", "C7 C7 C7 C7 F7 F7 C7 C7 G7 F7 C7 G7");
+    // 速度:− / + 每次 5 BPM
+    await q.click("#prFaster"); await q.click("#prFaster"); await q.click("#prSlower");
+    if ((await q.evaluate(() => PRACTICE.bpm)) !== 75) fails.push("速度加減不對: " + await q.evaluate(() => PRACTICE.bpm));
+    // 版面緊湊:手機上整張練習卡片不超過一個畫面高
+    const prH = await q.evaluate(() => Math.round($("practiceCard").getBoundingClientRect().height));
+    if (prH > 700) fails.push("練習卡片太高: " + prH + "px");
     await q.fill("#prCustom", "C D/F# Em Xq"); await q.press("#prCustom", "Enter");
     await want("自訂進行", "C D/F♯ Em");
     if (!(await q.locator(".pr-bad").count())) fails.push("自訂進行打錯的字沒有提示");
@@ -389,6 +395,7 @@ async function openPage(browser, opts = {}){
     if ((await q.evaluate(() => $("prNow").textContent)) !== "Dm") fails.push("加和弦不該改掉目前的和弦");
     const hidden = await q.evaluate(() => [$("rootCard").hidden, $("typeCard").hidden, $("practiceCard").hidden]);
     if (hidden.join() !== "true,true,false") fails.push("練習時卡片顯示錯誤: " + hidden);
+    if (await q.evaluate(() => document.querySelector(".info").getBoundingClientRect().height > 0)) fails.push("練習時結果面板應該收起來(畫面上還看得到)");
     // 節拍器:180 BPM、每個和弦 2 拍 → 約 0.67 秒換一次
     await q.evaluate(() => { window._plays = 0; playCurrent = () => window._plays++; });
     await q.selectOption("#prBeats", "2");
@@ -402,9 +409,9 @@ async function openPage(browser, opts = {}){
     const stopped = await q.evaluate(() => { const n = window._plays; return new Promise(r => setTimeout(() => r(window._plays === n && !PRACTICE.running), 900)); });
     if (!stopped) fails.push("按停止後還在換和弦");
     await q.click("#prClose");
-    if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden)) fails.push("結束練習後沒有回到和弦清單");
+    if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden || document.querySelector(".info").getBoundingClientRect().height === 0)) fails.push("結束練習後沒有回到和弦清單與結果面板");
     if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
-    report("換和弦練習", 26, fails);
+    report("換和弦練習", 28, fails);
     await q.close();
   }
 

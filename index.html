@@ -157,6 +157,7 @@ main{
 .topbar.unstick{position:static}
 .lower{display:flex;flex-direction:column;gap:14px;min-width:0}
 .info{display:flex;flex-direction:column;gap:14px;min-width:0}
+.info[hidden]{display:none}   /* display:flex 會蓋過 hidden 屬性,要明寫 */
 
 /* 手機橫向 / 螢幕高度極矮:頂欄整體收扁,品牌名也降一階 */
 @media (max-height:420px){
@@ -414,11 +415,17 @@ html[data-lang="en"] .chip i{white-space:normal}
 .go-chip{width:100%;margin-bottom:12px;border-color:var(--gold)}
 #practiceOpen{border-color:var(--teal);color:var(--teal)}
 #practiceOpen[hidden]{display:none}
-.pr-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
-.pr-head .card-title{margin:0}
+.pr-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.pr-head .card-title{margin:0;white-space:nowrap}
+.pr-head select{flex:1;min-width:0;margin-left:auto;max-width:260px}
+.pr-head .kb-gear{margin-left:0}
+.pr-set{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
+.pr-set .pr-bpm{display:inline-flex;align-items:center;gap:4px}
+.pr-set .pr-bpm .kb-gear{margin:0}
+.pr-set output{min-width:4.6em;text-align:center;font-variant-numeric:tabular-nums;color:var(--ivory);font-size:var(--fs-sm)}
 .pr-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
 .pr-row .filter-label{min-width:4em}
-.pr-now{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px}
+.pr-now{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 8px}
 .pr-now > div{background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);padding:10px 12px;min-width:0}
 .pr-now small{display:block;font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.12em}
 .pr-now b{display:block;font-family:"Noto Serif TC",serif;font-size:clamp(26px,7vw,40px);line-height:1.15;
@@ -427,26 +434,24 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-now .next b{color:var(--muted-bright)}
 .pr-now .dg{display:block;height:auto;margin-top:6px;width:100%;max-width:150px}
 .pr-now .dg.kb{max-width:none}   /* 鋼琴小鍵盤撐滿格子,兩張一樣寬 */
-.pr-beats{display:flex;gap:8px;justify-content:center;margin:6px 0 12px}
+.pr-beats{display:flex;gap:8px;justify-content:center;margin:0 0 8px}
 .pr-beats i{width:12px;height:12px;border-radius:50%;background:var(--line)}
 .pr-beats i.on{background:var(--teal)}
 .pr-beats i.on.one{background:var(--gold)}
-.pr-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pr-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .pr-steps span{border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px 10px;font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
 .pr-steps span.cur{border-color:var(--gold);color:var(--gold);font-weight:700}
 /* 練習卡片裡的和弦輸入:跟根音卡片同一套按鈕(根音一下 + 和弦一下 = 把這個和弦加到進行最後面) */
 .pr-pad{margin-bottom:10px}
 .pr-pad .quick-grid{margin-top:8px;padding-top:8px}
-.pr-edit{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
-.pr-edit .lbl{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.12em;margin-right:auto}
+.pr-edit{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.pr-edit .pr-steps{flex:1;min-width:0;margin:0}
 .pr-custom{display:flex;gap:6px;margin-bottom:6px}
 .pr-custom input{flex:1;min-width:0;background:var(--surface-inset);color:var(--ivory);border:1px solid var(--line);
                  border-radius:var(--radius-pill);padding:0 12px;height:34px;font:inherit;font-size:var(--fs-sm)}
 .pr-bad{font-size:var(--fs-xs);color:#E07A5F;margin-bottom:6px}
 .pr-go{width:100%;height:44px;font-size:var(--fs-md)}
-.pr-bpm{display:flex;align-items:center;gap:8px;flex:1;min-width:180px}
-.pr-bpm input{flex:1}
-.pr-bpm output{min-width:4.5em;font-variant-numeric:tabular-nums;color:var(--ivory);font-size:var(--fs-sm)}
+
 .go-chip i{color:var(--gold)}
 
 /* ── 鍵盤 ── */
@@ -644,6 +649,7 @@ footer{
   /* 右邊的說明欄也跟著釘住。不然左邊清單很長、右邊說明很短,清單一往下捲,
      右半邊就整片空著。--topbar-h 由 JS 量出來(鍵盤高度會隨音域變,寫死會對不齊) */
   .info{position:sticky;top:calc(var(--header-h, 60px) + var(--topbar-h, 250px) + 10px)}
+  .lower.practicing{grid-template-columns:minmax(0,760px)}
 }
 </style>
 </head>
@@ -862,7 +868,8 @@ const I18N = {
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
-    practiceProgression: "和弦進行", practiceUndo: "刪除最後一個", practiceClearSteps: "清除",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practicePreset: "內建進行",
+    practiceCustomOpt: "自訂進行", practiceKeyOpt: "{k} 調", practiceAccompShort: "伴奏",
     practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
     practiceKey: "調", practiceTempo: "速度", practiceBeats: "每個和弦", practiceBeatsUnit: "拍",
     practiceAccomp: "換和弦時彈出和弦", practiceStart: "開始", practiceStop: "停止",
@@ -940,7 +947,8 @@ const I18N = {
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
-    practiceProgression: "Progression", practiceUndo: "Delete last", practiceClearSteps: "Clear",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practicePreset: "Preset progression",
+    practiceCustomOpt: "Custom progression", practiceKeyOpt: "Key of {k}", practiceAccompShort: "Accomp.",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
     practiceKey: "Key", practiceTempo: "Tempo", practiceBeats: "Each chord", practiceBeatsUnit: "beats",
     practiceAccomp: "Play the chord on each change", practiceStart: "Start", practiceStop: "Stop",
@@ -3485,6 +3493,9 @@ function render(){
   $("rootCard").hidden = findMode || practicing;   // 練習時調性在練習卡片裡選,根音列會跟著和弦跳,收起來
   $("typeCard").hidden = findMode || practicing;
   $("practiceCard").hidden = !practicing;
+  // 練習時結果面板(公式、組成音、低音、音階)用不到,收起來;桌機讓練習卡片佔滿兩欄
+  document.querySelector(".info").hidden = practicing;
+  document.querySelector(".lower").classList.toggle("practicing", practicing);
   $("practiceOpen").hidden = STATE.tab !== "chord";
   if (practicing) renderPractice();
   $("findCard").hidden = !findMode;
@@ -3701,44 +3712,43 @@ function pianoDiagramSVG(){
 function renderPractice(){
   const c = $("practiceCard");
   const P = PRACTICE, cur = P.steps[P.step], nxt = P.steps[(P.step + 1) % (P.steps.length || 1)];
-  const keyOpts = PRACTICE_KEYS.map(([L, a], i) => '<option value="' + i + '"' + (i === P.key ? " selected" : "") + '>' + L + accText(a) + '</option>').join("");
+  const keyOpts = PRACTICE_KEYS.map(([L, a], i) => '<option value="' + i + '"' + (i === P.key ? " selected" : "") + '>' + t("practiceKeyOpt", { k: L + accText(a) }) + '</option>').join("");
   const beatOpts = [2, 3, 4, 8].map(b => '<option value="' + b + '"' + (b === P.beats ? " selected" : "") + '>' + b + " " + t("practiceBeatsUnit") + '</option>').join("");
+  const svg = d => '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
+  // 內建進行收成一個下拉(原本三排按鈕);選項文字只寫這個調裡的和弦,連續重複的只寫一次
+  const presetOpts = (P.preset < 0 ? '<option value="-1" selected>' + t("practiceCustomOpt") + '</option>' : '') +
+    PROGRESSIONS.map((_, i) => '<option value="' + i + '"' + (i === P.preset ? " selected" : "") + '>' +
+      practiceStepsFor(i).map(stepName).filter((n, j, arr) => j === 0 || n !== arr[j - 1]).join(" ") + '</option>').join("");
+  /* 版面刻意壓縮(使用者要求「簡單、緊湊」):標題列放範本下拉與關閉鈕;進行與刪除/清除同一列;
+     調、拍數、速度、伴奏擠成一列設定;說明文字收進開始鈕的 title */
   c.innerHTML =
     '<div class="pr-head"><div class="card-title">' + t("practiceTitle") + '</div>' +
-      '<button class="btn small ghost" id="prClose">' + t("practiceClose") + '</button></div>' +
-    '<div class="pr-row" id="prPresets"></div>' +
+      '<select class="mini" id="prPreset" aria-label="' + t("practicePreset") + '">' + presetOpts + '</select>' +
+      '<button class="kb-gear" id="prClose" aria-label="' + t("practiceClose") + '" title="' + t("practiceClose") + '">' + svg("M18 6L6 18M6 6l12 12") + '</button></div>' +
     '<div class="pr-pad"><div class="root-line"><div class="root-row letters" id="prLetters"></div><div class="acc-row" id="prAcc"></div></div>' +
       '<div class="quick-grid" id="prQuick"></div></div>' +
-    '<div class="pr-edit"><span class="lbl">' + t("practiceProgression") + '</span>' +
+    '<div class="pr-edit"><div class="pr-steps" id="prSteps"></div>' +
       '<button class="btn small ghost" id="prUndo"' + (P.steps.length ? "" : " disabled") + '>' + t("practiceUndo") + '</button>' +
       '<button class="btn small ghost" id="prClearSteps"' + (P.steps.length ? "" : " disabled") + '>' + t("practiceClearSteps") + '</button></div>' +
-    '<div class="pr-steps" id="prSteps"></div>' +
-    '<div class="pr-custom"><input id="prCustom" type="text" autocomplete="off" placeholder="' + t("practiceCustomPh") + '">' +
-      '<button class="btn small" id="prCustomGo">' + t("practiceCustomApply") + '</button></div>' +
+    '<div class="pr-custom"><input id="prCustom" type="text" autocomplete="off" enterkeyhint="done" placeholder="' + t("practiceCustomPh") + '"></div>' +
     (P.bad.length ? '<div class="pr-bad">' + t("practiceBad", { x: P.bad.join(" ") }) + '</div>' : '') +
-    '<div class="pr-row"><span class="filter-label">' + t("practiceKey") + '</span><select class="mini" id="prKey"' + (P.preset < 0 ? " disabled" : "") + '>' + keyOpts + '</select>' +
-      '<span class="filter-label" style="margin-left:8px">' + t("practiceBeats") + '</span><select class="mini" id="prBeats">' + beatOpts + '</select></div>' +
-    '<div class="pr-row"><span class="filter-label">' + t("practiceTempo") + '</span><label class="pr-bpm"><input type="range" id="prBpm" min="40" max="180" step="2" value="' + P.bpm + '"><output id="prBpmOut">' + P.bpm + ' BPM</output></label></div>' +
-    '<div class="pr-row"><label style="display:flex;gap:8px;align-items:center;font-size:var(--fs-sm)"><input type="checkbox" id="prAccomp"' + (P.accomp ? " checked" : "") + '>' + t("practiceAccomp") + '</label></div>' +
+    '<div class="pr-set">' +
+      '<select class="mini" id="prKey" aria-label="' + t("practiceKey") + '"' + (P.preset < 0 ? " disabled" : "") + '>' + keyOpts + '</select>' +
+      '<select class="mini" id="prBeats" aria-label="' + t("practiceBeats") + '">' + beatOpts + '</select>' +
+      '<span class="pr-bpm" role="group" aria-label="' + t("practiceTempo") + '">' +
+        '<button class="kb-gear" id="prSlower" aria-label="-5 BPM">' + svg("M5 12h14") + '</button>' +
+        '<output id="prBpmOut">' + P.bpm + ' BPM</output>' +
+        '<button class="kb-gear" id="prFaster" aria-label="+5 BPM">' + svg("M12 5v14M5 12h14") + '</button></span>' +
+      '<button class="filter-chip" id="prAccomp" aria-pressed="' + P.accomp + '">' + t("practiceAccompShort") + '</button>' +
+    '</div>' +
     '<div class="pr-now"><div><small>' + t("practiceNow") + '</small><b id="prNow"></b>' + (cur ? stepDiagram(cur) : "") + '</div>' +
       '<div class="next"><small>' + t("practiceNext") + '</small><b id="prNext"></b>' + (nxt ? stepDiagram(nxt) : "") + '</div></div>' +
     '<div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div>' +
-    '<button class="btn primary pr-go" id="prGo">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>' +
-    '<div class="desc">' + t("practiceHint") + '</div>';
+    '<button class="btn primary pr-go" id="prGo" title="' + t("practiceHint") + '">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>';
   $("prNow").textContent = cur ? stepName(cur) : "—";
   $("prNext").textContent = nxt ? stepName(nxt) : "—";
   $("prCustom").value = P.custom;
-  const pr = $("prPresets");
-  PROGRESSIONS.forEach((_, i) => {
-    const b = document.createElement("button");
-    // 按鈕只寫這個調裡實際的和弦(C G Am F):不用羅馬數字,也不加風格名稱。
-    // 連續重複的和弦只寫一次,12 小節藍調才不會長成一整排
-    const names = practiceStepsFor(i).map(stepName).filter((n, j, arr) => j === 0 || n !== arr[j - 1]);
-    b.className = "filter-chip"; b.textContent = names.join(" ");
-    b.setAttribute("aria-pressed", String(i === P.preset));
-    b.onclick = () => { P.custom = ""; P.bad = []; practiceLoad(i); render(); };
-    pr.appendChild(b);
-  });
+  $("prPreset").onchange = e => { const i = +e.target.value; if (i >= 0) { P.custom = ""; P.bad = []; practiceLoad(i); render(); } };
   const ss = $("prSteps");
   P.steps.forEach((st, i) => {
     const sp = document.createElement("span");
@@ -3790,8 +3800,10 @@ function renderPractice(){
   $("prGo").onclick = () => { if (P.running) { practiceStop(); render(); } else practiceStart(); };
   $("prKey").onchange = e => { P.key = +e.target.value; practiceLoad(P.preset); render(); };
   $("prBeats").onchange = e => { P.beats = +e.target.value; render(); };
-  $("prBpm").oninput = e => { P.bpm = +e.target.value; $("prBpmOut").textContent = P.bpm + " BPM"; };
-  $("prAccomp").onchange = e => { P.accomp = e.target.checked; };
+  const setBpm = d => { P.bpm = Math.max(40, Math.min(200, P.bpm + d)); $("prBpmOut").textContent = P.bpm + " BPM"; };
+  $("prSlower").onclick = () => setBpm(-5);
+  $("prFaster").onclick = () => setBpm(5);
+  $("prAccomp").onclick = e => { P.accomp = !P.accomp; e.currentTarget.setAttribute("aria-pressed", String(P.accomp)); };
   const applyCustom = () => {
     const text = $("prCustom").value.trim();
     const r = practiceParseCustom(text);
@@ -3799,8 +3811,9 @@ function renderPractice(){
     if (r.steps.length) { P.steps = r.steps; P.preset = -1; P.step = 0; practiceApply(); }
     render();
   };
-  $("prCustomGo").onclick = applyCustom;
+  // 沒有「套用」鈕:按 Enter 或離開輸入框就套用(內容沒變就不動)
   $("prCustom").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); applyCustom(); } };
+  $("prCustom").onchange = () => { if ($("prCustom").value.trim() !== P.custom) applyCustom(); };
 }
 /* 釘在鍵盤下的那一行:名稱 + 組成音,固定一行高度 */
 function renderSummary(){
