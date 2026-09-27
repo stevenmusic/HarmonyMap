@@ -3480,7 +3480,17 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
     playSingle(m);
     render();
   } else {
-    playSingle(m);
+    /* 和弦/音階模式只讓亮起來的鍵(組成音)發聲,手指擦到旁邊的鍵不會冒出和弦外的音。
+       黑鍵疊在白鍵上面,點在亮起來的白鍵邊緣常常會先命中沒亮的黑鍵——
+       這種情形改看手指底下那顆白鍵,它亮著就彈它 */
+    const on = new Set(keyboardNotes().map(n => n.midi));
+    let hit = on.has(m) ? m : null;
+    if (hit == null) {
+      const ww = cv._cssW / KB_WHITE_KEYS.length;
+      const white = KB_WHITE_KEYS[Math.max(0, Math.min(KB_WHITE_KEYS.length - 1, Math.floor((ev.clientX - rect.left) / ww)))];
+      if (on.has(white)) hit = white;
+    }
+    if (hit != null) playSingle(hit);
   }
 });
 
