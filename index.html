@@ -412,6 +412,33 @@ html[data-lang="en"] .chip i{white-space:normal}
 .chip[aria-pressed="true"] i{color:rgba(0,0,0,.62)}
 .empty-hint{color:var(--muted);font-size:var(--fs-sm);padding:10px 2px}
 .go-chip{width:100%;margin-bottom:12px;border-color:var(--gold)}
+#practiceOpen{border-color:var(--teal);color:var(--teal)}
+#practiceOpen[hidden]{display:none}
+.pr-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.pr-head .card-title{margin:0}
+.pr-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+.pr-row .filter-label{min-width:4em}
+.pr-now{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 10px}
+.pr-now > div{background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);padding:10px 12px;min-width:0}
+.pr-now small{display:block;font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.12em}
+.pr-now b{display:block;font-family:"Noto Serif TC",serif;font-size:clamp(26px,7vw,40px);line-height:1.15;
+          color:var(--gold-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pr-now .next b{color:var(--muted-bright);font-size:clamp(20px,5vw,28px)}
+.pr-beats{display:flex;gap:8px;justify-content:center;margin:6px 0 12px}
+.pr-beats i{width:12px;height:12px;border-radius:50%;background:var(--line)}
+.pr-beats i.on{background:var(--teal)}
+.pr-beats i.on.one{background:var(--gold)}
+.pr-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.pr-steps span{border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px 10px;font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
+.pr-steps span.cur{border-color:var(--gold);color:var(--gold);font-weight:700}
+.pr-custom{display:flex;gap:6px;margin-bottom:6px}
+.pr-custom input{flex:1;min-width:0;background:var(--surface-inset);color:var(--ivory);border:1px solid var(--line);
+                 border-radius:var(--radius-pill);padding:0 12px;height:34px;font:inherit;font-size:var(--fs-sm)}
+.pr-bad{font-size:var(--fs-xs);color:#E07A5F;margin-bottom:6px}
+.pr-go{width:100%;height:44px;font-size:var(--fs-md)}
+.pr-bpm{display:flex;align-items:center;gap:8px;flex:1;min-width:180px}
+.pr-bpm input{flex:1}
+.pr-bpm output{min-width:4.5em;font-variant-numeric:tabular-nums;color:var(--ivory);font-size:var(--fs-sm)}
 .go-chip i{color:var(--gold)}
 
 /* ── 鍵盤 ── */
@@ -702,6 +729,9 @@ footer{
 
   <!-- ══ 只有這一區會捲動:和弦/音階清單 + 結果說明 ══ -->
   <div class="lower">
+    <!-- 換和弦練習:選一組和弦進行,跟著節拍器輪流換。動態內容,由 renderPractice() 產生 -->
+    <div class="card" id="practiceCard" hidden></div>
+
     <div class="card" id="typeCard">
       <!-- 篩選預設收合。它是「偶爾用一次」的功能,常駐展開會把主要內容(和弦清單)
            整個推到第一屏之外——實測手機版第一顆和弦落在 y=803 的 844px 畫面上 -->
@@ -715,6 +745,7 @@ footer{
         <button class="filter-summary" id="filterToggle" aria-expanded="false">
           <span class="chev">›</span><span data-i18n="filterToggleText">篩選</span><span class="badge" id="filterBadge"></span>
         </button>
+        <button class="filter-summary" id="practiceOpen" data-i18n="practiceBtn">練習</button>
       </div>
       <div class="filter-rows" id="filterRows" hidden>
         <div class="filter-row" id="styleRow"></div>
@@ -823,6 +854,14 @@ const I18N = {
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
+    practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
+    practiceKey: "調", practiceTempo: "速度", practiceBeats: "每個和弦", practiceBeatsUnit: "拍",
+    practiceAccomp: "換和弦時彈出和弦", practiceStart: "開始", practiceStop: "停止",
+    practiceNow: "現在", practiceNext: "下一個", practiceCustom: "自訂進行",
+    practiceCustomPh: "例如 C G Am F 或 C D/F# Em", practiceCustomApply: "套用",
+    practiceBad: "看不懂:{x}", practiceHint: "節拍器第一拍是重音,換和弦就在那一拍。先放慢,換得乾淨再加速。",
+    pgPop: "I–V–vi–IV 流行", pg50s: "I–vi–IV–V 五〇年代", pgSad: "vi–IV–I–V", pgBasic: "I–IV–V–I 三和弦",
+    pgCanon: "卡農進行", pgJazz: "ii–V–I 爵士", pgBlues: "12 小節藍調",
     bassLabel: "低音", bassRoot: "根音", bassOther: "其他音…",
     bassNonChord: "低音不是和弦內音(例如 D/C),斜線後面的音是另外加的",
     vOpen: "開放和弦", vBarre: "橫按 · 第 {n} 格", vPos: "第 {n} 把位", vRootOn: "根音在 {n} 弦",
@@ -893,6 +932,14 @@ const I18N = {
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
+    practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
+    practiceKey: "Key", practiceTempo: "Tempo", practiceBeats: "Each chord", practiceBeatsUnit: "beats",
+    practiceAccomp: "Play the chord on each change", practiceStart: "Start", practiceStop: "Stop",
+    practiceNow: "Now", practiceNext: "Next", practiceCustom: "Custom progression",
+    practiceCustomPh: "e.g. C G Am F or C D/F# Em", practiceCustomApply: "Apply",
+    practiceBad: "Not a chord: {x}", practiceHint: "Beat one is accented and is where the chord changes. Start slow; speed up once the change is clean.",
+    pgPop: "I–V–vi–IV Pop", pg50s: "I–vi–IV–V '50s", pgSad: "vi–IV–I–V", pgBasic: "I–IV–V–I Triads",
+    pgCanon: "Canon progression", pgJazz: "ii–V–I Jazz", pgBlues: "12-bar blues",
     bassLabel: "Bass", bassRoot: "Root", bassOther: "Other note…",
     bassNonChord: "The bass is not a chord tone (e.g. D/C); the note after the slash is added",
     vOpen: "Open chord", vBarre: "Barre · fret {n}", vPos: "Position {n}", vRootOn: "root on string {n}",
@@ -3313,8 +3360,12 @@ function render(){
   $("tabScale").setAttribute("aria-selected", String(STATE.tab === "scale"));
   $("tabFind").setAttribute("aria-selected", String(STATE.tab === "find"));
   const findMode = STATE.tab === "find";
-  $("rootCard").hidden = findMode;
-  $("typeCard").hidden = findMode;
+  const practicing = STATE.tab === "chord" && PRACTICE.open;
+  $("rootCard").hidden = findMode || practicing;   // 練習時調性在練習卡片裡選,根音列會跟著和弦跳,收起來
+  $("typeCard").hidden = findMode || practicing;
+  $("practiceCard").hidden = !practicing;
+  $("practiceOpen").hidden = STATE.tab !== "chord";
+  if (practicing) renderPractice();
   $("findCard").hidden = !findMode;
   const gtr = STATE.inst === "guitar";
   document.querySelector(".kb-wrap").classList.toggle("gtr", gtr);
@@ -3354,6 +3405,166 @@ function render(){
   syncStickyMetrics(); // 鍵盤音域一變,釘住區塊的高度就變,右欄的 sticky 偏移量要跟著更新
 }
 
+/* ══════════════════════════════════════════════════════════════
+   換和弦練習:一組和弦進行 + 節拍器。和弦用「調裡的第幾級」存,
+   換調時照同一套規則(字母照級數推、升降照音高差)推出每個和弦的根音拼寫。
+   節拍用 Web Audio 的時鐘排程(提前 0.1 秒排好點擊聲),畫面在那一刻用 setTimeout 跟上
+   ══════════════════════════════════════════════════════════════ */
+const PROGRESSIONS = [
+  ["pgPop",   [["1","maj"],["5","maj"],["6","min"],["4","maj"]]],
+  ["pg50s",   [["1","maj"],["6","min"],["4","maj"],["5","maj"]]],
+  ["pgSad",   [["6","min"],["4","maj"],["1","maj"],["5","maj"]]],
+  ["pgBasic", [["1","maj"],["4","maj"],["5","maj"],["1","maj"]]],
+  ["pgCanon", [["1","maj"],["5","maj"],["6","min"],["3","min"],["4","maj"],["1","maj"],["4","maj"],["5","maj"]]],
+  ["pgJazz",  [["2","m7"],["5","7"],["1","maj7"],["1","maj7"]]],
+  ["pgBlues", [["1","7"],["1","7"],["1","7"],["1","7"],["4","7"],["4","7"],["1","7"],["1","7"],["5","7"],["4","7"],["1","7"],["5","7"]]]
+];
+const PRACTICE_KEYS = [["C",0],["G",0],["D",0],["A",0],["E",0],["B",0],["F",1],["D",-1],["A",-1],["E",-1],["B",-1],["F",0]];
+const PRACTICE = { open: false, preset: 0, key: 0, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
+                   steps: [], step: 0, beat: -1, running: false, timer: 0, nextTime: 0, count: 0 };
+
+/* 把一組進行換成具體的和弦:{letter, acc, id, bass} */
+function practiceLoad(preset){
+  PRACTICE.preset = preset;
+  if (preset < 0) return;
+  const [L, a] = PRACTICE_KEYS[PRACTICE.key];
+  const li = LETTERS.indexOf(L);
+  PRACTICE.steps = PROGRESSIONS[preset][1].map(([tok, id]) => {
+    const sp = spell(li, a, tok);
+    if (sp.acc === null || Math.abs(sp.acc) > 1) { // 需要重升降時退回等音(實務上的寫法)
+      const pc = pcOf(LETTER_PC[li] + a + sp.semi), nm = simpleName(pc, a < 0 ? "flat" : "sharp");
+      return { letter: LETTERS.indexOf(nm[0]), acc: nm.length > 1 ? (nm[1] === "♯" ? 1 : -1) : 0, id, bass: null };
+    }
+    return { letter: sp.letter, acc: sp.acc, id, bass: null };
+  });
+  PRACTICE.step = 0;
+  practiceApply();
+}
+function practiceParseCustom(text){
+  const bad = [], steps = [];
+  for (const w of text.split(/[\s,|]+/).filter(Boolean)) {
+    const pc = parseChordName(w);
+    if (pc) steps.push({ letter: pc.letter, acc: pc.acc, id: pc.def.id, bass: pc.bass }); else bad.push(w);
+  }
+  return { steps, bad };
+}
+const stepName = st => {
+  const saved = { letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, bassIv: STATE.bassIv, bassFor: STATE.bassFor };
+  Object.assign(STATE, { letter: st.letter, acc: st.acc, chordId: st.id, bassIv: st.bass, bassFor: st.id });
+  const n = chordTitle(chordById(st.id));
+  Object.assign(STATE, saved);
+  return n;
+};
+/* 把目前這一步套到鍵盤/指板上 */
+function practiceApply(){
+  const st = PRACTICE.steps[PRACTICE.step];
+  if (!st) return;
+  Object.assign(STATE, { tab: "chord", letter: st.letter, acc: st.acc, chordId: st.id, bassIv: st.bass, bassFor: st.id });
+}
+function practiceClick(time, accent){
+  const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+  o.frequency.value = accent ? 1760 : 1175;
+  g.gain.setValueAtTime(0.0001, time);
+  g.gain.exponentialRampToValueAtTime(accent ? 0.5 : 0.28, time + 0.002);
+  g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
+  o.connect(g); g.connect(masterGain);
+  o.start(time); o.stop(time + 0.06);
+}
+function practiceStart(){
+  if (!PRACTICE.steps.length) return;
+  ensureAudio();
+  PRACTICE.running = true;
+  PRACTICE.count = 0;
+  PRACTICE.step = 0;
+  PRACTICE.nextTime = audioCtx.currentTime + 0.12;
+  const schedule = () => {
+    while (PRACTICE.nextTime < audioCtx.currentTime + 0.1) {
+      const n = PRACTICE.count++, beat = n % PRACTICE.beats, step = Math.floor(n / PRACTICE.beats) % PRACTICE.steps.length;
+      practiceClick(PRACTICE.nextTime, beat === 0);
+      const delay = Math.max(0, (PRACTICE.nextTime - audioCtx.currentTime) * 1000);
+      setTimeout(() => {
+        if (!PRACTICE.running) return;
+        PRACTICE.beat = beat;
+        if (beat === 0) {
+          PRACTICE.step = step;
+          practiceApply();
+          render();
+          if (PRACTICE.accomp) playCurrent();
+        } else renderPracticeBeat();
+      }, delay);
+      PRACTICE.nextTime += 60 / PRACTICE.bpm;
+    }
+  };
+  schedule();
+  PRACTICE.timer = setInterval(schedule, 25);
+  render();
+}
+function practiceStop(){
+  if (!PRACTICE.running && !PRACTICE.open) return;
+  clearInterval(PRACTICE.timer);
+  PRACTICE.running = false;
+  PRACTICE.beat = -1;
+}
+function renderPracticeBeat(){
+  const el = document.querySelector("#practiceCard .pr-beats");
+  if (!el) return;
+  [...el.children].forEach((d, i) => { d.className = (i === PRACTICE.beat ? "on" : "") + (i === 0 ? " one" : ""); });
+}
+function renderPractice(){
+  const c = $("practiceCard");
+  const P = PRACTICE, cur = P.steps[P.step], nxt = P.steps[(P.step + 1) % (P.steps.length || 1)];
+  const keyOpts = PRACTICE_KEYS.map(([L, a], i) => '<option value="' + i + '"' + (i === P.key ? " selected" : "") + '>' + L + accText(a) + '</option>').join("");
+  const beatOpts = [2, 3, 4, 8].map(b => '<option value="' + b + '"' + (b === P.beats ? " selected" : "") + '>' + b + " " + t("practiceBeatsUnit") + '</option>').join("");
+  c.innerHTML =
+    '<div class="pr-head"><div class="card-title">' + t("practiceTitle") + '</div>' +
+      '<button class="btn small ghost" id="prClose">' + t("practiceClose") + '</button></div>' +
+    '<div class="pr-row" id="prPresets"></div>' +
+    '<div class="pr-custom"><input id="prCustom" type="text" autocomplete="off" placeholder="' + t("practiceCustomPh") + '">' +
+      '<button class="btn small" id="prCustomGo">' + t("practiceCustomApply") + '</button></div>' +
+    (P.bad.length ? '<div class="pr-bad">' + t("practiceBad", { x: P.bad.join(" ") }) + '</div>' : '') +
+    '<div class="pr-row"><span class="filter-label">' + t("practiceKey") + '</span><select class="mini" id="prKey"' + (P.preset < 0 ? " disabled" : "") + '>' + keyOpts + '</select>' +
+      '<span class="filter-label" style="margin-left:8px">' + t("practiceBeats") + '</span><select class="mini" id="prBeats">' + beatOpts + '</select></div>' +
+    '<div class="pr-row"><span class="filter-label">' + t("practiceTempo") + '</span><label class="pr-bpm"><input type="range" id="prBpm" min="40" max="180" step="2" value="' + P.bpm + '"><output id="prBpmOut">' + P.bpm + ' BPM</output></label></div>' +
+    '<div class="pr-row"><label style="display:flex;gap:8px;align-items:center;font-size:var(--fs-sm)"><input type="checkbox" id="prAccomp"' + (P.accomp ? " checked" : "") + '>' + t("practiceAccomp") + '</label></div>' +
+    '<div class="pr-now"><div><small>' + t("practiceNow") + '</small><b id="prNow"></b></div><div class="next"><small>' + t("practiceNext") + '</small><b id="prNext"></b></div></div>' +
+    '<div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div>' +
+    '<div class="pr-steps" id="prSteps"></div>' +
+    '<button class="btn primary pr-go" id="prGo">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>' +
+    '<div class="desc">' + t("practiceHint") + '</div>';
+  $("prNow").textContent = cur ? stepName(cur) : "—";
+  $("prNext").textContent = nxt ? stepName(nxt) : "—";
+  $("prCustom").value = P.custom;
+  const pr = $("prPresets");
+  PROGRESSIONS.forEach(([key], i) => {
+    const b = document.createElement("button");
+    b.className = "filter-chip"; b.textContent = t(key);
+    b.setAttribute("aria-pressed", String(i === P.preset));
+    b.onclick = () => { P.custom = ""; P.bad = []; practiceLoad(i); render(); };
+    pr.appendChild(b);
+  });
+  const ss = $("prSteps");
+  P.steps.forEach((st, i) => {
+    const sp = document.createElement("span");
+    sp.textContent = stepName(st);
+    if (i === P.step) sp.className = "cur";
+    ss.appendChild(sp);
+  });
+  $("prClose").onclick = () => { practiceStop(); P.open = false; render(); };
+  $("prGo").onclick = () => { if (P.running) { practiceStop(); render(); } else practiceStart(); };
+  $("prKey").onchange = e => { P.key = +e.target.value; practiceLoad(P.preset); render(); };
+  $("prBeats").onchange = e => { P.beats = +e.target.value; render(); };
+  $("prBpm").oninput = e => { P.bpm = +e.target.value; $("prBpmOut").textContent = P.bpm + " BPM"; };
+  $("prAccomp").onchange = e => { P.accomp = e.target.checked; };
+  const applyCustom = () => {
+    const text = $("prCustom").value.trim();
+    const r = practiceParseCustom(text);
+    P.custom = text; P.bad = r.bad;
+    if (r.steps.length) { P.steps = r.steps; P.preset = -1; P.step = 0; practiceApply(); }
+    render();
+  };
+  $("prCustomGo").onclick = applyCustom;
+  $("prCustom").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); applyCustom(); } };
+}
 /* 釘在鍵盤下的那一行:名稱 + 組成音,固定一行高度 */
 function renderSummary(){
   const el = $("kbSummary");
@@ -3515,9 +3726,10 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
   }
 });
 
+$("practiceOpen").onclick = () => { PRACTICE.open = true; practiceLoad(0); render(); };
 $("tabChord").onclick = () => { STATE.tab = "chord"; STATE.search = ""; STATE.style = ""; STATE.level = 0; STATE.size = 0; $("typeSearch").value = ""; render(); };
-$("tabScale").onclick = () => { STATE.tab = "scale"; STATE.search = ""; $("typeSearch").value = ""; render(); };
-$("tabFind").onclick  = () => { STATE.tab = "find"; render(); };
+$("tabScale").onclick = () => { practiceStop(); STATE.tab = "scale"; STATE.search = ""; $("typeSearch").value = ""; render(); };
+$("tabFind").onclick  = () => { practiceStop(); STATE.tab = "find"; render(); };
 // 搜尋只重畫清單與分類列,不跑整個 render()——每打一個字就重算音域、重畫鍵盤太浪費
 $("typeSearch").addEventListener("input", e => { STATE.search = e.target.value.trim(); buildGroupTabs(); buildTypeList(); });
 $("typeSearch").addEventListener("keydown", e => {

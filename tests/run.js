@@ -246,6 +246,44 @@ async function openPage(browser, opts = {}){
     report("iPhone 靜音開關", 5, fails);
   }
 
+  /* ── 5c. 換和弦練習:進行換調、自訂進行、節拍器實際換和弦 ── */
+  {
+    const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
+    await q.click("#instPiano");
+    await q.click("#practiceOpen");
+    const fails = [];
+    const steps = () => q.evaluate(() => [...document.querySelectorAll("#prSteps span")].map(x => x.textContent).join(" "));
+    const want = async (label, exp) => { const got = await steps(); if (got !== exp) fails.push(label + ": " + got + " ≠ " + exp); };
+    await want("C 大調 I–V–vi–IV", "C G Am F");
+    await q.selectOption("#prKey", "1"); await want("G 大調 I–V–vi–IV", "G D Em C");
+    await q.selectOption("#prKey", "10"); await want("B♭ 大調 I–V–vi–IV", "B♭ F Gm E♭");
+    await q.selectOption("#prKey", "0");
+    await q.locator("#prPresets .filter-chip").nth(5).click(); await want("C ii–V–I", "Dm7 G7 Cmaj7 Cmaj7");
+    await q.locator("#prPresets .filter-chip").nth(6).click(); await want("C 12 小節藍調", "C7 C7 C7 C7 F7 F7 C7 C7 G7 F7 C7 G7");
+    await q.fill("#prCustom", "C D/F# Em Xq"); await q.press("#prCustom", "Enter");
+    await want("自訂進行", "C D/F♯ Em");
+    if (!(await q.locator(".pr-bad").count())) fails.push("自訂進行打錯的字沒有提示");
+    const hidden = await q.evaluate(() => [$("rootCard").hidden, $("typeCard").hidden, $("practiceCard").hidden]);
+    if (hidden.join() !== "true,true,false") fails.push("練習時卡片顯示錯誤: " + hidden);
+    // 節拍器:180 BPM、每個和弦 2 拍 → 約 0.67 秒換一次
+    await q.evaluate(() => { window._plays = 0; playCurrent = () => window._plays++; });
+    await q.selectOption("#prBeats", "2");
+    await q.evaluate(() => { PRACTICE.bpm = 180; });
+    await q.click("#prGo");
+    await q.waitForTimeout(1600);
+    const run = await q.evaluate(() => ({ plays: window._plays, now: $("prNow").textContent, sum: $("kbSummary").querySelector("b").textContent, running: PRACTICE.running }));
+    if (!run.running || run.plays < 2) fails.push("節拍器沒有在換和弦: 換了 " + run.plays + " 次");
+    if (run.now !== run.sum) fails.push("練習卡片的「現在」與鍵盤上的和弦不一致: " + run.now + " / " + run.sum);
+    await q.click("#prGo");
+    const stopped = await q.evaluate(() => { const n = window._plays; return new Promise(r => setTimeout(() => r(window._plays === n && !PRACTICE.running), 900)); });
+    if (!stopped) fails.push("按停止後還在換和弦");
+    await q.click("#prClose");
+    if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden)) fails.push("結束練習後沒有回到和弦清單");
+    if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
+    report("換和弦練習", 12, fails);
+    await q.close();
+  }
+
   /* ── 6. 英文介面:兩個分頁的每個條目都點一次,畫面上除了「中」不能有中文 ── */
   {
     const q = await openPage(browser);
@@ -270,6 +308,10 @@ async function openPage(browser, opts = {}){
       total += r.n;
       fails.push(...r.bad);
     }
+    total++;
+    const pr = await q.evaluate(() => { STATE.inst = "piano"; STATE.tab = "chord"; PRACTICE.open = true; practiceLoad(0); render();
+      const m = document.body.innerText.replace(/中/g, "").match(/[\u3400-\u9fff]+/g); PRACTICE.open = false; render(); return m ? m.slice(0, 3).join(",") : ""; });
+    if (pr) fails.push("練習卡片: " + pr);
     report("英文介面無中文", total, fails);
     await q.close();
   }
