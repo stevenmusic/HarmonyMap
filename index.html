@@ -411,6 +411,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 .chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
 .chip[aria-pressed="true"] i{color:rgba(0,0,0,.62)}
 .empty-hint{color:var(--muted);font-size:var(--fs-sm);padding:10px 2px}
+.go-chip{width:100%;margin-bottom:12px;border-color:var(--gold)}
+.go-chip i{color:var(--gold)}
 
 /* ── 鍵盤 ── */
 .kb-wrap{
@@ -705,7 +707,7 @@ footer{
       <div class="find-row">
         <div class="search-wrap">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="typeSearch" type="search" data-i18n-attr="placeholder:searchPlaceholder" placeholder="搜尋名稱、符號或公式" autocomplete="off">
+          <input id="typeSearch" type="search" data-i18n-attr="placeholder:searchPlaceholder" placeholder="搜尋名稱、符號,或直接打 C/B" autocomplete="off">
         </div>
         <button class="filter-summary" id="filterToggle" aria-expanded="false">
           <span class="chev">›</span><span data-i18n="filterToggleText">篩選</span><span class="badge" id="filterBadge"></span>
@@ -770,7 +772,7 @@ const I18N = {
     findCardDesc: "點鍵盤上的琴鍵選音。最低的音當低音,不是根音時寫成斜線和弦(E G C → C/E)。",
     clearSelection: "清除選音",
     spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
-    searchPlaceholder: "搜尋名稱、符號或公式",
+    searchPlaceholder: "搜尋名稱、符號,或直接打 C/B",
     filterToggleText: "篩選",
     accFlat: "♭ 降", accNatural: "♮ 原", accSharp: "♯ 升",
     filterStyle: "風格", filterLevel: "程度", filterSize: "編制", filterEnharmonic: "同音",
@@ -817,6 +819,7 @@ const I18N = {
     guitarTabTitle: "吉他指法", guitarTabNote: "由低音弦(6 弦)寫到高音弦(1 弦)· × = 不彈 · 0 = 空弦 · 數字 = 格數",
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
     guitarBassNote: "這個指法的最低音不是根音",
+    goToChord: "前往這個和弦(Enter)",
     bassLabel: "低音", bassRoot: "根音", bassOther: "其他音…",
     bassNonChord: "低音不是和弦內音(例如 D/C),斜線後面的音是另外加的",
     vOpen: "開放和弦", vBarre: "橫按 · 第 {n} 格", vPos: "第 {n} 把位", vRootOn: "根音在 {n} 弦",
@@ -838,7 +841,7 @@ const I18N = {
     findCardDesc: "Tap keys on the keyboard to pick notes. The lowest note is the bass — when it isn't the root you get a slash chord (E G C → C/E).",
     clearSelection: "Clear notes",
     spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
-    searchPlaceholder: "Search name, symbol, or formula",
+    searchPlaceholder: "Search a name or symbol, or type C/B",
     filterToggleText: "Filter",
     accFlat: "♭ Flat", accNatural: "♮ Natural", accSharp: "♯ Sharp",
     filterStyle: "Style", filterLevel: "Level", filterSize: "Size", filterEnharmonic: "Enh.",
@@ -885,6 +888,7 @@ const I18N = {
     guitarTabTitle: "Guitar voicing", guitarTabNote: "Low string (6th) to high string (1st) · × = muted · 0 = open · number = fret",
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
     guitarBassNote: "The lowest note of this voicing is not the root",
+    goToChord: "Go to this chord (Enter)",
     bassLabel: "Bass", bassRoot: "Root", bassOther: "Other note…",
     bassNonChord: "The bass is not a chord tone (e.g. D/C); the note after the slash is added",
     vOpen: "Open chord", vBarre: "Barre · fret {n}", vPos: "Position {n}", vRootOn: "root on string {n}",
@@ -1807,7 +1811,7 @@ function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
    拼寫:和弦內音照這個和弦自己的級數(C7/B♭ 不是 C7/A♯),和弦外的音照音程級數推(D/C) */
 const BASS_TOKS = ["1","♭2","2","♭3","3","4","♯4","5","♭6","6","♭7","7"];
 function bassInfo(){
-  if (STATE.inst !== "guitar" || STATE.tab !== "chord" || STATE.bassIv == null || STATE.bassFor !== STATE.chordId) return null;
+  if (STATE.tab !== "chord" || STATE.bassIv == null || STATE.bassFor !== STATE.chordId) return null;
   const def = chordById(STATE.chordId);
   const own = def.t.find(tok => pcOf(tokenSemi(tok)) === STATE.bassIv);
   const tok = own || BASS_TOKS[STATE.bassIv];
@@ -2438,6 +2442,13 @@ function currentNotes(){
    這一份是「讀出來給人看/拿去播放」的音,音階固定一個八度就好 */
 function displayNotes(){
   const notes = currentNotes();
+  /* 斜線和弦(鋼琴):低音放在和弦下面一個八度內,C/B 就是 B2 + C3 E3 G3。
+     吉他的低音由指法決定,不走這裡 */
+  const b = STATE.inst === "piano" ? bassInfo() : null;
+  if (b && notes.length) {
+    const sp = spell(STATE.letter, STATE.acc, b.tok);
+    notes.unshift(Object.assign({}, sp, { midi: rootMidi() + b.iv - 12, isBass: true }));
+  }
   if (STATE.tab === "scale" && notes.length) {
     const first = notes[0];
     notes.push(Object.assign({}, first, { midi: first.midi + 12, octaveTop: true }));
@@ -2701,17 +2712,72 @@ $("groupCurrent").onclick = () => {
   }
 };
 
+/* 搜尋框直接打和弦名稱:C/B、D/F#、Bbmaj7、F#m7b5、Am/G。
+   打的 # / b 會換成 ♯ / ♭;和弦符號比對 sym 與 alias(maj、min 也認)。
+   6/9 本身就有斜線,所以先整串當符號比對,比不到才把最後一個斜線後面當低音 */
+function parseChordName(q){
+  // 根音只認大寫:小寫開頭的是一般搜尋字(add9、dim、aug),不能被讀成 A、D 和弦
+  const m = q.trim().match(/^([A-G])([#♯b♭]*)(.*)$/);
+  if (!m) return null;
+  const letter = LETTERS.indexOf(m[1]);
+  const accOf = x => [...x].reduce((a, c) => a + (c === "#" || c === "♯" ? 1 : -1), 0);
+  const acc = accOf(m[2]);
+  if (acc < -1 || acc > 1) return null;
+  const norm = x => x.replace(/#/g, "♯").replace(/b/g, "♭").replace(/\s+/g, "");
+  const findSym = x => {
+    const n = norm(x);
+    if (n === "maj" || n === "M" || n === "") return chordById("maj");
+    if (n === "min" || n === "-") return chordById("min");
+    return CHORDS.find(c => norm(c.sym) === n) ||
+           CHORDS.find(c => c.alias && c.alias.some(a => norm(a) === n)) || null;
+  };
+  let def = findSym(m[3]), bass = null;
+  if (!def) {
+    const i = m[3].lastIndexOf("/");
+    if (i < 0) return null;
+    def = findSym(m[3].slice(0, i));
+    const bm = m[3].slice(i + 1).match(/^([A-Ga-g])([#♯b♭]*)$/);
+    if (!def || !bm) return null;
+    const bpc = pcOf(LETTER_PC[LETTERS.indexOf(bm[1].toUpperCase())] + accOf(bm[2]));
+    const iv = pcOf(bpc - (LETTER_PC[letter] + acc));
+    bass = iv === 0 ? null : iv;
+  }
+  return { letter, acc, def, bass };
+}
+function goToParsedChord(pc){
+  STATE.tab = "chord";
+  STATE.letter = pc.letter; STATE.acc = pc.acc; STATE.chordId = pc.def.id;
+  STATE.bassIv = pc.bass; STATE.bassFor = pc.def.id;
+  STATE.search = ""; $("typeSearch").value = "";
+  render();
+  playCurrent();
+}
 function buildTypeList(){
   const list = $("typeList");
   list.innerHTML = "";
   const isChord = STATE.tab === "chord";
+  const parsed = isChord && STATE.search ? parseChordName(STATE.search) : null;
+  if (parsed) {
+    // 打的是一個完整的和弦名稱:最上面放一顆「前往」,按 Enter 也可以
+    const saved = { letter: STATE.letter, acc: STATE.acc, bassIv: STATE.bassIv, bassFor: STATE.bassFor, chordId: STATE.chordId };
+    Object.assign(STATE, { letter: parsed.letter, acc: parsed.acc, chordId: parsed.def.id, bassIv: parsed.bass, bassFor: parsed.def.id });
+    const label = chordTitle(parsed.def);
+    Object.assign(STATE, saved);
+    const go = document.createElement("button");
+    go.className = "chip go-chip";
+    go.innerHTML = "<b></b><i></i>";
+    go.querySelector("b").textContent = label;
+    go.querySelector("i").textContent = t("goToChord");
+    go.onclick = () => goToParsedChord(parsed);
+    list.appendChild(go);
+  }
   const key = groupKey();
   let items = filteredItems();
   // 選了分類就只出那一組(搜尋時不受分類限制)
   const single = !STATE.search && STATE.group[key];
   if (single) items = items.filter(it => it.g === STATE.group[key]);
   if (!items.length) {
-    list.innerHTML = '<div class="empty-hint">' + t("emptyHint") + '</div>';
+    if (!parsed) list.innerHTML = '<div class="empty-hint">' + t("emptyHint") + '</div>';
     return;
   }
   const groups = [];
@@ -2924,8 +2990,8 @@ function renderReadout(){
       html += '<div class="desc" style="margin-top:4px">' + t("guitarTabNote") +
               (v.bassIsRoot || bassInfo() ? '' : (LANG === "en" ? ". " : "。") + t("guitarBassNote")) + '</div>';
     }
-    html += bassPickerHtml(def);
   }
+  if (isChord) html += bassPickerHtml(def);
   html += '<div class="desc">' + localDesc(def) + '</div>';
   ro.innerHTML = html;
   ro.querySelector(".rt-name").textContent = title;
@@ -3240,7 +3306,8 @@ function renderSummary(){
     const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
     name = isChord ? chordTitle(def) : rootName() + " " + localName(def);
     zh = isChord ? localName(def) : subName(def);
-    tones = currentNotes().map(n => STATE.label === "do" ? toSolfege(n.name) : n.name).join(" ");
+    // 和弦用 displayNotes:斜線和弦的低音排在最前面(C/B → B C E G)
+    tones = (isChord ? displayNotes() : currentNotes()).map(n => STATE.label === "do" ? toSolfege(n.name) : n.name).join(" ");
   }
   // 摘要列是 flex + gap,空的 .zh 會白白撐出一段間距(英文介面的音階就沒有對照名稱),
   // 所以沒有內容時連 span 都不要產生
@@ -3353,6 +3420,11 @@ $("tabScale").onclick = () => { STATE.tab = "scale"; STATE.search = ""; $("typeS
 $("tabFind").onclick  = () => { STATE.tab = "find"; render(); };
 // 搜尋只重畫清單與分類列,不跑整個 render()——每打一個字就重算音域、重畫鍵盤太浪費
 $("typeSearch").addEventListener("input", e => { STATE.search = e.target.value.trim(); buildGroupTabs(); buildTypeList(); });
+$("typeSearch").addEventListener("keydown", e => {
+  if (e.key !== "Enter" || STATE.tab !== "chord") return;
+  const pc = parseChordName(STATE.search);
+  if (pc) { e.preventDefault(); goToParsedChord(pc); $("typeSearch").blur(); }
+});
 /* 切換分頁時把篩選清掉,免得跳到音階分頁後回來發現清單「怎麼少了一半」 */
 $("octaveSel").addEventListener("change", e => { STATE.octave = +e.target.value; render(); });
 $("labelSel").addEventListener("change", e => { STATE.label = e.target.value; render(); });
