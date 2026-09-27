@@ -333,6 +333,19 @@ async function openPage(browser, opts = {}){
     const steps = () => q.evaluate(() => [...document.querySelectorAll("#prSteps span")].map(x => x.textContent).join(" "));
     const want = async (label, exp) => { const got = await steps(); if (got !== exp) fails.push(label + ": " + got + " ≠ " + exp); };
     await want("C 大調 流行進行", "C G Am F");
+    // 「現在」與「下一個」字級一致,而且兩個和弦的按法同時顯示
+    const pn = await q.evaluate(() => ({ fs: [...document.querySelectorAll(".pr-now b")].map(b => getComputedStyle(b).fontSize), dg: document.querySelectorAll(".pr-now svg.dg").length }));
+    if (pn.fs[0] !== pn.fs[1]) fails.push("現在/下一個字級不同: " + pn.fs.join(" / "));
+    if (pn.dg !== 2) fails.push("沒有同時顯示兩個和弦的按法(" + pn.dg + " 個圖)");
+    await q.click("#instGuitar"); await q.click("#practiceOpen").catch(() => {});
+    const nextTab = await q.evaluate(() => {
+      const lab = document.querySelectorAll(".pr-now svg.dg")[1].getAttribute("aria-label");
+      const st = PRACTICE.steps[1];
+      const vs = chordVoicingsFor(pcOf(LETTER_PC[st.letter] + st.acc), chordById(st.id));
+      return [lab, gtrTabText(vs.list[vs.best].frets)];
+    });
+    if (nextTab[0] !== nextTab[1]) fails.push("下一個和弦的吉他圖不是指板上會用的指法: " + nextTab.join(" / "));
+    await q.click("#instPiano"); await q.click("#practiceOpen").catch(() => {});
     const chip0 = await q.locator("#prPresets .filter-chip").first().innerText();
     if (/\b(I|II|III|IV|V|VI|VII|ii|iii|vi)\b/.test(chip0) || chip0 !== "C G Am F") fails.push("進行按鈕只寫和弦名稱: " + chip0);
     const blues = await q.locator("#prPresets .filter-chip").nth(6).innerText();
@@ -362,7 +375,7 @@ async function openPage(browser, opts = {}){
     await q.click("#prClose");
     if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden)) fails.push("結束練習後沒有回到和弦清單");
     if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
-    report("換和弦練習", 14, fails);
+    report("換和弦練習", 17, fails);
     await q.close();
   }
 

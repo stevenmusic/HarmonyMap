@@ -423,7 +423,10 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-now small{display:block;font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.12em}
 .pr-now b{display:block;font-family:"Noto Serif TC",serif;font-size:clamp(26px,7vw,40px);line-height:1.15;
           color:var(--gold-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.pr-now .next b{color:var(--muted-bright);font-size:clamp(20px,5vw,28px)}
+/* 「現在」與「下一個」字級一致(使用者要求);下一個只用顏色區分 */
+.pr-now .next b{color:var(--muted-bright)}
+.pr-now .dg{display:block;max-width:100%;height:auto;margin-top:6px}
+.pr-now svg.dg:not([width]){width:100%;max-width:150px}
 .pr-beats{display:flex;gap:8px;justify-content:center;margin:6px 0 12px}
 .pr-beats i{width:12px;height:12px;border-radius:50%;background:var(--line)}
 .pr-beats i.on{background:var(--teal)}
@@ -3624,6 +3627,65 @@ function renderPracticeBeat(){
   if (!el) return;
   [...el.children].forEach((d, i) => { d.className = (i === PRACTICE.beat ? "on" : "") + (i === 0 ? " one" : ""); });
 }
+/* 練習卡片裡「現在 / 下一個」的小圖:吉他畫直式和弦圖(跟指板上同一個指法),鋼琴畫兩個八度的小鍵盤。
+   兩個一起看,換和弦之前就能先把手準備好 */
+function withStep(st, fn){
+  const saved = { letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, bassIv: STATE.bassIv, bassFor: STATE.bassFor, tab: STATE.tab };
+  Object.assign(STATE, { tab: "chord", letter: st.letter, acc: st.acc, chordId: st.id, bassIv: st.bass, bassFor: st.id });
+  try { return fn(); } finally { Object.assign(STATE, saved); }
+}
+function stepDiagram(st){
+  return withStep(st, () => STATE.inst === "guitar" ? guitarDiagramSVG() : pianoDiagramSVG());
+}
+function guitarDiagramSVG(){
+  const b = bassInfo();
+  const vs = chordVoicingsFor(rootPc(), chordById(STATE.chordId), b ? b.pc : null);
+  const v = vs.list[vs.best];
+  if (!v) return "";
+  const rp = rootPc();
+  const fr = v.frets.filter(f => f > 0);
+  const maxF = fr.length ? Math.max(...fr) : 0, minF = fr.length ? Math.min(...fr) : 0;
+  const base = maxF <= 4 ? 1 : minF;
+  const x0 = 16, gap = 18, y0 = 26, rowH = 20, rows = 4, W = x0 + gap * 5 + 30, H = y0 + rowH * rows + 8;
+  const xs = s => x0 + s * gap, yOf = f => y0 + (f - base + 0.5) * rowH;
+  let g = '<rect x="' + x0 + '" y="' + y0 + '" width="' + gap * 5 + '" height="' + rowH * rows + '" fill="var(--surface-inset)"/>';
+  for (let r = 0; r <= rows; r++) g += '<line x1="' + x0 + '" x2="' + (x0 + gap * 5) + '" y1="' + (y0 + r * rowH) + '" y2="' + (y0 + r * rowH) + '" stroke="var(--muted)" stroke-width="' + (r === 0 && base === 1 ? 4 : 1.2) + '"/>';
+  for (let s = 0; s < 6; s++) g += '<line x1="' + xs(s) + '" x2="' + xs(s) + '" y1="' + y0 + '" y2="' + (y0 + rowH * rows) + '" stroke="var(--muted-bright)" stroke-width="' + (1.8 - s * 0.2) + '"/>';
+  if (base > 1) g += '<text x="' + (x0 + gap * 5 + 6) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="11" fill="var(--muted)">' + base + 'fr</text>';
+  if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
+  v.frets.forEach((f, s) => {
+    const col = f >= 0 && pcOf(GTR_OPEN[s] + f) === rp ? "var(--gold)" : "var(--teal)";
+    if (f < 0) g += '<text x="' + xs(s) + '" y="' + (y0 - 9) + '" text-anchor="middle" font-size="12" fill="var(--muted)">×</text>';
+    else if (f === 0) g += '<circle cx="' + xs(s) + '" cy="' + (y0 - 13) + '" r="5" fill="none" stroke="' + col + '" stroke-width="1.8"/>';
+    else g += '<circle cx="' + xs(s) + '" cy="' + yOf(f) + '" r="7" fill="' + col + '"/>';
+  });
+  return '<svg class="dg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + gtrTabText(v.frets) + '">' + g + '</svg>';
+}
+function pianoDiagramSVG(){
+  const notes = displayNotes();
+  if (!notes.length) return "";
+  const on = new Map(notes.map(n => [n.midi, n.deg === 1 && !n.isBass]));
+  // 從最低音往下一個白鍵畫到最高音往上一個白鍵:每個和弦的鍵一樣大(G B D 跨八度也不會被縮小)
+  let lo = Math.min(...notes.map(n => n.midi)) - 1, hi = Math.max(...notes.map(n => n.midi)) + 1;
+  while (isBlackKey(lo)) lo--;
+  while (isBlackKey(hi)) hi++;
+  const whites = [];
+  for (let m = lo; m <= hi; m++) if (!isBlackKey(m)) whites.push(m);
+  const ww = 14, W = whites.length * ww, H = 56, bh = 34, bw = 9;
+  let g = "";
+  whites.forEach((m, i) => {
+    const fill = on.has(m) ? (on.get(m) ? "#F2B94B" : "#3FBFAE") : "#FFFDF6";
+    g += '<rect x="' + (i * ww) + '" y="0" width="' + (ww - 0.8) + '" height="' + H + '" rx="1.5" fill="' + fill + '" stroke="#8A7D5F" stroke-width=".6"/>';
+  });
+  for (let m = lo; m <= hi; m++) {
+    if (!isBlackKey(m)) continue;
+    const i = whites.indexOf(m - 1);
+    if (i < 0) continue;
+    const fill = on.has(m) ? (on.get(m) ? "#C4901A" : "#22887A") : "#1C1A16";
+    g += '<rect x="' + ((i + 1) * ww - bw / 2 - 0.4) + '" y="0" width="' + bw + '" height="' + bh + '" rx="1" fill="' + fill + '"/>';
+  }
+  return '<svg class="dg" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + notes.map(n => n.name).join(" ") + '">' + g + '</svg>';
+}
 function renderPractice(){
   const c = $("practiceCard");
   const P = PRACTICE, cur = P.steps[P.step], nxt = P.steps[(P.step + 1) % (P.steps.length || 1)];
@@ -3640,7 +3702,8 @@ function renderPractice(){
       '<span class="filter-label" style="margin-left:8px">' + t("practiceBeats") + '</span><select class="mini" id="prBeats">' + beatOpts + '</select></div>' +
     '<div class="pr-row"><span class="filter-label">' + t("practiceTempo") + '</span><label class="pr-bpm"><input type="range" id="prBpm" min="40" max="180" step="2" value="' + P.bpm + '"><output id="prBpmOut">' + P.bpm + ' BPM</output></label></div>' +
     '<div class="pr-row"><label style="display:flex;gap:8px;align-items:center;font-size:var(--fs-sm)"><input type="checkbox" id="prAccomp"' + (P.accomp ? " checked" : "") + '>' + t("practiceAccomp") + '</label></div>' +
-    '<div class="pr-now"><div><small>' + t("practiceNow") + '</small><b id="prNow"></b></div><div class="next"><small>' + t("practiceNext") + '</small><b id="prNext"></b></div></div>' +
+    '<div class="pr-now"><div><small>' + t("practiceNow") + '</small><b id="prNow"></b>' + (cur ? stepDiagram(cur) : "") + '</div>' +
+      '<div class="next"><small>' + t("practiceNext") + '</small><b id="prNext"></b>' + (nxt ? stepDiagram(nxt) : "") + '</div></div>' +
     '<div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div>' +
     '<div class="pr-steps" id="prSteps"></div>' +
     '<button class="btn primary pr-go" id="prGo">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>' +
