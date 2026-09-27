@@ -3184,6 +3184,8 @@ function render(){
   $("findCard").hidden = !findMode;
   const gtr = STATE.inst === "guitar";
   document.querySelector(".kb-wrap").classList.toggle("gtr", gtr);
+  // 吉他和弦可以按住上下滑來刷弦,觸控時畫布不能把這個手勢拿去捲頁面
+  $("keyboardCanvas").style.touchAction = gtr && STATE.tab === "chord" ? "none" : "";
   $("instPiano").setAttribute("aria-pressed", String(!gtr));
   $("instGuitar").setAttribute("aria-pressed", String(gtr));
   $("findDesc").textContent = t(gtr ? "findCardDescGuitar" : "findCardDesc");
@@ -3292,6 +3294,25 @@ function keyAt(px, py){
   const i = Math.floor(px / whiteW);
   return KB_WHITE_KEYS[Math.max(0, Math.min(KB_WHITE_KEYS.length - 1, i))];
 }
+/* 撥一條弦:發出目前指法在這條弦上的音(空弦就是空弦音、按弦就是按住的那一格),
+   標 × 的弦不彈,不發聲 */
+function pluckString(s){
+  const v = currentVoicing();
+  if (!v || v.frets[s] < 0) return;
+  playSingle(GTR_OPEN[s] + v.frets[s]);
+}
+$("keyboardCanvas").addEventListener("pointermove", ev => {
+  const cv = $("keyboardCanvas");
+  if (cv._strum == null || STATE.inst !== "guitar" || STATE.tab !== "chord") return;
+  const rect = cv.getBoundingClientRect();
+  const hit = fretAt(ev.clientX - rect.left, ev.clientY - rect.top);
+  if (!hit || hit.s === cv._strum) return;
+  // 一次滑過好幾條弦(滑得快)時,中間經過的每一條都要響
+  const step = hit.s > cv._strum ? 1 : -1;
+  for (let s = cv._strum + step; s !== hit.s + step; s += step) pluckString(s);
+  cv._strum = hit.s;
+});
+["pointerup", "pointercancel"].forEach(t => $("keyboardCanvas").addEventListener(t, () => { $("keyboardCanvas")._strum = null; }));
 $("keyboardCanvas").addEventListener("pointerdown", ev => {
   const cv = $("keyboardCanvas");
   const rect = cv.getBoundingClientRect();
@@ -3305,6 +3326,12 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
       syncFindFromFrets();
       if (STATE.findFrets[hit.s] != null) playSingle(midi);
       render();
+    } else if (STATE.tab === "chord") {
+      // 和弦:左手已經按好整個和弦,右手撥哪條弦就響那條弦「按住的音」,
+      // 不是點到的那一格。手指按住往上下滑就是一條一條刷過去
+      pluckString(hit.s);
+      cv._strum = hit.s;
+      try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
     } else {
       playSingle(midi);
     }
