@@ -435,6 +435,10 @@ html[data-lang="en"] .chip i{white-space:normal}
 }
 .vc-nav button:hover{border-color:var(--gold);color:var(--gold)}
 .vc-nav button svg{display:block}
+.bass-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
+.bass-row .filter-label{min-width:0;margin-right:4px}
+.bass-row small{opacity:.7;font-size:.85em}
+.bass-row select{height:30px}
 .vc-nav .n{min-width:2.6em;text-align:center;font-variant-numeric:tabular-nums}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
 .audio-status{
@@ -772,6 +776,9 @@ const I18N = {
     guitarTabTitle: "吉他指法", guitarTabNote: "由低音弦(6 弦)寫到高音弦(1 弦)· × = 不彈 · 0 = 空弦 · 數字 = 格數",
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
     guitarBassNote: "這個指法的最低音不是根音",
+    bassLabel: "低音", bassRoot: "根音", bassOther: "其他音…",
+    bassNonChord: "低音不是和弦內音(例如 D/C),斜線後面的音是另外加的",
+    vOpen: "開放和弦", vBarre: "橫按 · 第 {n} 格", vPos: "第 {n} 把位", vRootOn: "根音在 {n} 弦",
     loadingPiano: "載入鋼琴音色中…", pianoLoadFailed: "音色載入失敗,使用合成音色",
     loadingGuitar: "載入吉他音色中…", guitarLoadFailed: "吉他音色載入失敗,改用鋼琴音色",
     gtrToneLabel: "吉他音色", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
@@ -837,6 +844,9 @@ const I18N = {
     guitarTabTitle: "Guitar voicing", guitarTabNote: "Low string (6th) to high string (1st) · × = muted · 0 = open · number = fret",
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
     guitarBassNote: "The lowest note of this voicing is not the root",
+    bassLabel: "Bass", bassRoot: "Root", bassOther: "Other note…",
+    bassNonChord: "The bass is not a chord tone (e.g. D/C); the note after the slash is added",
+    vOpen: "Open chord", vBarre: "Barre · fret {n}", vPos: "Position {n}", vRootOn: "root on string {n}",
     loadingPiano: "Loading piano samples…", pianoLoadFailed: "Sample load failed, using synth fallback",
     loadingGuitar: "Loading guitar samples…", guitarLoadFailed: "Guitar samples failed to load, using piano",
     gtrToneLabel: "Guitar tone", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
@@ -1588,13 +1598,17 @@ function gtrMarkers(frets){
 function gtrTabText(frets){ return frets.map(f => f < 0 ? "×" : String(f)).join(" "); }
 
 /* 評估一組指法(frets[s]:-1 = 不彈、0 = 空弦、n = 第 n 格),不能彈就回傳 null */
-function evalVoicing(frets, tones, rPc){
+function evalVoicing(frets, tones, rPc, bassPc, extraPc){
   const played = [];
   for (let s = 0; s < 6; s++) if (frets[s] >= 0) played.push(s);
   if (played.length < Math.min(3, tones.length)) return null;
   const lowS = played[0], highS = played[played.length - 1];
-  const bassIsRoot = pcOf(GTR_OPEN[lowS] + frets[lowS]) === rPc;
-  let cost = bassIsRoot ? 0 : 40; // 最低音不是根音的話,聽起來就是轉位,不是使用者選的那個和弦
+  const lowPc = pcOf(GTR_OPEN[lowS] + frets[lowS]);
+  // 指定了低音(斜線和弦)就一定要是它;和弦外的低音只能出現在最低那條弦,上面不能再重複
+  if (bassPc != null && lowPc !== bassPc) return null;
+  if (extraPc != null) for (const s of played) if (s !== lowS && pcOf(GTR_OPEN[s] + frets[s]) === extraPc) return null;
+  const bassIsRoot = lowPc === rPc;
+  let cost = bassIsRoot || bassPc != null ? 0 : 40; // 最低音不是根音的話,聽起來就是轉位,不是使用者選的那個和弦
   const have = new Set(played.map(s => pcOf(GTR_OPEN[s] + frets[s])));
   const missing = [];
   for (const tn of tones) if (!have.has(tn.pc)) { cost += tn.w; missing.push(tn.tok); }
@@ -1615,8 +1629,17 @@ function evalVoicing(frets, tones, rPc){
     }
     if (fingers > 4) return null;
     cost += minF * 1.2 + (maxF - minF) * 1.5 + fingers + (barre ? 2 : 0);
+    if (maxF - minF === GTR_MAX_SPAN) cost += 2; // 撐滿四格很吃力,同樣彈得到的話選不用撐的
+    // 四根手指全用上、最低格又落在不相鄰的幾條弦、中間夾著空弦所以不能橫按
+    // (× 1 0 3 3 1、× 3 1 0 1 3):同一個和弦有橫按指法時應該選橫按。
+    // 只用兩三根手指的不算(A7 的 × 0 2 0 2 0 是標準指法),G 的兩個 3 格也不在最低格
+    if (!barre && fingers === 4) {
+      const ss = fretted.filter(s => frets[s] === minF);
+      // 6 弦那一格可以用拇指從琴頸上方勾住(D/F♯ 的 2 0 0 2 3 2),不算
+      if (ss.length >= 2 && ss[0] !== 0 && ss[ss.length - 1] - ss[0] !== ss.length - 1) cost += 5;
+    }
     // 高把位混空弦彈得到,但手要撐很開,不當首選
-    if (minF >= 5) cost += 4 * frets.filter(f => f === 0).length;
+    if (minF >= 3) cost += 4 * frets.filter(f => f === 0).length;
   }
   cost += 3 * (6 - played.length);
   for (let s = lowS; s <= highS; s++) if (frets[s] < 0) cost += 20; // 中間夾一條不彈的弦要另外用手指悶住
@@ -1626,8 +1649,8 @@ function evalVoicing(frets, tones, rPc){
 /* 列出這個和弦在標準調音下彈得到的指法:先窮舉(每條弦只考慮組成音所在的格子,
    按弦跨度超過 3 格就剪枝),再挑出彼此把位相差兩格以上的幾個,由低把位排到高把位 */
 const VOICING_CACHE = new Map();
-function chordVoicingsFor(rPc, def){
-  const key = rPc + "|" + def.id;
+function chordVoicingsFor(rPc, def, bassPc = null){
+  const key = rPc + "|" + def.id + "|" + bassPc;
   if (VOICING_CACHE.has(key)) return VOICING_CACHE.get(key);
   const byPc = new Map();
   for (const tok of def.t) {
@@ -1636,14 +1659,15 @@ function chordVoicingsFor(rPc, def){
     if (!byPc.has(pc) || byPc.get(pc).w < w) byPc.set(pc, { pc, tok, w });
   }
   const tones = [...byPc.values()];
+  const extraPc = bassPc != null && !byPc.has(bassPc) ? bassPc : null;
   const opts = GTR_OPEN.map(o => {
     const a = [-1];
-    for (let f = 0; f <= GTR_FRETS; f++) if (byPc.has(pcOf(o + f))) a.push(f);
+    for (let f = 0; f <= GTR_FRETS; f++) if (byPc.has(pcOf(o + f)) || pcOf(o + f) === extraPc) a.push(f);
     return a;
   });
   const all = [], cur = [];
   (function dfs(s, lo, hi){
-    if (s === 6) { const v = evalVoicing(cur, tones, rPc); if (v) all.push(v); return; }
+    if (s === 6) { const v = evalVoicing(cur, tones, rPc, bassPc, extraPc); if (v) all.push(v); return; }
     for (const f of opts[s]) {
       let nlo = lo, nhi = hi;
       if (f > 0) {
@@ -1667,12 +1691,43 @@ function chordVoicingsFor(rPc, def){
   VOICING_CACHE.set(key, res);
   return res;
 }
-/* 目前顯示的指法。換和弦或換根音時回到「最好彈」的那一個 */
+/* 斜線和弦的低音。存的是「離根音幾個半音」,換根音時跟著走(D/F♯ 換到 E 就是 E/G♯);
+   換和弦就回到根音——D/F♯ 換成 Dm 時 F♯ 已經不是和弦內音,留著只會變成奇怪的 Dm/F♯。
+   拼寫:和弦內音照這個和弦自己的級數(C7/B♭ 不是 C7/A♯),和弦外的音照音程級數推(D/C) */
+const BASS_TOKS = ["1","♭2","2","♭3","3","4","♯4","5","♭6","6","♭7","7"];
+function bassInfo(){
+  if (STATE.inst !== "guitar" || STATE.tab !== "chord" || STATE.bassIv == null || STATE.bassFor !== STATE.chordId) return null;
+  const def = chordById(STATE.chordId);
+  const own = def.t.find(tok => pcOf(tokenSemi(tok)) === STATE.bassIv);
+  const tok = own || BASS_TOKS[STATE.bassIv];
+  const sp = spell(STATE.letter, STATE.acc, tok);
+  return { iv: STATE.bassIv, tok, name: sp.name, pc: pcOf(rootPc() + STATE.bassIv), chordTone: !!own };
+}
+function chordTitle(def){
+  const b = bassInfo();
+  return rootName() + def.sym + (b ? "/" + b.name : "");
+}
+/* 指法的類型:有空弦的低把位是開放和弦,食指橫按的是封閉(橫按)和弦,其他照把位稱呼。
+   同一個橫按形狀移到別格就是別的和弦,所以標籤寫「形狀 + 格數 + 根音在哪條弦」,
+   不為每個名稱各存一份指法 */
+function voicingLabel(v){
+  const hasOpen = v.frets.some(f => f === 0);
+  let s = hasOpen && v.minF <= 4 ? t("vOpen") : v.barre ? t("vBarre", { n: v.minF }) : t("vPos", { n: Math.max(1, v.minF) });
+  const rs = v.frets.findIndex((f, i) => f >= 0 && pcOf(GTR_OPEN[i] + f) === rootPc());
+  if (rs >= 0) s += " · " + t("vRootOn", { n: 6 - rs });
+  return s;
+}
+function currentVoicingSet(){
+  const b = bassInfo();
+  return chordVoicingsFor(rootPc(), chordById(STATE.chordId), b ? b.pc : null);
+}
+/* 目前顯示的指法。換和弦、換根音或換低音時回到「最好彈」的那一個 */
 function currentVoicing(){
   if (STATE.tab !== "chord") return null;
   const def = chordById(STATE.chordId);
-  const vs = chordVoicingsFor(rootPc(), def);
-  const key = rootPc() + "|" + def.id;
+  const b = bassInfo();
+  const vs = currentVoicingSet();
+  const key = rootPc() + "|" + def.id + "|" + (b ? b.pc : "");
   if (STATE.vKey !== key) { STATE.vKey = key; STATE.vIdx = vs.best; }
   return vs.list[STATE.vIdx] || null;
 }
@@ -1711,6 +1766,8 @@ function guitarView(){
     }
     return { frets, dots, ghosts, markers };
   }
+  const b = bassInfo();
+  if (b && !info.has(b.pc)) info.set(b.pc, { name: b.name, tok: b.tok, root: false });
   const v = currentVoicing();
   if (!v) return { frets, dots, ghosts, markers: markers.map(() => ({ type: "mute" })) };
   frets = Math.min(GTR_FRETS, Math.max(12, Math.max(...v.frets) + 1));
@@ -1724,8 +1781,9 @@ function guitarView(){
   // 同一個和弦在指板上其他位置的組成音淡淡畫出來,看得到「換把位時手要往哪裡去」
   for (let s = 0; s < 6; s++) for (let f = 1; f <= frets; f++) {
     if (f === v.frets[s]) continue;
-    const x = info.get(pcOf(GTR_OPEN[s] + f));
-    if (x) ghosts.push({ s, f, root: x.root });
+    const pc = pcOf(GTR_OPEN[s] + f);
+    const x = info.get(pc);
+    if (x && !(b && !b.chordTone && pc === b.pc)) ghosts.push({ s, f, root: x.root });
   }
   return { frets, dots, ghosts, markers };
 }
@@ -2219,6 +2277,7 @@ const STATE = {
   inst: "piano",       // "piano" / "guitar"
   gtrTone: "acoustic", // 吉他音色:acoustic / nylon / electric
   vKey: "", vIdx: 0,   // 吉他:目前是哪個和弦的第幾個指法
+  bassIv: null, bassFor: "", // 吉他斜線和弦:低音離根音幾個半音(null = 根音),只對 bassFor 這個和弦有效
   findFrets: [null, null, null, null, null, null] // 吉他反查:每條弦按第幾格(null = 不彈)
 };
 const INST_KEY = "harmonymap.inst";
@@ -2634,6 +2693,36 @@ function intervalSteps(notes){
   return steps;
 }
 
+/* 斜線和弦的低音:和弦內音做成按鈕(D/F♯、C/G、G/B 這類轉位最常用),
+   和弦外的音收在一個下拉(D/C 這種),12 × 80 種組合全部即時算,不另外存條目 */
+function bassPickerHtml(def){
+  const b = bassInfo();
+  const seen = new Set([0]);
+  let chips = '<button class="filter-chip" data-bass="" aria-pressed="' + !b + '">' + t("bassRoot") + '</button>';
+  for (const tok of def.t) {
+    const iv = pcOf(tokenSemi(tok));
+    if (seen.has(iv)) continue;
+    seen.add(iv);
+    const nm = spell(STATE.letter, STATE.acc, tok).name;
+    chips += '<button class="filter-chip" data-bass="' + iv + '" aria-pressed="' + (!!b && b.iv === iv) + '">' + nm + ' <small>' + tok + '</small></button>';
+  }
+  let sel = '<select class="mini" id="bassOther"><option value="">' + t("bassOther") + '</option>';
+  for (let iv = 1; iv < 12; iv++) {
+    if (seen.has(iv)) continue;
+    const nm = spell(STATE.letter, STATE.acc, BASS_TOKS[iv]).name;
+    sel += '<option value="' + iv + '"' + (b && b.iv === iv ? " selected" : "") + '>' + nm + ' (' + BASS_TOKS[iv] + ')</option>';
+  }
+  sel += '</select>';
+  let note = "";
+  if (b) note = '<div class="desc" style="margin-top:6px">' +
+    (b.chordTone ? inversionLabel(rootPc(), def, b.pc, "sharp") : t("bassNonChord")) + '</div>';
+  return '<div class="bass-row"><span class="filter-label">' + t("bassLabel") + '</span>' + chips + sel + '</div>' + note;
+}
+function setBass(iv){
+  STATE.bassIv = iv; STATE.bassFor = STATE.chordId;
+  render();
+  playCurrent();
+}
 function renderReadout(){
   const ro = $("readout"), ex = $("extraCard");
   if (STATE.tab === "find") { renderFindReadout(ro, ex); return; }
@@ -2641,7 +2730,7 @@ function renderReadout(){
   const isChord = STATE.tab === "chord";
   const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
   const notes = currentNotes();
-  const title = isChord ? (rootName() + def.sym) : (rootName() + " " + localName(def));
+  const title = isChord ? chordTitle(def) : (rootName() + " " + localName(def));
   // 副標是「名稱 · 對照名稱 · 別名」,任何一段可能是空的(英文介面沒有對照名稱、
   // 也不是每個和弦都有 alias),所以先收成陣列再濾掉空字串,免得留下多餘的分隔號
   const subParts = isChord ? [localName(def), subName(def)] : [subName(def)];
@@ -2680,15 +2769,22 @@ function renderReadout(){
     if (!v) html += '<div class="meta-row"><span>' + t("guitarTabTitle") + ' <b>' + t("guitarNoVoicing") + '</b></span></div>';
     else {
       html += '<div class="meta-row"><span>' + t("guitarTabTitle") + ' <b>' + gtrTabText(v.frets) + '</b></span>' +
+              '<span><b>' + voicingLabel(v) + '</b></span>' +
               (v.missing.length ? '<span>' + t("guitarOmit") + ' <b>' + v.missing.join(" ") + '</b></span>' : '') + '</div>';
       html += '<div class="desc" style="margin-top:4px">' + t("guitarTabNote") +
-              (v.bassIsRoot ? '' : (LANG === "en" ? ". " : "。") + t("guitarBassNote")) + '</div>';
+              (v.bassIsRoot || bassInfo() ? '' : (LANG === "en" ? ". " : "。") + t("guitarBassNote")) + '</div>';
     }
+    html += bassPickerHtml(def);
   }
   html += '<div class="desc">' + localDesc(def) + '</div>';
   ro.innerHTML = html;
   ro.querySelector(".rt-name").textContent = title;
   if (sub) ro.querySelector(".rt-sub").textContent = sub;
+  ro.querySelectorAll("[data-bass]").forEach(el => {
+    el.onclick = () => { setBass(el.dataset.bass === "" ? null : +el.dataset.bass); };
+  });
+  const bo = ro.querySelector("#bassOther");
+  if (bo) bo.onchange = () => { setBass(bo.value === "" ? null : +bo.value); };
   ro.querySelectorAll(".note-cell").forEach(el => {
     el.style.cursor = "pointer";
     el.onclick = () => playSingle(+el.dataset.midi);
@@ -2988,13 +3084,13 @@ function renderSummary(){
   } else {
     const isChord = STATE.tab === "chord";
     const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
-    name = isChord ? rootName() + def.sym : rootName() + " " + localName(def);
+    name = isChord ? chordTitle(def) : rootName() + " " + localName(def);
     zh = isChord ? localName(def) : subName(def);
     tones = currentNotes().map(n => STATE.label === "do" ? toSolfege(n.name) : n.name).join(" ");
   }
   // 摘要列是 flex + gap,空的 .zh 會白白撐出一段間距(英文介面的音階就沒有對照名稱),
   // 所以沒有內容時連 span 都不要產生
-  const vs = STATE.inst === "guitar" && STATE.tab === "chord" ? chordVoicingsFor(rootPc(), chordById(STATE.chordId)) : null;
+  const vs = STATE.inst === "guitar" && STATE.tab === "chord" ? currentVoicingSet() : null;
   const chev = d => '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
   const nav = vs && vs.list.length > 1
     ? '<span class="vc-nav"><button id="vcPrev" aria-label="' + t("voicingPrev") + '" title="' + t("voicingPrev") + '">' + chev("M15 18l-6-6 6-6") + '</button>' +
