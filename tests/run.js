@@ -337,6 +337,20 @@ async function openPage(browser, opts = {}){
     const pn = await q.evaluate(() => ({ fs: [...document.querySelectorAll(".pr-now b")].map(b => getComputedStyle(b).fontSize), dg: document.querySelectorAll(".pr-now svg.dg").length }));
     if (pn.fs[0] !== pn.fs[1]) fails.push("現在/下一個字級不同: " + pn.fs.join(" / "));
     if (pn.dg !== 2) fails.push("沒有同時顯示兩個和弦的按法(" + pn.dg + " 個圖)");
+    // 鋼琴小鍵盤一定從 C 或 F 開始、到 E 或 B 結束(整個進行每個和弦都查)
+    const kb = await q.evaluate(() => PRACTICE.steps.map(st => withStep(st, () => {
+      const ns = displayNotes().map(n => n.midi);
+      const svg = pianoDiagramSVG();
+      const whites = (svg.match(/<rect x="[\d.]+" y="0" width="13.2"/g) || []).length;
+      let lo = Math.min(...ns), hi = Math.max(...ns);
+      while (![0, 5].includes(pcOf(lo))) lo--;
+      while (![4, 11].includes(pcOf(hi))) hi++;
+      let w = 0; for (let m = lo; m <= hi; m++) if (!isBlackKey(m)) w++;
+      return stepName(st) + ":" + (whites === w ? "ok" : whites + "≠" + w);
+    })));
+    if (kb.some(x => !x.endsWith(":ok"))) fails.push("小鍵盤起訖不是 C/F 到 E/B: " + kb.join(" "));
+    const firstKey = await q.evaluate(() => { const st = PRACTICE.steps[2]; return withStep(st, () => { const ns = displayNotes().map(n => n.midi); let lo = Math.min(...ns); while (![0, 5].includes(pcOf(lo))) lo--; return simpleName(pcOf(lo), "sharp"); }); });
+    if (firstKey !== "F") fails.push("Am 的小鍵盤應該從 F 開始,實際從 " + firstKey);
     await q.click("#instGuitar"); await q.click("#practiceOpen").catch(() => {});
     const nextTab = await q.evaluate(() => {
       const lab = document.querySelectorAll(".pr-now svg.dg")[1].getAttribute("aria-label");
@@ -375,7 +389,7 @@ async function openPage(browser, opts = {}){
     await q.click("#prClose");
     if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden)) fails.push("結束練習後沒有回到和弦清單");
     if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
-    report("換和弦練習", 17, fails);
+    report("換和弦練習", 19, fails);
     await q.close();
   }
 

@@ -3665,10 +3665,11 @@ function pianoDiagramSVG(){
   const notes = displayNotes();
   if (!notes.length) return "";
   const on = new Map(notes.map(n => [n.midi, n.deg === 1 && !n.isBass]));
-  // 從最低音往下一個白鍵畫到最高音往上一個白鍵:每個和弦的鍵一樣大(G B D 跨八度也不會被縮小)
-  let lo = Math.min(...notes.map(n => n.midi)) - 1, hi = Math.max(...notes.map(n => n.midi)) + 1;
-  while (isBlackKey(lo)) lo--;
-  while (isBlackKey(hi)) hi++;
+  /* 鍵盤一定從 C 或 F 開始、到 E 或 B 結束(黑鍵兩個一組、三個一組都完整),
+     看的人才認得出哪個鍵是哪個音。從 G 或 A 開始會被誤認(使用者回報過:Am 那張像是從別的音開始) */
+  let lo = Math.min(...notes.map(n => n.midi)), hi = Math.max(...notes.map(n => n.midi));
+  while (![0, 5].includes(pcOf(lo))) lo--;
+  while (![4, 11].includes(pcOf(hi))) hi++;
   const whites = [];
   for (let m = lo; m <= hi; m++) if (!isBlackKey(m)) whites.push(m);
   const ww = 14, W = whites.length * ww, H = 56, bh = 34, bw = 9;
