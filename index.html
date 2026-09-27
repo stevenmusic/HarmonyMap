@@ -154,6 +154,7 @@ main{
   background:var(--bg); /* 必須不透明:捲上來的內容要被擋在後面 */
   display:flex;flex-direction:column;gap:10px;padding-bottom:8px;
 }
+.topbar.unstick{position:static}
 .lower{display:flex;flex-direction:column;gap:14px;min-width:0}
 .info{display:flex;flex-direction:column;gap:14px;min-width:0}
 
@@ -195,7 +196,9 @@ main{
   transition:background .2s,color .2s;
 }
 .inst-switch button[aria-pressed="true"]{background:var(--teal);color:var(--bg);font-weight:700}
-@media (max-width:380px){ .inst-switch button{padding:0 7px} .tabs button{padding:9px 4px} }
+@media (max-width:380px){
+  .inst-switch button{padding:0 7px} .tabs button{padding:9px 4px}
+}
 
 /* ── 根音:字母列 + 升降記號 ── */
 .root-row{display:flex;gap:6px;flex-wrap:wrap}
@@ -207,18 +210,43 @@ main{
   transition:background .15s,color .15s,border-color .15s;
 }
 .key-btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
-.acc-row{display:flex;gap:6px;margin-top:6px}
-.acc-row .key-btn{flex:1;height:36px;font-size:var(--fs-md)}
+.root-line{display:flex;gap:6px}
+.root-line .letters{flex:7 1 0;flex-wrap:nowrap;min-width:0}
+.root-line .letters .key-btn{min-width:0}
+/* 升降記號跟字母同一列,中間多留一點空隔開 */
+.acc-row{display:flex;gap:6px;flex:3 1 0;margin-left:6px;min-width:0}
+.acc-row .key-btn{flex:1;min-width:0;height:44px;font-size:var(--fs-lg)}
+.quick-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px;
+            padding-top:10px;border-top:1px solid var(--line)}
+.quick-grid[hidden]{display:none}
+.quick-btn{
+  border:1px solid var(--line);background:var(--surface-inset);color:var(--muted-bright);
+  font-family:inherit;font-size:var(--fs-sm);font-weight:500;height:36px;min-width:0;padding:0 2px;
+  border-radius:var(--radius-sm);cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  transition:background .15s,color .15s,border-color .15s;
+}
+.quick-btn:hover{border-color:var(--gold);color:var(--gold)}
+.quick-btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
 /* 手機:根音卡片是釘住的,每省下一點高度就是清單多看到一排。
    「根音」這個標題可以省——底下就是 C D E F G A B 七顆按鈕,不會看不懂 */
 @media (max-width:900px){
   #rootCard{padding:8px 10px}
   #rootCard .card-title{display:none}
-  .root-row.letters .key-btn{height:38px}
-  .acc-row{margin-top:5px}
-  .acc-row .key-btn{height:30px}
+  .root-row.letters .key-btn,.acc-row .key-btn{height:38px}
+  .quick-grid{margin-top:8px;padding-top:8px;gap:5px}
+  .quick-btn{height:32px}
   .topbar{gap:8px}
   #typeCard{padding:12px}
+}
+/* 320~380px 塞不下十顆一列(每顆會窄到 21px),升降記號折到第二列。
+   必須放在上面 max-width:900px 那段之後,同權重靠順序決勝負 */
+@media (max-width:380px){
+  .root-line{flex-wrap:wrap;gap:5px}
+  .root-line .letters{flex:1 1 100%}
+  .acc-row{flex:1 1 100%;margin-left:0}
+  .root-row.letters .key-btn{height:36px}
+  .acc-row .key-btn{height:30px;font-size:var(--fs-md)}
+  .quick-btn{font-size:11px;letter-spacing:-.02em;padding:0}
 }
 
 /* ── 類型清單:搜尋 + 分組晶片 ── */
@@ -441,6 +469,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 .bass-row select{height:30px}
 .vc-nav .n{min-width:2.6em;text-align:center;font-variant-numeric:tabular-nums}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
+/* 吉他模式左上角是 ○/× 那一欄,載入提示改貼右上角,不要蓋住空弦標記 */
+.kb-wrap.gtr .audio-status{left:auto;right:8px}
 .audio-status{
   position:absolute;top:8px;left:8px;z-index:2;
   font-size:var(--fs-2xs);color:var(--muted-bright);white-space:nowrap;
@@ -560,6 +590,12 @@ footer{
   .topbar .tab-row{grid-column:1;grid-row:1}
   .topbar #rootCard,.topbar #findCard{grid-column:1;grid-row:2}
   .topbar .kb-wrap{grid-column:2;grid-row:1 / span 2}
+  /* 左欄只有 280~340px 寬:十顆排一列每顆只剩 23px,升降記號改排第二列;
+     快速鍵排五欄三列(跟參考圖同一個排法) */
+  .root-line{flex-wrap:wrap}
+  .root-line .letters,.acc-row{flex:1 1 100%;margin-left:0}
+  .acc-row .key-btn{height:36px;font-size:var(--fs-md)}
+  .quick-grid{grid-template-columns:repeat(5,1fr)}
   /* 欄寬分配:會捲的長清單拿彈性寬度,不會捲的短說明給上限。
      反過來(清單鎖 420px、說明吃 1fr)在平板橫式會很難看——實測 1024×768 時
      清單被擠成 420 寬 × 1292 高的窄長條、右下角一大片空白。
@@ -636,8 +672,13 @@ footer{
 
     <div class="card" id="rootCard">
       <div class="card-title" data-i18n="rootCardTitle">根音</div>
-      <div class="root-row letters" id="letterRow"></div>
-      <div class="acc-row" id="accRow"></div>
+      <!-- 根音字母與升降記號排成同一列(窄到 380px 以下才折成兩列),
+           底下是常用和弦的快速鍵:根音一下、和弦一下,兩下就選好 -->
+      <div class="root-line">
+        <div class="root-row letters" id="letterRow"></div>
+        <div class="acc-row" id="accRow"></div>
+      </div>
+      <div class="quick-grid" id="quickGrid"></div>
     </div>
 
     <div class="card" id="findCard" hidden>
@@ -1570,7 +1611,14 @@ function syncStickyMetrics(){
   const h = document.querySelector("header");
   if (h) root.setProperty("--header-h", h.offsetHeight + "px");
   const t = document.querySelector(".topbar");
-  if (t) root.setProperty("--topbar-h", t.offsetHeight + "px");
+  if (t) {
+    root.setProperty("--topbar-h", t.offsetHeight + "px");
+    /* 釘住區塊(分頁 + 鍵盤 + 根音 + 常用和弦)加上頂欄超過螢幕高度 70% 時就不要釘:
+       320×568 的手機釘住的話清單只剩 100px。用比例判斷而不是再開一個高度斷點——
+       390×844 以上的直向手機、平板、桌機照樣釘住 */
+    const hh = h ? h.offsetHeight : 0;
+    t.classList.toggle("unstick", hh + t.offsetHeight > window.innerHeight * 0.7);
+  }
 }
 /* ══════════════════════════════════════════════════════════════
    6b. 吉他指板 —— 跟鋼琴共用同一張畫布,換樂器只換畫法。
@@ -2456,16 +2504,39 @@ function buildRootPicker(){
   });
   const ar = $("accRow");
   ar.innerHTML = "";
-  [[-1, "accFlat"], [0, "accNatural"], [1, "accSharp"]].forEach(([v, key]) => {
+  // 跟字母排在同一列,只放記號本身;「降/原/升」的字放進 aria-label 與 title
+  [[-1, "accFlat", "♭"], [0, "accNatural", "♮"], [1, "accSharp", "♯"]].forEach(([v, key, sym]) => {
     const b = document.createElement("button");
-    b.className = "key-btn";
-    b.textContent = t(key);
+    b.className = "key-btn acc";
+    b.textContent = sym;
+    b.setAttribute("aria-label", t(key));
+    b.title = t(key);
     b.setAttribute("aria-pressed", String(v === STATE.acc));
     b.onclick = () => { STATE.acc = v; render(); };
     ar.appendChild(b);
   });
 }
 
+/* 常用和弦快速鍵:最常查的 14 種,不用進清單找。完整的 80 種還是在下面的清單裡 */
+const QUICK_CHORDS = [["maj","maj"],["min","min"],["7","7"],["maj7","maj7"],["m7","m7"],["m7b5","m7♭5"],["dim","dim"],
+                      ["aug","aug"],["sus2","sus2"],["sus4","sus4"],["6","6"],["9","9"],["add9","add9"],["13","13"]];
+function buildQuickGrid(){
+  const g = $("quickGrid");
+  g.hidden = STATE.tab !== "chord";
+  if (g.hidden) return;
+  g.innerHTML = "";
+  for (const [id, label] of QUICK_CHORDS) {
+    const c = chordById(id);
+    if (!c) continue;
+    const b = document.createElement("button");
+    b.className = "quick-btn";
+    b.textContent = label;
+    b.title = rootName() + c.sym + " · " + localName(c);
+    b.setAttribute("aria-pressed", String(STATE.chordId === id));
+    b.onclick = () => { STATE.chordId = id; render(); playCurrent(); };
+    g.appendChild(b);
+  }
+}
 function matchesSearch(item, q){
   if (!q) return true;
   const hay = [item.zh, item.en, item.sym || "", item.id, (item.alias || []).join(" "), item.t.join(" ")]
@@ -3112,6 +3183,7 @@ function render(){
   $("typeCard").hidden = findMode;
   $("findCard").hidden = !findMode;
   const gtr = STATE.inst === "guitar";
+  document.querySelector(".kb-wrap").classList.toggle("gtr", gtr);
   $("instPiano").setAttribute("aria-pressed", String(!gtr));
   $("instGuitar").setAttribute("aria-pressed", String(gtr));
   $("findDesc").textContent = t(gtr ? "findCardDescGuitar" : "findCardDesc");
@@ -3123,6 +3195,7 @@ function render(){
 
   if (!findMode) {
     buildRootPicker();
+    buildQuickGrid();
     buildFilterRows();
     syncGroup();
     buildGroupTabs();
