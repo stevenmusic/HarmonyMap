@@ -213,6 +213,39 @@ async function openPage(browser, opts = {}){
     await q.close();
   }
 
+  /* ── 5b. iPhone 靜音開關:有 Audio Session API 就設成 playback;沒有的舊 iOS 提示一次 ── */
+  {
+    const fails = [];
+    const IOS_UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1";
+    // 新 iOS:有 navigator.audioSession
+    let ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, userAgent: IOS_UA, hasTouch: true, isMobile: true });
+    let q = await ctx.newPage();
+    await q.addInitScript(() => { navigator.audioSession = { type: "auto" }; });
+    await q.route(/^https?:\/\//, r => r.abort());
+    await q.goto(PAGE);
+    await q.locator("#kbSummary b").click();
+    await q.waitForTimeout(3500);
+    const a = await q.evaluate(() => ({ type: navigator.audioSession.type, status: audioStatusKey }));
+    if (a.type !== "playback") fails.push("有 audioSession 時沒設成 playback: " + a.type);
+    if (a.status === "iosMuteHint") fails.push("有 audioSession 時不該出現靜音提示");
+    await ctx.close();
+    // 舊 iOS:沒有 audioSession → 第一次發聲後提示;第二次開頁面不再提示
+    ctx = await browser.newContext({ viewport: { width: 320, height: 568 }, userAgent: IOS_UA, hasTouch: true, isMobile: true });
+    q = await ctx.newPage();
+    await q.route(/^https?:\/\//, r => r.abort());
+    await q.goto(PAGE);
+    await q.locator("#kbSummary b").click();
+    await q.waitForFunction(() => audioStatusKey === "iosMuteHint", null, { timeout: 15000 }).catch(() => fails.push("舊 iOS 沒有出現靜音提示"));
+    const clipped = await q.evaluate(() => { const el = $("audioStatus"); const w = el.parentElement.getBoundingClientRect(), r = el.getBoundingClientRect(); return r.right > w.right + 1; });
+    if (clipped) fails.push("靜音提示超出鍵盤區(被切掉)");
+    await q.reload();
+    await q.locator("#kbSummary b").click();
+    await q.waitForTimeout(4000);
+    if (await q.evaluate(() => audioStatusKey === "iosMuteHint")) fails.push("靜音提示第二次開頁面又出現");
+    await ctx.close();
+    report("iPhone 靜音開關", 5, fails);
+  }
+
   /* ── 6. 英文介面:兩個分頁的每個條目都點一次,畫面上除了「中」不能有中文 ── */
   {
     const q = await openPage(browser);

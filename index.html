@@ -477,7 +477,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 .kb-wrap.gtr .audio-status{left:auto;right:8px}
 .audio-status{
   position:absolute;top:8px;left:8px;z-index:2;
-  font-size:var(--fs-2xs);color:var(--muted-bright);white-space:nowrap;
+  /* 絕對定位,換行不會推動版面;iPhone 靜音提示比較長,窄螢幕要能折行而不是被切掉 */
+  font-size:var(--fs-2xs);color:var(--muted-bright);max-width:calc(100% - 16px);
   background:var(--surface-glass);border:1px solid var(--line);
   border-radius:var(--radius-pill);padding:3px 10px;
   backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
@@ -826,6 +827,7 @@ const I18N = {
     bassNonChord: "低音不是和弦內音(例如 D/C),斜線後面的音是另外加的",
     vOpen: "開放和弦", vBarre: "橫按 · 第 {n} 格", vPos: "第 {n} 把位", vRootOn: "根音在 {n} 弦",
     loadingPiano: "載入鋼琴音色中…", pianoLoadFailed: "音色載入失敗,使用合成音色",
+    iosMuteHint: "聽不到聲音?請關閉 iPhone 側邊的靜音開關",
     loadingGuitar: "載入吉他音色中…", guitarLoadFailed: "吉他音色載入失敗,改用鋼琴音色",
     gtrToneLabel: "吉他音色", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
   },
@@ -895,6 +897,7 @@ const I18N = {
     bassNonChord: "The bass is not a chord tone (e.g. D/C); the note after the slash is added",
     vOpen: "Open chord", vBarre: "Barre · fret {n}", vPos: "Position {n}", vRootOn: "root on string {n}",
     loadingPiano: "Loading piano samples…", pianoLoadFailed: "Sample load failed, using synth fallback",
+    iosMuteHint: "No sound? Turn off the silent switch on the side of your iPhone",
     loadingGuitar: "Loading guitar samples…", guitarLoadFailed: "Guitar samples failed to load, using piano",
     gtrToneLabel: "Guitar tone", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
   }
@@ -2110,8 +2113,26 @@ function buildImpulseResponse(seconds, decayPow){
   }
   return ir;
 }
+/* iPhone 側邊的靜音開關預設會把網頁聲音一起消音,使用者只會覺得「按了沒聲音、壞了」。
+   Safari 16.4+ 有 Audio Session API:宣告成 playback 就跟音樂 app 一樣不受靜音開關影響。
+   更舊的 iOS 沒有這個 API,只能在第一次發聲後提示一次(每台裝置只提示一次) */
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const MUTE_HINT_KEY = "harmonymap.muteHint";
+function setupAudioSession(){
+  try { if (navigator.audioSession) { navigator.audioSession.type = "playback"; return; } } catch (e) {}
+  if (!IS_IOS) return;
+  try { if (localStorage.getItem(MUTE_HINT_KEY)) return; localStorage.setItem(MUTE_HINT_KEY, "1"); } catch (e) {}
+  // 等載入提示(載入鋼琴/吉他音色中…)消失後再顯示,兩句不要搶同一個位置
+  const show = () => {
+    if (audioStatusKey) { setTimeout(show, 1000); return; }
+    setAudioStatus("iosMuteHint");
+    setTimeout(() => { if (audioStatusKey === "iosMuteHint") setAudioStatus(""); }, 7000);
+  };
+  setTimeout(show, 1500);
+}
 function ensureAudio(){
   if (!audioCtx) {
+    setupAudioSession();
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     masterGain = audioCtx.createGain();
     masterGain.gain.value = 0.48;   // 留足夠的動態餘裕,和弦同時發聲才不會相加後破音

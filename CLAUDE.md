@@ -49,6 +49,9 @@ prefers-reduced-motion:reduce
   不要寫死數字
 - 取樣有 30 個檔案,等按下播放才開始抓的話,第一次播放一定只聽得到合成音色。
   所以在「使用者第一次碰到頁面」時就 `ensureAudio()` 暖機,不要退回按下播放才載入
+- iPhone 側邊靜音開關預設會把網頁聲音一起消音。`setupAudioSession()` 在建立 AudioContext 前把
+  `navigator.audioSession.type` 設成 `playback`(Safari 16.4+),就跟音樂 app 一樣不受影響;
+  沒有這個 API 的舊 iOS 在第一次發聲後提示一次「請關閉靜音開關」(每台裝置只提示一次)
 - 響度:訊號鏈是 masterGain → loudnessComp(-18dB / 3:1)→ makeupGain(1.6)→ 限幅器。
   少了中間那段響度壓縮,平均音量會低到使用者得把裝置音量開到 80~90%。
   實測積分響度:合成備援 -9~-10 LUFS、取樣路徑最壞情況 -5 LUFS,峰值都在 0 dBFS 以下沒有削波
