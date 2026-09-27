@@ -2620,10 +2620,13 @@ function isSounding(midi){
   const t = audioCtx.currentTime;
   return soundingWindows.some(s => s.midi === midi && t >= s.from && t <= s.to);
 }
-function playNotes(midis, mode){
+/* at:指定在音訊時鐘的哪一刻開始(練習的節拍器用,跟點擊聲同一個時鐘)。
+   有指定時,前一個和弦不是立刻切掉,而是排在新和弦開始的那一刻停 */
+function playNotes(midis, mode, at){
   ensureAudio();
-  stopAllSound();
-  const t0 = audioCtx.currentTime + 0.06;
+  if (at == null) stopAllSound();
+  else { for (const n of scheduledNodes) { try { n.stop(at); } catch (e) {} } scheduledNodes = []; }
+  const t0 = at != null ? at : audioCtx.currentTime + 0.06;
   let seq;
   if (mode === "block") {
     seq = midis.map(m => ({ midi: m, at: t0, dur: 2.6 }));
@@ -3620,6 +3623,12 @@ function practiceStart(){
     while (PRACTICE.nextTime < audioCtx.currentTime + 0.1) {
       const n = PRACTICE.count++, beat = n % PRACTICE.beats, step = Math.floor(n / PRACTICE.beats) % PRACTICE.steps.length;
       practiceClick(PRACTICE.nextTime, beat === 0);
+      // 和弦跟點擊聲排在同一個音訊時鐘的同一刻。原本等畫面的 setTimeout 觸發才彈,
+      // 計時器常常晚幾十毫秒、playNotes 又再往後 60ms,和弦總是慢半拍(使用者回報過)
+      if (beat === 0 && PRACTICE.accomp) {
+        const at = PRACTICE.nextTime;
+        withStep(PRACTICE.steps[step], () => playCurrent(at));
+      }
       const delay = Math.max(0, (PRACTICE.nextTime - audioCtx.currentTime) * 1000);
       setTimeout(() => {
         if (!PRACTICE.running) return;
@@ -3627,8 +3636,7 @@ function practiceStart(){
         if (beat === 0) {
           PRACTICE.step = step;
           practiceApply();
-          render();
-          if (PRACTICE.accomp) playCurrent();
+          render();   // 聲音已經在上面照節拍器的時鐘排好了,這裡只更新畫面
         } else renderPracticeBeat();
       }, delay);
       PRACTICE.nextTime += 60 / PRACTICE.bpm;
@@ -4067,14 +4075,18 @@ $("findClear").onclick = () => { STATE.findSel.clear(); STATE.findFrets = [null,
 $("findSpell").addEventListener("change", e => { STATE.findSpell = e.target.value; render(); });
 $("filterToggle").onclick = () => { STATE.filtersOpen = !STATE.filtersOpen; render(); };
 /* 播放目前選的和弦/音階。由「點和弦名稱」與空白鍵觸發,沒有獨立的播放按鈕 */
-function playCurrent(){
+function currentPlayback(){
   const v = STATE.inst === "guitar" ? currentVoicing() : null;
   const midis = STATE.tab === "find"
     ? [...STATE.findSel].sort((a, b) => a - b)
     : v ? voicingMidis(v) : displayNotes().map(n => n.midi);
-  if (!midis.length) return;
   // 吉他的「齊奏」照吉他的方式發聲:刷弦
-  playNotes(midis, STATE.inst === "guitar" && STATE.playMode === "block" ? "strum" : STATE.playMode);
+  return { midis, mode: STATE.inst === "guitar" && STATE.playMode === "block" ? "strum" : STATE.playMode };
+}
+function playCurrent(at){
+  const { midis, mode } = currentPlayback();
+  if (!midis.length) return;
+  playNotes(midis, mode, at);
 }
 function syncFindFromFrets(){
   STATE.findSel = new Set(gtrFindFrets().map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null));

@@ -393,6 +393,18 @@ async function openPage(browser, opts = {}){
     const prH = await q.evaluate(() => Math.round($("practiceCard").getBoundingClientRect().height));
     check(prH <= 560, "練習卡片太高: " + prH + "px");
     check(await q.evaluate(() => document.querySelector(".info").getBoundingClientRect().height === 0 && $("rootCard").hidden && $("typeCard").hidden), "練習時根音卡片、清單、結果面板要收起來");
+    // 和弦與節拍器同一刻:第一拍的點擊聲時間 = 和弦第一個音的開始時間(真的去排音,不 mock playCurrent)
+    await q.evaluate(() => {
+      window._clicks = []; window._notes = [];
+      const pc0 = practiceClick; practiceClick = (t, acc) => { if (acc) window._clicks.push(t); return pc0(t, acc); };
+      const sn0 = scheduleNote; scheduleNote = (m, when, dur, a) => { window._notes.push(when); return sn0(m, when, dur, a); };
+      PRACTICE.bpm = 180; PRACTICE.beats = 2; PRACTICE.accomp = true;
+    });
+    await q.click("#prGo");
+    await q.waitForTimeout(1500);
+    await q.click("#prGo");
+    const sync = await q.evaluate(() => window._clicks.map(t => Math.min(...window._notes.map(n => Math.abs(n - t)))));
+    check(sync.length >= 2 && sync.every(d => d < 0.001), "和弦沒有跟節拍器第一拍同時開始(差 " + sync.map(d => Math.round(d * 1000) + "ms").join(", ") + ")");
     // 節拍器:180 BPM、每個和弦 2 拍
     await q.evaluate(() => { window._plays = 0; playCurrent = () => window._plays++; });
     await q.selectOption("#prBeats", "2");

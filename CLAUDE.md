@@ -160,7 +160,10 @@ prefers-reduced-motion:reduce
   關閉是右上角 × 線稿圖示,說明文字收進開始鈕的 title。手機上整個練習畫面放得進一個螢幕(測試:卡片 ≤ 560px)。
   `.info` 是 display:flex,要另外寫 `.info[hidden]{display:none}` 才藏得起來(踩過);`.kb-wrap` 同理
 - 節拍器用 Web Audio 時鐘提前 0.1 秒排程點擊聲,畫面用 setTimeout 對齊;第一拍重音、在第一拍換和弦。
-  點擊聲不進 `scheduledNodes`,所以換和弦時 `playCurrent()` 的 `stopAllSound()` 不會把節拍器切掉
+  點擊聲不進 `scheduledNodes`。**第一拍的和弦也在排點擊聲的同一刻、用同一個音訊時鐘排**(`playCurrent(at)`),
+  不能等畫面的 setTimeout 觸發才彈——計時器常晚幾十毫秒、playNotes 又再往後 60ms,
+  實測和弦比點擊聲晚 63~71ms(使用者回報過)。有 `at` 時前一個和弦排在那一刻停,不是立刻切掉。
+  測試會比對每個第一拍的點擊時間與和弦第一個音,差距要 < 1ms
 - 切到音階或反查分頁要停止節拍器(`practiceStop`)
 - 「現在 / 下一個」兩格**字級一致**(下一個只用顏色區分),兩個和弦的按法同時畫出來。
   吉他畫直式和弦圖,用的是指板上同一個指法(`chordVoicingsFor` 的第一個);
