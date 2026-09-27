@@ -373,6 +373,20 @@ async function openPage(browser, opts = {}){
     await q.fill("#prCustom", "C D/F# Em Xq"); await q.press("#prCustom", "Enter");
     await want("自訂進行", "C D/F♯ Em");
     if (!(await q.locator(".pr-bad").count())) fails.push("自訂進行打錯的字沒有提示");
+    // 和弦輸入板:清除 → D、min → G、7 → 刪除最後一個 → A♭、maj7
+    await q.click("#prClearSteps");
+    if (!(await q.locator("#prGo").isDisabled())) fails.push("進行清空後「開始」應該不能按");
+    const pad = async (letter, acc, quick) => {
+      await q.locator("#prLetters .key-btn", { hasText: new RegExp("^" + letter + "$") }).click();
+      await q.locator("#prAcc .key-btn").nth(acc + 1).click();
+      await q.locator("#prQuick .quick-btn", { hasText: new RegExp("^" + quick + "$") }).click();
+    };
+    await pad("D", 0, "min"); await pad("G", 0, "7");
+    await want("輸入板加兩個和弦", "Dm G7");
+    await q.click("#prUndo"); await want("刪除最後一個", "Dm");
+    await pad("A", -1, "maj7"); await want("輸入板加 A♭maj7", "Dm A♭maj7");
+    if ((await q.inputValue("#prCustom")) !== "Dm A♭maj7") fails.push("文字框沒有跟輸入板同步: " + await q.inputValue("#prCustom"));
+    if ((await q.evaluate(() => $("prNow").textContent)) !== "Dm") fails.push("加和弦不該改掉目前的和弦");
     const hidden = await q.evaluate(() => [$("rootCard").hidden, $("typeCard").hidden, $("practiceCard").hidden]);
     if (hidden.join() !== "true,true,false") fails.push("練習時卡片顯示錯誤: " + hidden);
     // 節拍器:180 BPM、每個和弦 2 拍 → 約 0.67 秒換一次
@@ -390,7 +404,7 @@ async function openPage(browser, opts = {}){
     await q.click("#prClose");
     if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden)) fails.push("結束練習後沒有回到和弦清單");
     if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
-    report("換和弦練習", 20, fails);
+    report("換和弦練習", 26, fails);
     await q.close();
   }
 

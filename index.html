@@ -434,6 +434,11 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
 .pr-steps span{border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px 10px;font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
 .pr-steps span.cur{border-color:var(--gold);color:var(--gold);font-weight:700}
+/* 練習卡片裡的和弦輸入:跟根音卡片同一套按鈕(根音一下 + 和弦一下 = 把這個和弦加到進行最後面) */
+.pr-pad{margin-bottom:10px}
+.pr-pad .quick-grid{margin-top:8px;padding-top:8px}
+.pr-edit{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.pr-edit .lbl{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.12em;margin-right:auto}
 .pr-custom{display:flex;gap:6px;margin-bottom:6px}
 .pr-custom input{flex:1;min-width:0;background:var(--surface-inset);color:var(--ivory);border:1px solid var(--line);
                  border-radius:var(--radius-pill);padding:0 12px;height:34px;font:inherit;font-size:var(--fs-sm)}
@@ -627,10 +632,10 @@ footer{
   .topbar .kb-wrap{grid-column:2;grid-row:1 / span 2}
   /* 左欄只有 280~340px 寬:十顆排一列每顆只剩 23px,升降記號改排第二列;
      快速鍵排五欄三列(跟參考圖同一個排法) */
-  .root-line{flex-wrap:wrap}
-  .root-line .letters,.acc-row{flex:1 1 100%;margin-left:0}
-  .acc-row .key-btn{height:36px;font-size:var(--fs-md)}
-  .quick-grid{grid-template-columns:repeat(5,1fr)}
+  #rootCard .root-line{flex-wrap:wrap}
+  #rootCard .root-line .letters,#rootCard .acc-row{flex:1 1 100%;margin-left:0}
+  #rootCard .acc-row .key-btn{height:36px;font-size:var(--fs-md)}
+  #rootCard .quick-grid{grid-template-columns:repeat(5,1fr)}
   /* 欄寬分配:會捲的長清單拿彈性寬度,不會捲的短說明給上限。
      反過來(清單鎖 420px、說明吃 1fr)在平板橫式會很難看——實測 1024×768 時
      清單被擠成 420 寬 × 1292 高的窄長條、右下角一大片空白。
@@ -857,11 +862,12 @@ const I18N = {
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
+    practiceProgression: "和弦進行", practiceUndo: "刪除最後一個", practiceClearSteps: "清除",
     practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
     practiceKey: "調", practiceTempo: "速度", practiceBeats: "每個和弦", practiceBeatsUnit: "拍",
     practiceAccomp: "換和弦時彈出和弦", practiceStart: "開始", practiceStop: "停止",
     practiceNow: "現在", practiceNext: "下一個", practiceCustom: "自訂進行",
-    practiceCustomPh: "例如 C G Am F 或 C D/F# Em", practiceCustomApply: "套用",
+    practiceCustomPh: "也可以直接打:C G Am F、D/F#(斜線和弦)", practiceCustomApply: "套用",
     practiceBad: "看不懂:{x}", practiceHint: "節拍器第一拍是重音,換和弦就在那一拍。先放慢,換得乾淨再加速。",
     bassLabel: "低音", bassRoot: "根音", bassOther: "其他音…",
     bassNonChord: "低音不是和弦內音(例如 D/C),斜線後面的音是另外加的",
@@ -934,11 +940,12 @@ const I18N = {
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
+    practiceProgression: "Progression", practiceUndo: "Delete last", practiceClearSteps: "Clear",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
     practiceKey: "Key", practiceTempo: "Tempo", practiceBeats: "Each chord", practiceBeatsUnit: "beats",
     practiceAccomp: "Play the chord on each change", practiceStart: "Start", practiceStop: "Stop",
     practiceNow: "Now", practiceNext: "Next", practiceCustom: "Custom progression",
-    practiceCustomPh: "e.g. C G Am F or C D/F# Em", practiceCustomApply: "Apply",
+    practiceCustomPh: "Or type it: C G Am F, D/F# (slash chords)", practiceCustomApply: "Apply",
     practiceBad: "Not a chord: {x}", practiceHint: "Beat one is accented and is where the chord changes. Start slow; speed up once the change is clean.",
     bassLabel: "Bass", bassRoot: "Root", bassOther: "Other note…",
     bassNonChord: "The bass is not a chord tone (e.g. D/C); the note after the slash is added",
@@ -3534,7 +3541,7 @@ const PROGRESSIONS = [
   ["pgBlues", [["1","7"],["1","7"],["1","7"],["1","7"],["4","7"],["4","7"],["1","7"],["1","7"],["5","7"],["4","7"],["1","7"],["5","7"]]]
 ];
 const PRACTICE_KEYS = [["C",0],["G",0],["D",0],["A",0],["E",0],["B",0],["F",1],["D",-1],["A",-1],["E",-1],["B",-1],["F",0]];
-const PRACTICE = { open: false, preset: 0, key: 0, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
+const PRACTICE = { pad: { letter: 0, acc: 0 }, open: false, preset: 0, key: 0, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
                    steps: [], step: 0, beat: -1, running: false, timer: 0, nextTime: 0, count: 0 };
 
 /* 把一組進行換成具體的和弦:{letter, acc, id, bass} */
@@ -3700,6 +3707,12 @@ function renderPractice(){
     '<div class="pr-head"><div class="card-title">' + t("practiceTitle") + '</div>' +
       '<button class="btn small ghost" id="prClose">' + t("practiceClose") + '</button></div>' +
     '<div class="pr-row" id="prPresets"></div>' +
+    '<div class="pr-pad"><div class="root-line"><div class="root-row letters" id="prLetters"></div><div class="acc-row" id="prAcc"></div></div>' +
+      '<div class="quick-grid" id="prQuick"></div></div>' +
+    '<div class="pr-edit"><span class="lbl">' + t("practiceProgression") + '</span>' +
+      '<button class="btn small ghost" id="prUndo"' + (P.steps.length ? "" : " disabled") + '>' + t("practiceUndo") + '</button>' +
+      '<button class="btn small ghost" id="prClearSteps"' + (P.steps.length ? "" : " disabled") + '>' + t("practiceClearSteps") + '</button></div>' +
+    '<div class="pr-steps" id="prSteps"></div>' +
     '<div class="pr-custom"><input id="prCustom" type="text" autocomplete="off" placeholder="' + t("practiceCustomPh") + '">' +
       '<button class="btn small" id="prCustomGo">' + t("practiceCustomApply") + '</button></div>' +
     (P.bad.length ? '<div class="pr-bad">' + t("practiceBad", { x: P.bad.join(" ") }) + '</div>' : '') +
@@ -3710,7 +3723,6 @@ function renderPractice(){
     '<div class="pr-now"><div><small>' + t("practiceNow") + '</small><b id="prNow"></b>' + (cur ? stepDiagram(cur) : "") + '</div>' +
       '<div class="next"><small>' + t("practiceNext") + '</small><b id="prNext"></b>' + (nxt ? stepDiagram(nxt) : "") + '</div></div>' +
     '<div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div>' +
-    '<div class="pr-steps" id="prSteps"></div>' +
     '<button class="btn primary pr-go" id="prGo">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>' +
     '<div class="desc">' + t("practiceHint") + '</div>';
   $("prNow").textContent = cur ? stepName(cur) : "—";
@@ -3734,6 +3746,46 @@ function renderPractice(){
     if (i === P.step) sp.className = "cur";
     ss.appendChild(sp);
   });
+  // 和弦輸入:根音與升降只改「輸入板」自己的狀態,不動練習中正在顯示的和弦
+  LETTERS.forEach((L, i) => {
+    const b = document.createElement("button");
+    b.className = "key-btn"; b.textContent = L;
+    b.setAttribute("aria-pressed", String(P.pad.letter === i));
+    b.onclick = () => { P.pad.letter = i; renderPractice(); };
+    $("prLetters").appendChild(b);
+  });
+  [[-1, "accFlat", "♭"], [0, "accNatural", "♮"], [1, "accSharp", "♯"]].forEach(([v, key, sym]) => {
+    const b = document.createElement("button");
+    b.className = "key-btn acc"; b.textContent = sym;
+    b.setAttribute("aria-label", t(key)); b.title = t(key);
+    b.setAttribute("aria-pressed", String(P.pad.acc === v));
+    b.onclick = () => { P.pad.acc = v; renderPractice(); };
+    $("prAcc").appendChild(b);
+  });
+  for (const [id, label] of QUICK_CHORDS) {
+    const b = document.createElement("button");
+    b.className = "quick-btn"; b.textContent = label;
+    b.onclick = () => {
+      const st = { letter: P.pad.letter, acc: P.pad.acc, id, bass: null };
+      P.steps.push(st);
+      P.preset = -1; P.bad = [];
+      P.custom = P.steps.map(stepName).join(" ");
+      if (P.steps.length === 1) { P.step = 0; practiceApply(); }
+      render();
+      withStep(st, () => playCurrent());   // 加進去的同時聽一下
+    };
+    $("prQuick").appendChild(b);
+  }
+  const afterEdit = () => {
+    P.preset = -1; P.bad = [];
+    P.custom = P.steps.map(stepName).join(" ");
+    if (!P.steps.length) { practiceStop(); P.step = 0; }
+    else { if (P.step >= P.steps.length) P.step = 0; practiceApply(); }
+    render();
+  };
+  $("prUndo").onclick = () => { P.steps.pop(); afterEdit(); };
+  $("prClearSteps").onclick = () => { P.steps = []; afterEdit(); };
+  $("prGo").disabled = !P.steps.length;
   $("prClose").onclick = () => { practiceStop(); P.open = false; render(); };
   $("prGo").onclick = () => { if (P.running) { practiceStop(); render(); } else practiceStart(); };
   $("prKey").onchange = e => { P.key = +e.target.value; practiceLoad(P.preset); render(); };
