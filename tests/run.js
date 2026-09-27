@@ -324,94 +324,79 @@ async function openPage(browser, opts = {}){
     report("iPhone 靜音開關", 5, fails);
   }
 
-  /* ── 5c. 換和弦練習:進行換調、自訂進行、節拍器實際換和弦 ── */
+  /* ── 5c. 換和弦練習:輸入板排進行、上方換成「現在 / 下一個」兩張圖、節拍器實際換和弦 ── */
   {
     const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
     await q.click("#instPiano");
     await q.click("#practiceOpen");
     const fails = [];
-    const steps = () => q.evaluate(() => [...document.querySelectorAll("#prSteps span")].map(x => x.textContent).join(" "));
-    const want = async (label, exp) => { const got = await steps(); if (got !== exp) fails.push(label + ": " + got + " ≠ " + exp); };
-    await want("C 大調 流行進行", "C G Am F");
-    // 「現在」與「下一個」字級一致,而且兩個和弦的按法同時顯示
-    const pn = await q.evaluate(() => ({ fs: [...document.querySelectorAll(".pr-now b")].map(b => getComputedStyle(b).fontSize), dg: document.querySelectorAll(".pr-now svg.dg").length }));
-    if (pn.fs[0] !== pn.fs[1]) fails.push("現在/下一個字級不同: " + pn.fs.join(" / "));
-    if (pn.dg !== 2) fails.push("沒有同時顯示兩個和弦的按法(" + pn.dg + " 個圖)");
-    // 鋼琴小鍵盤一定從 C 或 F 開始、到 E 或 B 結束(整個進行每個和弦都查)
-    const kb = await q.evaluate(() => PRACTICE.steps.map(st => withStep(st, () => {
-      const ns = displayNotes().map(n => n.midi);
-      const svg = pianoDiagramSVG();
-      const whites = (svg.match(/<rect x="[\d.]+" y="0" width="13.2"/g) || []).length;
-      let lo = Math.min(...ns);
-      while (![0, 5].includes(pcOf(lo))) lo--;
-      // 固定兩個八度 = 14 個白鍵(每張一樣大)
-      return stepName(st) + ":" + (whites === 14 ? "ok" : whites + "≠14");
-    })));
-    if (kb.some(x => !x.endsWith(":ok"))) fails.push("小鍵盤不是固定兩個八度: " + kb.join(" "));
-    const widths = await q.evaluate(() => [...document.querySelectorAll(".pr-now svg.dg")].map(x => Math.round(x.getBoundingClientRect().width) + "x" + Math.round(x.getBoundingClientRect().height)));
-    if (widths[0] !== widths[1]) fails.push("現在/下一個的小鍵盤大小不同: " + widths.join(" / "));
-    const firstKey = await q.evaluate(() => { const st = PRACTICE.steps[2]; return withStep(st, () => { const ns = displayNotes().map(n => n.midi); let lo = Math.min(...ns); while (![0, 5].includes(pcOf(lo))) lo--; return simpleName(pcOf(lo), "sharp"); }); });
-    if (firstKey !== "F") fails.push("Am 的小鍵盤應該從 F 開始,實際從 " + firstKey);
-    await q.click("#instGuitar"); await q.click("#practiceOpen").catch(() => {});
-    const nextTab = await q.evaluate(() => {
-      const lab = document.querySelectorAll(".pr-now svg.dg")[1].getAttribute("aria-label");
-      const st = PRACTICE.steps[1];
-      const vs = chordVoicingsFor(pcOf(LETTER_PC[st.letter] + st.acc), chordById(st.id));
-      return [lab, gtrTabText(vs.list[vs.best].frets)];
-    });
-    if (nextTab[0] !== nextTab[1]) fails.push("下一個和弦的吉他圖不是指板上會用的指法: " + nextTab.join(" / "));
-    await q.click("#instPiano"); await q.click("#practiceOpen").catch(() => {});
-    const chip0 = (await q.locator("#prPreset option").first().innerText()).trim();
-    if (/\b(I|II|III|IV|V|VI|VII|ii|iii|vi)\b/.test(chip0) || chip0 !== "C G Am F") fails.push("進行按鈕只寫和弦名稱: " + chip0);
-    const blues = (await q.locator("#prPreset option").nth(6).innerText()).trim();
-    if (blues !== "C7 F7 C7 G7 F7 C7 G7") fails.push("藍調按鈕(連續重複只寫一次): " + blues);
-    await q.selectOption("#prKey", "1"); await want("G 大調 I–V–vi–IV", "G D Em C");
-    await q.selectOption("#prKey", "10"); await want("B♭ 大調 I–V–vi–IV", "B♭ F Gm E♭");
-    await q.selectOption("#prKey", "0");
-    await q.selectOption("#prPreset", "5"); await want("C ii–V–I", "Dm7 G7 Cmaj7 Cmaj7");
-    await q.selectOption("#prPreset", "6"); await want("C 12 小節藍調", "C7 C7 C7 C7 F7 F7 C7 C7 G7 F7 C7 G7");
-    // 速度:− / + 每次 5 BPM
-    await q.click("#prFaster"); await q.click("#prFaster"); await q.click("#prSlower");
-    if ((await q.evaluate(() => PRACTICE.bpm)) !== 75) fails.push("速度加減不對: " + await q.evaluate(() => PRACTICE.bpm));
-    // 版面緊湊:手機上整張練習卡片不超過一個畫面高
-    const prH = await q.evaluate(() => Math.round($("practiceCard").getBoundingClientRect().height));
-    if (prH > 700) fails.push("練習卡片太高: " + prH + "px");
-    await q.fill("#prCustom", "C D/F# Em Xq"); await q.press("#prCustom", "Enter");
-    await want("自訂進行", "C D/F♯ Em");
-    if (!(await q.locator(".pr-bad").count())) fails.push("自訂進行打錯的字沒有提示");
-    // 和弦輸入板:清除 → D、min → G、7 → 刪除最後一個 → A♭、maj7
-    await q.click("#prClearSteps");
-    if (!(await q.locator("#prGo").isDisabled())) fails.push("進行清空後「開始」應該不能按");
+    let total = 0;
+    const check = (cond, msg) => { total++; if (!cond) fails.push(msg); };
+    const steps = () => q.evaluate(() => [...document.querySelectorAll("#prSteps span:not(.pr-steps-empty)")].map(x => x.textContent).join(" "));
+    // 沒有範例進行、沒有調性選單;一開始是空的,開始鈕不在
+    check(await q.evaluate(() => !document.querySelector("#prPreset, #prKey, #prPresets")), "還有範例進行或調性選單");
+    check((await steps()) === "", "一開始進行應該是空的");
+    check(await q.locator("#prGo").count() === 0, "進行是空的時不該有開始鈕");
+    // 練習時上方指板/鍵盤換成兩張和弦圖
+    check(await q.evaluate(() => document.querySelector(".kb-wrap").getBoundingClientRect().height === 0 && $("practiceStage").getBoundingClientRect().height > 0), "練習時上方應該是和弦圖、不是指板/鍵盤");
+    check(await q.evaluate(() => $("practiceStage").closest(".topbar") !== null), "和弦圖要在釘住的上方區塊裡");
+    // 輸入板:根音 + 和弦種類 → 立刻加進去
     const pad = async (letter, acc, quick) => {
       await q.locator("#prLetters .key-btn", { hasText: new RegExp("^" + letter + "$") }).click();
       await q.locator("#prAcc .key-btn").nth(acc + 1).click();
       await q.locator("#prQuick .quick-btn", { hasText: new RegExp("^" + quick + "$") }).click();
     };
-    await pad("D", 0, "min"); await pad("G", 0, "7");
-    await want("輸入板加兩個和弦", "Dm G7");
-    await q.click("#prUndo"); await want("刪除最後一個", "Dm");
-    await pad("A", -1, "maj7"); await want("輸入板加 A♭maj7", "Dm A♭maj7");
-    if ((await q.inputValue("#prCustom")) !== "Dm A♭maj7") fails.push("文字框沒有跟輸入板同步: " + await q.inputValue("#prCustom"));
-    if ((await q.evaluate(() => $("prNow").textContent)) !== "Dm") fails.push("加和弦不該改掉目前的和弦");
-    const hidden = await q.evaluate(() => [$("rootCard").hidden, $("typeCard").hidden, $("practiceCard").hidden]);
-    if (hidden.join() !== "true,true,false") fails.push("練習時卡片顯示錯誤: " + hidden);
-    if (await q.evaluate(() => document.querySelector(".info").getBoundingClientRect().height > 0)) fails.push("練習時結果面板應該收起來(畫面上還看得到)");
-    // 節拍器:180 BPM、每個和弦 2 拍 → 約 0.67 秒換一次
+    await pad("C", 0, "maj"); await pad("G", 0, "maj"); await pad("A", 0, "min"); await pad("F", 0, "maj");
+    check((await steps()) === "C G Am F", "輸入板排出來的進行: " + await steps());
+    check(await q.locator("#prSteps span.new").count() === 1, "新加的和弦要閃一下");
+    const st = await q.evaluate(() => ({ now: $("prNow").textContent, next: $("prNext").textContent,
+      fs: [...document.querySelectorAll(".pr-now b")].map(b => getComputedStyle(b).fontSize), dg: document.querySelectorAll("#practiceStage svg.dg").length }));
+    check(st.now === "C" && st.next === "G", "現在/下一個: " + st.now + " / " + st.next);
+    check(st.fs[0] === st.fs[1], "現在/下一個字級不同: " + st.fs.join(" / "));
+    check(st.dg === 2, "兩個和弦的按法要同時顯示(" + st.dg + ")");
+    // 鋼琴小鍵盤:固定兩個八度、從 C 或 F 開始,兩張一樣大
+    const kb = await q.evaluate(() => PRACTICE.steps.map(st => withStep(st, () => ((pianoDiagramSVG().match(/<rect x="[\d.]+" y="0" width="13.2"/g) || []).length))));
+    check(kb.every(n => n === 14), "小鍵盤不是固定兩個八度: " + kb.join(","));
+    const firstKey = await q.evaluate(() => withStep(PRACTICE.steps[2], () => { let lo = Math.min(...displayNotes().map(n => n.midi)); while (![0, 5].includes(pcOf(lo))) lo--; return simpleName(pcOf(lo), "sharp"); }));
+    check(firstKey === "F", "Am 的小鍵盤應該從 F 開始,實際從 " + firstKey);
+    const wh = await q.evaluate(() => [...document.querySelectorAll("#practiceStage svg.dg")].map(x => Math.round(x.getBoundingClientRect().width) + "x" + Math.round(x.getBoundingClientRect().height)));
+    check(wh[0] === wh[1], "現在/下一個的小鍵盤大小不同: " + wh.join(" / "));
+    // 刪除最後一個、文字框同步、斜線和弦、打錯提示
+    await q.click("#prUndo");
+    check((await steps()) === "C G Am", "刪除最後一個: " + await steps());
+    check((await q.inputValue("#prCustom")) === "C G Am", "文字框沒有跟輸入板同步");
+    await q.fill("#prCustom", "C D/F# Em Xq"); await q.press("#prCustom", "Enter");
+    check((await steps()) === "C D/F♯ Em", "文字框輸入: " + await steps());
+    check(await q.locator(".pr-bad").count() === 1, "打錯的字要提示");
+    // 吉他:下一個和弦的圖就是指板上會用的指法
+    await q.click("#instGuitar"); await q.click("#practiceOpen").catch(() => {});
+    const nt = await q.evaluate(() => { const lab = document.querySelectorAll("#practiceStage svg.dg")[1].getAttribute("aria-label");
+      const st = PRACTICE.steps[1]; const b = st.bass == null ? null : pcOf(LETTER_PC[st.letter] + st.acc + st.bass);
+      const vs = chordVoicingsFor(pcOf(LETTER_PC[st.letter] + st.acc), chordById(st.id), b); return [lab, gtrTabText(vs.list[vs.best].frets)]; });
+    check(nt[0] === nt[1], "下一個和弦的吉他圖不是指板上會用的指法: " + nt.join(" / "));
+    await q.click("#instPiano"); await q.click("#practiceOpen").catch(() => {});
+    // 速度 − / +、卡片高度
+    await q.click("#prFaster"); await q.click("#prFaster"); await q.click("#prSlower");
+    check((await q.evaluate(() => PRACTICE.bpm)) === 75, "速度加減不對");
+    const prH = await q.evaluate(() => Math.round($("practiceCard").getBoundingClientRect().height));
+    check(prH <= 560, "練習卡片太高: " + prH + "px");
+    check(await q.evaluate(() => document.querySelector(".info").getBoundingClientRect().height === 0 && $("rootCard").hidden && $("typeCard").hidden), "練習時根音卡片、清單、結果面板要收起來");
+    // 節拍器:180 BPM、每個和弦 2 拍
     await q.evaluate(() => { window._plays = 0; playCurrent = () => window._plays++; });
     await q.selectOption("#prBeats", "2");
     await q.evaluate(() => { PRACTICE.bpm = 180; });
     await q.click("#prGo");
     await q.waitForTimeout(1600);
-    const run = await q.evaluate(() => ({ plays: window._plays, now: $("prNow").textContent, sum: $("kbSummary").querySelector("b").textContent, running: PRACTICE.running }));
-    if (!run.running || run.plays < 2) fails.push("節拍器沒有在換和弦: 換了 " + run.plays + " 次");
-    if (run.now !== run.sum) fails.push("練習卡片的「現在」與鍵盤上的和弦不一致: " + run.now + " / " + run.sum);
+    const run = await q.evaluate(() => ({ plays: window._plays, now: $("prNow").textContent, step: PRACTICE.steps[PRACTICE.step], running: PRACTICE.running }));
+    check(run.running && run.plays >= 2, "節拍器沒有在換和弦: 換了 " + run.plays + " 次");
+    check(run.now === await q.evaluate(() => stepName(PRACTICE.steps[PRACTICE.step])), "「現在」不是目前這一步");
     await q.click("#prGo");
     const stopped = await q.evaluate(() => { const n = window._plays; return new Promise(r => setTimeout(() => r(window._plays === n && !PRACTICE.running), 900)); });
-    if (!stopped) fails.push("按停止後還在換和弦");
+    check(stopped, "按停止後還在換和弦");
     await q.click("#prClose");
-    if (await q.evaluate(() => !$("practiceCard").hidden || $("typeCard").hidden || document.querySelector(".info").getBoundingClientRect().height === 0)) fails.push("結束練習後沒有回到和弦清單與結果面板");
-    if (q._errors.length) fails.push("頁面錯誤: " + q._errors.join("; "));
-    report("換和弦練習", 28, fails);
+    check(await q.evaluate(() => $("practiceCard").hidden && !$("typeCard").hidden && document.querySelector(".kb-wrap").getBoundingClientRect().height > 0 && $("practiceStage").hidden), "結束練習後沒有回到原本的畫面");
+    check(!q._errors.length, "頁面錯誤: " + q._errors.join("; "));
+    report("換和弦練習", total, fails);
     await q.close();
   }
 
@@ -440,7 +425,7 @@ async function openPage(browser, opts = {}){
       fails.push(...r.bad);
     }
     total++;
-    const pr = await q.evaluate(() => { STATE.inst = "piano"; STATE.tab = "chord"; PRACTICE.open = true; practiceLoad(0); render();
+    const pr = await q.evaluate(() => { STATE.inst = "piano"; STATE.tab = "chord"; PRACTICE.open = true; PRACTICE.steps = [{ letter: 0, acc: 0, id: "maj", bass: null }, { letter: 4, acc: 0, id: "7", bass: null }]; PRACTICE.step = 0; render();
       const m = document.body.innerText.replace(/中/g, "").match(/[\u3400-\u9fff]+/g); PRACTICE.open = false; render(); return m ? m.slice(0, 3).join(",") : ""; });
     if (pr) fails.push("練習卡片: " + pr);
     report("英文介面無中文", total, fails);
