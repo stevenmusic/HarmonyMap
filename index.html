@@ -2276,9 +2276,20 @@ function scalePositions(){
   const n = pcs.length, set = new Set(pcs);
   if (n < 2) return [];
   const per = n >= 10 ? 4 : n >= 7 ? 3 : 2;
-  const nextUp = m => { do m++; while (!set.has(pcOf(m))); return m; };
+  /* 六聲音階裡「五聲 + 一個經過音」的(藍調的 ♭5、大調藍調的 ♭3):用那個五聲音階的 box 排,再把經過音補進去。
+     直接用 6 個音每弦 2 音排,會多走半個八度,跨度拉到 8 格,不是大家學的那個 box */
+  let base = pcs;
+  if (n === 6) {
+    const r0 = pcs[0];
+    const five = pcs.filter(pc => pc !== r0).map(drop => pcs.filter(pc => pc !== drop))
+      .find(sub => SCALES.some(sc => sc.t.length === 5 && sc.t.every(tk => sub.includes(pcOf(r0 + tokenSemi(tk))))));
+    if (five) base = five;
+  }
+  const bset = new Set(base);
+  const nextUp = m => { do m++; while (!bset.has(pcOf(m))); return m; };
   const out = [];
   pcs.forEach((pc, k) => {
+    if (!bset.has(pc)) return;   // 經過音本身不當把位的起點(藍調還是 5 個 box)
     let f0 = pcOf(pc - GTR_OPEN[0]);          // 6 弦上 0~11 格
     let m = GTR_OPEN[0] + f0, pat = [];
     for (let s = 0; s < 6; s++) for (let i = 0; i < per; i++) {
@@ -2287,7 +2298,7 @@ function scalePositions(){
     }
     if (pat.some(x => x.f < 0)) pat = pat.map(x => ({ s: x.s, f: x.f + 12, midi: x.midi + 12 }));
     let lo = Math.min(...pat.map(x => x.f)), hi = Math.max(...pat.map(x => x.f));
-    if (n < 7) {   // 五聲、六聲:範圍內其他的音階音也算(藍調的 ♭5 夾在 box 裡)
+    if (n < 7) {   // 五聲、六聲:範圍內其他的音階音也算(藍調的 ♭5 夾在 box 裡;lo~hi 以 box 為準)
       for (let s = 0; s < 6; s++) for (let f = lo; f <= hi; f++)
         if (set.has(pcOf(GTR_OPEN[s] + f)) && !pat.some(x => x.s === s && x.f === f)) pat.push({ s, f, midi: GTR_OPEN[s] + f });
     }
@@ -2335,8 +2346,9 @@ function guitarView(){
        其他位置的音階音縮成淡淡的小點,看得到跟旁邊的把位怎麼接;「全部」才整個指板都畫 */
     const pos = currentScalePos();
     const inPos = new Set(pos ? pos.notes.map(n => n.s + ":" + n.f) : []);
-    if (pos) frets = Math.max(12, pos.hi);
-    for (let s = 0; s < 6; s++) for (let f = 0; f <= frets; f++) {
+    // 把位在第 12 格以上時,指板往右平移(永遠畫 12 格),不把整個指板拉長到 17~19 格、每一格變很窄
+    const first = pos && pos.hi > frets ? pos.hi - frets : 0;
+    for (let s = 0; s < 6; s++) for (let f = first ? first + 1 : 0; f <= first + frets; f++) {
       const midi = GTR_OPEN[s] + f, x = info.get(pcOf(midi));
       if (!x) continue;
       if (pos && !inPos.has(s + ":" + f)) { if (f > 0) ghosts.push({ s, f, root: x.root }); continue; }
@@ -2344,7 +2356,7 @@ function guitarView(){
       if (f === 0) markers[s] = { type: "open", midi, root: x.root, text: lab(x) };
       else dots.push({ s, f, midi, root: x.root, text: lab(x) });
     }
-    return { frets, dots, ghosts, markers, barre: null, window: pos ? { lo: pos.lo, hi: pos.hi } : null };
+    return { frets, first, dots, ghosts, markers, barre: null, window: pos ? { lo: pos.lo, hi: pos.hi } : null };
   }
   const b = bassInfo();
   if (b && !info.has(b.pc)) info.set(b.pc, { name: b.name, tok: b.tok, root: false });
@@ -2370,22 +2382,24 @@ function guitarView(){
   return { frets, dots, ghosts, markers, barre };
 }
 
-function fretboardLayout(w, h, nFrets){
+function fretboardLayout(w, h, nFrets, first = 0){
   const numH = Math.max(12, Math.min(16, h * 0.11));   // 最下面一條寫格數
   const colW = Math.max(20, Math.min(30, h * 0.2));    // 琴頸左邊的 ○/× 欄
   const nutX = colW + 5, right = w - 6;
   const top = Math.round(h * 0.05) + 2, bottom = h - numH - 2;
   const sp = (bottom - top) / 6;
   return {
-    numH, colW, nutX, right, top, bottom, sp, frets: nFrets,
+    numH, colW, nutX, right, top, bottom, sp, frets: nFrets, first,
     fretW: (right - nutX) / nFrets,
     // 橫著看的指板:1 弦(高音 E)在最上面、6 弦(低音 E)在最下面,跟六線譜同一個方向
     yOf: s => top + sp * (5 - s + 0.5),
-    xOf(f){ return f === 0 ? colW / 2 + 2 : nutX + (f - 0.5) * this.fretW; }
+    // first > 0:指板平移,從第 first+1 格開始畫(音階的高把位),左邊那一欄就不是空弦
+    xOf(f){ return f === 0 && !first ? colW / 2 + 2 : nutX + (f - first - 0.5) * this.fretW; }
   };
 }
 function drawFretboard(ctx, w, h, gv){
-  const L = fretboardLayout(w, h, gv.frets);
+  const first = gv.first || 0, last = first + gv.frets;
+  const L = fretboardLayout(w, h, gv.frets, first);
   const { nutX, right, top, bottom, sp } = L;
   /* 指板本身是木頭,兩種主題都一樣;指板外面(○/× 欄、格數)不塗底色,
      透出 .kb-wrap 的主題背景,文字與記號也改讀主題色,淺色模式才不會是一塊黑框 */
@@ -2398,7 +2412,7 @@ function drawFretboard(ctx, w, h, gv){
   ctx.fillRect(nutX, top, right - nutX, bottom - top);
   // 音階選了把位:把位範圍打一層亮一點的底,一眼看出手放在哪幾格
   if (gv.window) {
-    const x1 = gv.window.lo <= 0 ? nutX : nutX + (gv.window.lo - 1) * L.fretW, x2 = nutX + gv.window.hi * L.fretW;
+    const x1 = gv.window.lo <= first ? nutX : nutX + (gv.window.lo - 1 - first) * L.fretW, x2 = nutX + (gv.window.hi - first) * L.fretW;
     ctx.fillStyle = "rgba(242,185,75,0.13)";
     ctx.fillRect(x1, top, x2 - x1, bottom - top);
   }
@@ -2407,17 +2421,18 @@ function drawFretboard(ctx, w, h, gv){
   // 把位記號(3/5/7/9/15 單點、12 雙點)
   ctx.fillStyle = "rgba(232,220,192,0.20)";
   const midY = (top + bottom) / 2;
-  for (const f of [3, 5, 7, 9, 15]) if (f <= gv.frets) { dot(L.xOf(f), midY, sp * 0.18); ctx.fill(); }
-  if (gv.frets >= 12) for (const y of [top + sp * 1.5, bottom - sp * 1.5]) { dot(L.xOf(12), y, sp * 0.18); ctx.fill(); }
+  const inView = f => f > first && f <= last;
+  for (const f of [3, 5, 7, 9, 15, 17, 19, 21]) if (inView(f)) { dot(L.xOf(f), midY, sp * 0.18); ctx.fill(); }
+  for (const f of [12, 24]) if (inView(f)) for (const y of [top + sp * 1.5, bottom - sp * 1.5]) { dot(L.xOf(f), y, sp * 0.18); ctx.fill(); }
   // 琴格
   ctx.strokeStyle = "#8E877A"; ctx.lineWidth = 1.5;
   for (let f = 1; f <= gv.frets; f++) {
     const x = nutX + f * L.fretW;
     ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
   }
-  // 上弦枕
-  ctx.fillStyle = "#E8DCC0";
-  ctx.fillRect(nutX - 4, top, 4, bottom - top);
+  // 上弦枕(平移時左邊不是上弦枕,畫成一般琴格線)
+  ctx.fillStyle = first ? "#8E877A" : "#E8DCC0";
+  ctx.fillRect(nutX - (first ? 1.5 : 4), top, first ? 1.5 : 4, bottom - top);
   // 琴弦:低音弦粗、高音弦細。剛撥過的弦從按弦那一格到琴橋那一段會振動(空弦是整條)
   const now = performance.now();
   for (let s = 0; s < 6; s++) {
@@ -2431,7 +2446,7 @@ function drawFretboard(ctx, w, h, gv){
     /* 振動畫成「殘影」而不是讓線上下跳:真的弦振動時肉眼看到的是一條微微變寬、
        發亮的梭形帶子(兩端固定、中間最寬),不會一直晃。上下跳的畫法看起來很抖(使用者回報過) */
     if (live && !REDUCED_MOTION.matches) {
-      const x0 = vib.f > 0 ? nutX + vib.f * L.fretW : nutX; // 按住那一格往琴橋那段才振動
+      const x0 = vib.f > first ? nutX + (vib.f - first) * L.fretW : nutX; // 按住那一格往琴橋那段才振動
       const amp = Math.min(sp * 0.16, 2.5) * decay;
       const N = 24;
       ctx.beginPath();
@@ -2458,7 +2473,9 @@ function drawFretboard(ctx, w, h, gv){
   ctx.font = "500 " + nfs + "px 'Noto Serif TC', serif";
   ctx.textAlign = "center"; ctx.textBaseline = "middle";
   ctx.fillStyle = TH.muted;
-  for (const f of [1, 3, 5, 7, 9, 12, 15]) if (f <= gv.frets) ctx.fillText(String(f), L.xOf(f), bottom + L.numH / 2 + 1);
+  for (const f of [1, 3, 5, 7, 9, 12, 15, 17, 19, 21]) if (inView(f)) ctx.fillText(String(f), L.xOf(f), bottom + L.numH / 2 + 1);
+  // 平移時第一格不一定是上面那些數字,左下角補標起始格數,才知道現在在哪
+  if (first && ![1, 3, 5, 7, 9, 12, 15, 17, 19, 21].includes(first + 1)) ctx.fillText(String(first + 1), L.xOf(first + 1), bottom + L.numH / 2 + 1);
 
   const r = Math.max(5, Math.min(sp * 0.44, L.fretW * 0.4));
   const fitText = (text, maxW, fs) => {
@@ -2544,7 +2561,8 @@ function fretAt(px, py){
   const L = $("keyboardCanvas")._fb;
   if (!L) return null;
   const s = Math.max(0, Math.min(5, 5 - Math.floor((py - L.top) / L.sp)));
-  const f = px < L.nutX - 2 ? 0 : Math.max(1, Math.min(L.frets, Math.floor((px - L.nutX) / L.fretW) + 1));
+  if (px < L.nutX - 2 && L.first) return null;   // 平移時左邊那一欄不是空弦
+  const f = px < L.nutX - 2 ? 0 : L.first + Math.max(1, Math.min(L.frets, Math.floor((px - L.nutX) / L.fretW) + 1));
   return { s, f };
 }
 

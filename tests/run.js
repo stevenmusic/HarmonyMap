@@ -441,6 +441,22 @@ async function openPage(browser, opts = {}){
       return { maj, rows, dots: gv.dots.length, ghosts: gv.ghosts.length, pent: pent.length, box1: box1.lo + "-" + box1.hi, allDots };
     });
     total++; if (sp.maj !== 7 || sp.rows !== 8 || sp.pent !== 5 || sp.box1 !== "5-8" || !sp.ghosts || sp.allDots <= sp.dots) fails.push("吉他音階把位: " + JSON.stringify(sp));
+    // 全部音階 × 12 根音的每個把位:音都在音階裡、沒有負格、六條弦都有音;藍調 = 五聲 box + ♭5(5 個、box 1 在 5~8 格);
+    // 把位超過第 12 格時指板平移(永遠 12 格),不拉長
+    const sp2 = await q.evaluate(() => { const bad = []; STATE.tab = "scale"; STATE.inst = "guitar";
+      for (const sc of SCALES) for (let r = 0; r < 12; r++) { const [l, a] = PC_SPELL[r]; STATE.letter = l; STATE.acc = a; STATE.scaleId = sc.id;
+        const set = new Set(currentNotes().map(x => pcOf(x.midi)));
+        for (const q of scalePositions()) {
+          if (q.notes.some(x => x.f < 0 || !set.has(pcOf(GTR_OPEN[x.s] + x.f)))) bad.push(sc.id + " 音不對");
+          if (new Set(q.notes.map(x => x.s)).size < 6) bad.push(sc.id + " 少了弦");
+          STATE.scalePos = q.k; const gv = guitarView();
+          if (gv.frets !== 12 || gv.first + gv.frets < q.hi || gv.first >= q.lo && q.lo > 0) bad.push(sc.id + " 指板沒有把整個把位放進來");
+        } }
+      STATE.letter = 5; STATE.acc = 0; STATE.scaleId = "bluesMin"; const bl = scalePositions(); const box1 = bl.find(p => p.k === 0);
+      STATE.scalePos = 0; STATE.tab = "chord"; STATE.letter = 0; render();
+      return { bad: [...new Set(bad)].slice(0, 5), blues: bl.length, box1: box1.lo + "-" + box1.hi };
+    });
+    total++; if (sp2.bad.length || sp2.blues !== 5 || sp2.box1 !== "5-8") fails.push("吉他音階把位全檢: " + JSON.stringify(sp2));
     // 鋼琴音階只顯示一個八度(從 C 或 F 開始)
     await q.click("#instPiano");
     const po = await q.evaluate(() => { STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; render(); const c = KB_WHITE_KEYS.length; STATE.letter = 4; render(); const g = [KB_LOW % 12, KB_WHITE_KEYS.length]; STATE.tab = "chord"; STATE.letter = 0; render(); return [c, g]; });
