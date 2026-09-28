@@ -647,6 +647,7 @@ select.mini:focus{outline:none;border-color:var(--gold)}
 .table-scroll{overflow-x:auto}
 table.dia{width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:420px}
 table.dia th,table.dia td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+table.dia sup.enh{color:var(--gold);font-size:.8em;margin-left:2px}
 table.dia th{font-size:var(--fs-2xs);letter-spacing:.08em;color:var(--muted);font-weight:700;text-transform:uppercase}
 table.dia td.rn{color:var(--gold);font-family:"Noto Serif TC",serif;font-weight:700}
 table.dia td.sym{font-weight:700}
@@ -843,6 +844,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
         <button class="btn small ghost" id="findClear" data-i18n="clearSelection">清除選音</button>
         <select class="mini" id="findSpell">
+          <option value="auto" data-i18n="spellAuto">拼寫:照調號(自動)</option>
           <option value="sharp" data-i18n="spellSharp">拼寫偏好:升記號 ♯</option>
           <option value="flat" data-i18n="spellFlat">拼寫偏好:降記號 ♭</option>
         </select>
@@ -937,7 +939,8 @@ const I18N = {
     findChordTitle: "辨識和弦",
     findCardDesc: "點鍵盤上的琴鍵選音。最低的音當低音,不是根音時寫成斜線和弦(E G C → C/E)。",
     clearSelection: "清除選音",
-    spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
+    spellAuto: "拼寫:照調號(自動)", spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
+    omit5: "省略五音",
     searchPlaceholder: "搜尋(如:C/B)",
     filterToggleText: "篩選",
     accFlat: "♭ 降(再按一次取消)", accSharp: "♯ 升(再按一次取消)",
@@ -967,6 +970,8 @@ const I18N = {
     diatonicChordsTitleFull: "順階和弦(三度堆疊)",
     colDegree: "級數", colTriad: "三和弦", col7th: "七和弦", colTones: "組成音",
     clickSeventhHint: "點七和弦可以直接跳去看它的組成音。",
+    enhNote: "≅ 照三度堆疊拼出來的音(例如 {a})跟和弦名稱的拼法({b})只差等音,聽起來一樣。",
+    enhNoteTri: "≅ 這個調照級數拼要用到三重升降記號,這幾列改用等音拼寫。",
     findHelpTextGuitar: "在上面的指板點幾個格子,這裡就會列出所有名字符合的和弦。例如 C E G B♭ 會得到 <strong>C7</strong>,再加一個 D 就變成 <strong>C9</strong>。",
     findHelpText: "在上面的鍵盤點幾個音,這裡就會列出所有名字符合的和弦。例如點 C E G B♭ 會得到 <strong>C7</strong>,再加一個 D 就變成 <strong>C9</strong>。",
     selectedNotesLabel: "已選 {n} 個音 · {m} 個不同音級",
@@ -1027,7 +1032,8 @@ const I18N = {
     findChordTitle: "Identify Chord",
     findCardDesc: "Tap keys on the keyboard to pick notes. The lowest note is the bass — when it isn't the root you get a slash chord (E G C → C/E).",
     clearSelection: "Clear notes",
-    spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
+    spellAuto: "Spelling: by key (auto)", spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
+    omit5: "no 5th",
     searchPlaceholder: "Search (e.g. C/B)",
     filterToggleText: "Filter",
     accFlat: "♭ Flat (tap again to cancel)", accSharp: "♯ Sharp (tap again to cancel)",
@@ -1057,6 +1063,8 @@ const I18N = {
     diatonicChordsTitleFull: "Diatonic Chords (tertian)",
     colDegree: "Degree", colTriad: "Triad", col7th: "7th chord", colTones: "Notes",
     clickSeventhHint: "Click a 7th chord to jump to its notes.",
+    enhNote: "≅ The notes stacked in thirds (e.g. {a}) are an enharmonic respelling of the chord name ({b}) — they sound the same.",
+    enhNoteTri: "≅ Spelling this key by degree would need triple sharps or flats, so these rows use enharmonic spellings.",
     findHelpTextGuitar: "Tap a few frets on the fretboard above and every matching chord name shows up here. For example C E G B♭ gives <strong>C7</strong>; add a D and it becomes <strong>C9</strong>.",
     findHelpText: "Tap a few notes on the keyboard above and every matching chord name shows up here. For example C E G B♭ gives <strong>C7</strong>; add a D and it becomes <strong>C9</strong>.",
     selectedNotesLabel: "{n} notes selected · {m} distinct pitch classes",
@@ -3051,7 +3059,7 @@ const STATE = {
   tierClosed: new Set(),// 哪幾組的哪一層被使用者手動收合了(鍵是「分組|程度」,預設全部展開)
   hideDup: 0,  // 音階:隱藏與其他條目同音高的重複條目
   findSel: new Set(),
-  findSpell: "sharp",
+  findSpell: "auto",
   inst: "piano",       // "piano" / "guitar"
   gtrTone: "acoustic", // 吉他音色:acoustic / nylon / electric
   vKey: "", vIdx: 0,   // 吉他:目前是哪個和弦的第幾個指法
@@ -3591,6 +3599,21 @@ function diatonicChords(scale){
     const rel = stack.map(s => s.semi - stack[0].semi);
     const triad = matchChords(0, rel.slice(0, 3))[0];
     const seventh = matchChords(0, rel)[0];
+    /* 和弦名稱是照音高比對出來的,拼法不一定跟三度堆疊一樣:雙和聲小調的 iii 是 E G B D♭(減七度),
+       聽起來就是 Em6(E G B C♯)。名稱照樣寫(譜上就是這樣記),但要標 ≅ 說明只是等音。
+       理論上的調(B♯、C♭ 起的某些音階)要三重升降時 spell() 退回等音拼法(acc 為 null),
+       這一列改用和弦自己的根音與拼法,不然會拼出 G♯ A♯♯ C♯♯ E♯ 這種四不像,點下去也跳不過去 */
+    let rootNote = stack[0].note;
+    const tri = stack.some(s => s.note.acc === null);
+    if (rootNote.acc === null) {
+      const nm = rootNote.name;
+      rootNote = { name: nm, letter: LETTERS.indexOf(nm[0]), acc: [...nm.slice(1)].reduce((a, c) => a + (c === "♯" ? 1 : c === "♭" ? -1 : 0), 0) };
+    }
+    const ownSpell = d => d ? d.t.map(tok => spell(rootNote.letter, rootNote.acc, tok).name) : null;
+    const stackNames = stack.map(s => s.note.name);
+    const own7 = ownSpell(seventh), own3 = ownSpell(triad);
+    const enh7 = !!own7 && own7.join(" ") !== stackNames.join(" ");
+    const enh3 = !!own3 && own3.join(" ") !== stackNames.slice(0, 3).join(" ");
     const rn = ROMAN[i];
     let roman = rn;
     if (triad) {
@@ -3600,14 +3623,17 @@ function diatonicChords(scale){
     }
     out.push({
       roman,
-      root: stack[0].note.name,
-      triad: triad ? stack[0].note.name + triad.sym : "—",
+      root: rootNote.name,
+      triad: triad ? rootNote.name + triad.sym : "—",
       triadZh: triad ? localName(triad) : "",
-      seventh: seventh ? stack[0].note.name + seventh.sym : "—",
+      seventh: seventh ? rootNote.name + seventh.sym : "—",
       seventhId: seventh ? seventh.id : null,
-      seventhLetter: stack[0].note.letter,
-      seventhAcc: stack[0].note.acc,
-      tones: stack.map(s => s.note.name).join(" ")
+      seventhLetter: rootNote.letter,
+      seventhAcc: rootNote.acc,
+      // 三重升降的列:音名照和弦自己的拼法(已經不是這個音階的拼法了,所以也標 ≅)
+      tones: (tri && own7 ? own7 : stackNames).join(" "),
+      enh3: enh3 || (tri && !!triad), enh7: enh7 || (tri && !!seventh),
+      enhEx: enh7 && !tri ? [stackNames.join(" "), rootNote.name + seventh.sym + " = " + own7.join(" ")] : null
     });
   }
   return out;
@@ -3780,11 +3806,16 @@ function renderReadout(){
       let e = '<div class="card-title">' + t("diatonicChordsTitleFull") + '</div><div class="table-scroll"><table class="dia">' +
               '<tr><th>' + t("colDegree") + '</th><th>' + t("colTriad") + '</th><th>' + t("col7th") + '</th><th>' + t("colTones") + '</th></tr>';
       for (const d of dia) {
-        e += '<tr><td class="rn">' + d.roman + '</td><td class="sym">' + d.triad + '</td>' +
-             '<td class="sym"><button class="link" data-id="' + (d.seventhId || "") + '" data-letter="' + d.seventhLetter + '" data-acc="' + (d.seventhAcc === null ? "" : d.seventhAcc) + '">' + d.seventh + '</button></td>' +
+        const enh = '<sup class="enh">≅</sup>';
+        e += '<tr><td class="rn">' + d.roman + '</td><td class="sym">' + d.triad + (d.enh3 ? enh : "") + '</td>' +
+             '<td class="sym"><button class="link" data-id="' + (d.seventhId || "") + '" data-letter="' + d.seventhLetter + '" data-acc="' + (d.seventhAcc === null ? "" : d.seventhAcc) + '">' + d.seventh + '</button>' + (d.enh7 ? enh : "") + '</td>' +
              '<td class="tones">' + d.tones + '</td></tr>';
       }
-      e += '</table></div><div class="desc">' + t("clickSeventhHint") + '</div>' + sameHtml;
+      // 有 ≅ 就在表下寫出圖例(手機沒有 hover,title 不算數),例子取表裡第一個
+      const ex1 = dia.find(d => d.enhEx);
+      const enhLegend = ex1 ? t("enhNote", { a: ex1.enhEx[0], b: ex1.enhEx[1] }) : dia.some(d => d.enh3 || d.enh7) ? t("enhNoteTri") : "";
+      e += '</table></div><div class="desc">' + t("clickSeventhHint") + '</div>' +
+           (enhLegend ? '<div class="desc">' + enhLegend + '</div>' : '') + sameHtml;
       ex.innerHTML = e;
       ex.hidden = false;
       ex.querySelectorAll("[data-scale]").forEach(b => b.onclick = () => { STATE.scaleId = b.dataset.scale; render(); });
@@ -3839,6 +3870,17 @@ function inversionLabel(rootPc, chord, bassPc, spellPref){
 }
 /* 反查的分析結果:選了哪些音、符合哪些和弦、每個音級該怎麼拼寫。
    鍵盤標籤與下方面板共用同一份結果,兩邊的音名才不會不一致 */
+/* 反查的拼寫偏好。預設 auto:照「調號升降記號比較少」的慣例拼根音(和移調用的 PC_SPELL 同一套想法),
+   大三度的和弦看大調(D♭ 5♭ 勝過 C♯ 7♯、A♭、B♭、E♭,F♯/G♭ 同為 6 個取慣用的 F♯),
+   小三度的和弦看小調(C♯m 4♯ 勝過 D♭m 8♭、G♯m、F♯m,E♭m/D♯m 同為 6 個取 E♭m、B♭m)。
+   原本預設一律用升記號,E♭7 被寫成 D♯7(三音還是 F𝄪)、A♭7 寫成 G♯7。使用者選了 ♯ 或 ♭ 就照選的 */
+const AUTO_MAJOR = ["sharp","flat","sharp","flat","sharp","sharp","sharp","sharp","flat","sharp","flat","sharp"];
+const AUTO_MINOR = ["sharp","sharp","sharp","flat","sharp","sharp","sharp","sharp","sharp","sharp","flat","sharp"];
+function spellPrefFor(rootPc, chord){
+  if (STATE.findSpell !== "auto") return STATE.findSpell;
+  const minor = !!chord && chord.t.includes("♭3") && !chord.t.includes("3");
+  return (minor ? AUTO_MINOR : AUTO_MAJOR)[rootPc];
+}
 function findAnalysis(){
   const sel = [...STATE.findSel].sort((a, b) => a - b);
   const pcs = [...new Set(sel.map(m => ((m % 12) + 12) % 12))];
@@ -3847,19 +3889,33 @@ function findAnalysis(){
   for (const rp of pcs) {
     for (const c of matchChords(rp, pcs)) results.push({ rootPc: rp, chord: c, isBass: rp === bassPc });
   }
-  // 低音當根音的排前面,再來是組成音少(比較單純)的寫法
-  results.sort((a, b) => (b.isBass - a.isBass) || (a.chord.t.length - b.chord.t.length));
+  /* 省略五音:七和弦以上最先省略的就是完全五度(吉他的 C7♯9 = C E B♭ D♯、爵士的 3-7 voicing),
+     譜上照樣寫 C7♯9。只在「沒有任何一般和弦完全符合」時才找,免得 E G C 多出 Em♭6(省略五音)這種牽強讀法。
+     增六和弦不算「一般和弦」:它是由解決方向定義的(要在上下文裡才成立),C E B♭ 一般讀成 C7(省略五音),
+     不是義大利增六。排序:完全符合的一般和弦 > 省略五音 > 增六和弦,同一級裡低音當根音的先 */
+  const AUG6 = ["it6", "fr6", "ger6"];
+  const rank = r => r.no5 ? 1 : AUG6.includes(r.chord.id) ? 2 : 0;
+  if (pcs.length >= 3 && !results.some(r => rank(r) === 0)) {
+    for (const rp of pcs) {
+      const p5 = (rp + 7) % 12;
+      if (pcs.includes(p5)) continue;
+      for (const c of matchChords(rp, pcs.concat(p5)))
+        if (c.t.includes("5") && c.t.length >= 4) results.push({ rootPc: rp, chord: c, isBass: rp === bassPc, no5: true });
+    }
+  }
+  // 同一級裡低音當根音的排前面,再來是組成音少(比較單純)的寫法
+  results.sort((a, b) => (rank(a) - rank(b)) || (b.isBass - a.isBass) || (a.chord.t.length - b.chord.t.length));
 
   /* 音名拼寫:一旦找到完全符合的和弦,就照那個和弦的級數推算正規拼寫
      (所以 C-E-G-B♭ 會寫成 B♭ 而不是 A♯);沒有符合的和弦時才退回升/降偏好 */
   const nameByPc = new Map(), tokByPc = new Map();
   if (results.length) {
     const best = results[0];
-    for (const [pc, sp] of chordSpelling(best.rootPc, best.chord, STATE.findSpell)) {
+    for (const [pc, sp] of chordSpelling(best.rootPc, best.chord, spellPrefFor(best.rootPc, best.chord))) {
       nameByPc.set(pc, sp.name); tokByPc.set(pc, sp.tok);
     }
   }
-  for (const p of pcs) if (!nameByPc.has(p)) nameByPc.set(p, simpleName(p, STATE.findSpell));
+  for (const p of pcs) if (!nameByPc.has(p)) nameByPc.set(p, simpleName(p, spellPrefFor(p, null)));
   return { sel, pcs, bassPc, results, nameByPc, tokByPc };
 }
 
@@ -3872,7 +3928,7 @@ function renderFindReadout(ro, ex){
     ex.hidden = true;
     return;
   }
-  const pcs = an.pcs, results = an.results, spellPref = STATE.findSpell;
+  const pcs = an.pcs, results = an.results;
   // 依實際彈奏的高低順序把音名列出來(同一個音級只列一次)
   const seen = new Set();
   const ordered = sel.map(m => ((m % 12) + 12) % 12).filter(p => !seen.has(p) && seen.add(p));
@@ -3883,10 +3939,12 @@ function renderFindReadout(ro, ex){
   if (results.length) {
     html += '<div class="find-list">';
     for (const r of results.slice(0, 12)) {
-      const nm = findChordName(r.rootPc, r.chord, an.bassPc, spellPref);
+      const pref = spellPrefFor(r.rootPc, r.chord);
+      const nm = findChordName(r.rootPc, r.chord, an.bassPc, pref);
       html += '<div class="find-item"><span class="fname">' + nm + '</span>' +
               '<span class="fzh">' + localName(r.chord) + '</span>' +
-              '<span class="ftag exact">' + inversionLabel(r.rootPc, r.chord, an.bassPc, spellPref) + '</span></div>';
+              '<span class="ftag exact">' + inversionLabel(r.rootPc, r.chord, an.bassPc, pref) + '</span>' +
+              (r.no5 ? '<span class="ftag">' + t("omit5") + '</span>' : '') + '</div>';
     }
     html += '</div>';
   } else {
@@ -3907,7 +3965,7 @@ function renderFindReadout(ro, ex){
   if (supers.length) {
     let e = '<div class="card-title">' + t("couldBelongTo") + '</div><div class="find-list">';
     for (const s of supers.slice(0, 10)) {
-      e += '<div class="find-item"><span class="fname">' + findChordName(s.rootPc, s.chord, an.bassPc, spellPref) + '</span>' +
+      e += '<div class="find-item"><span class="fname">' + findChordName(s.rootPc, s.chord, an.bassPc, spellPrefFor(s.rootPc, s.chord)) + '</span>' +
            '<span class="fzh">' + localName(s.chord) + '</span>' +
            '<span class="ftag">' + t("missingNotes", { n: s.missing }) + '</span></div>';
     }
@@ -4489,8 +4547,8 @@ function renderSummary(){
               .map(m => ({ text: an.nameByPc.get(pcOf(m)), midi: m }));
     if (an.results.length) {
       const r0 = an.results[0];
-      name = findChordName(r0.rootPc, r0.chord, an.bassPc, STATE.findSpell);
-      zh = localName(r0.chord);
+      name = findChordName(r0.rootPc, r0.chord, an.bassPc, spellPrefFor(r0.rootPc, r0.chord));
+      zh = localName(r0.chord) + (r0.no5 ? " · " + t("omit5") : "");
     }
     else { name = an.sel.length ? "?" : t("findPickNotes"); zh = an.sel.length ? t("findNoMatch") : t(STATE.inst === "guitar" ? "findTapStartGuitar" : "findTapStart"); }
   } else {

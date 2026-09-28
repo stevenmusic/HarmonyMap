@@ -96,6 +96,19 @@ async function openPage(browser, opts = {}){
           if (miss.length) fails.push(def.id + " → " + sid + ": 音階少了和弦音 " + miss.join(" "));
         }
       }
+      // 順階和弦表:名稱的拼法跟表上的組成音不同(等音)就一定要標 ≅;點下去要能跳(根音不能是 null)
+      for (const sc of SCALES.filter(x => x.t.length === 7)) for (let L = 0; L < 7; L++) for (const a of [-1, 0, 1]) {
+        STATE.letter = L; STATE.acc = a;
+        for (const row of diatonicChords(sc)) {
+          if (!row.seventhId) continue;
+          total++;
+          const tag = sc.id + " " + LETTERS[L] + (a ? (a > 0 ? "♯" : "♭") : "") + " " + row.roman;
+          if (row.seventhAcc == null || Number.isNaN(row.seventhAcc)) { fails.push(tag + ": 七和弦根音沒有升降值,點了跳不過去"); continue; }
+          const own = chordById(row.seventhId).t.map(tok => spell(row.seventhLetter, row.seventhAcc, tok).name).join(" ");
+          if (own !== row.tones && !row.enh7) fails.push(tag + " " + row.seventh + ": 表上 " + row.tones + " 與名稱拼法 " + own + " 不同卻沒有標 ≅");
+        }
+      }
+      STATE.letter = 0; STATE.acc = 0;
       return { total, fails };
     });
     report("字典 × 21 根音", r.total, r.fails);
@@ -324,6 +337,29 @@ async function openPage(browser, opts = {}){
       return { total: Object.keys(cases).length, fails };
     });
     report("和弦名稱解析", r.total, r.fails);
+  }
+  /* ── 4b. 辨識:常見的音組合第一個讀法要對(拼寫照調號、省略五音、增六和弦排在一般讀法後面) ── */
+  {
+    const r = await p.evaluate(() => {
+      const cases = [[[60,64,67],"C"],[[64,67,72],"C/E"],[[55,60,64],"C/G"],[[60,64,67,70],"C7"],[[57,60,64,67],"Am7"],[[60,64,67,69],"C6"],
+        [[60,63,66,69],"Cdim7"],[[60,64,68],"Caug"],[[60,62,67],"Csus2"],[[60,65,67],"Csus4"],[[52,55,58,62],"Em7♭5"],[[48,55],"C5"],
+        [[60,64,70,75],"C7♯9"],[[54,62,69],"D/F♯"],[[59,60,64,67],"Cmaj7/B"],[[58,60,64,67],"C7/B♭"],[[60,64,67,74],"Cadd9"],
+        [[61,65,68],"D♭"],[[63,67,70,73],"E♭7"],[[56,60,63,66],"A♭7"],[[61,64,68],"C♯m"],[[68,71,75],"G♯m"],[[63,66,70],"E♭m"],[[70,73,77],"B♭m"],
+        [[60,64,70],"C7"],[[60,64,71],"Cmaj7"],[[60,63,70],"Cm7"],[[62,65,72,76],"Dm9"],[[55,59,65,69,76],"G13"],[[56,59,62,65],"G♯dim7"],
+        [[60,64,66,70],"C7♭5"],[[60,64,67,70,73],"C7♭9"],[[56,60,62,66],"A♭7♭5"],[[65,69,72,74],"F6"],[[62,65,69,71],"Dm6"]];
+      const save = [STATE.tab, STATE.findSel, STATE.findSpell];
+      STATE.tab = "find"; STATE.findSpell = "auto";
+      const fails = [];
+      for (const [notes, want] of cases) {
+        STATE.findSel = new Set(notes);
+        const an = findAnalysis(), r0 = an.results[0];
+        const got = r0 ? findChordName(r0.rootPc, r0.chord, an.bassPc, spellPrefFor(r0.rootPc, r0.chord)) : "(沒有)";
+        if (got !== want) fails.push(notes.join(" ") + ": " + got + " ≠ " + want);
+      }
+      [STATE.tab, STATE.findSel, STATE.findSpell] = save;
+      return { total: cases.length, fails };
+    });
+    report("辨識命名", r.total, r.fails);
   }
   await p.close();
 
