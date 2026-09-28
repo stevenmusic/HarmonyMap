@@ -1776,9 +1776,10 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
   if (played.length < Math.min(3, tones.length)) return null;
   const lowS = played[0], highS = played[played.length - 1];
   const lowPc = pcOf(GTR_OPEN[lowS] + frets[lowS]);
-  // 指定了低音(斜線和弦)就一定要是它;和弦外的低音只能出現在最低那條弦,上面不能再重複
+  // 指定了低音(斜線和弦)就一定要是它。低音在上面的弦重複是可以的(使用者確認過):
+  // 斜線只規定「最低的是誰」,C/G 的 3 3 2 0 1 0、D/F♯ 的 2 0 0 2 3 2 本來就重複了低音,
+  // 和弦外的低音(D/C♯ 的 C♯)一樣可以在上面再出現
   if (bassPc != null && lowPc !== bassPc) return null;
-  if (extraPc != null) for (const s of played) if (s !== lowS && pcOf(GTR_OPEN[s] + frets[s]) === extraPc) return null;
   const bassIsRoot = lowPc === rPc;
   let cost = bassIsRoot || bassPc != null ? 0 : 40; // 最低音不是根音的話,聽起來就是轉位,不是使用者選的那個和弦
   const have = new Set(played.map(s => pcOf(GTR_OPEN[s] + frets[s])));

@@ -278,6 +278,9 @@ async function openPage(browser, opts = {}){
       }
       if (pairs < 1000) fails.push("同音異名的配對太少: " + pairs);
       if (has(0, "maj", 5, "× 8 5 5 5 8")) fails.push("C/F 不該有 × 8 5 5 5 8");
+      // 斜線和弦的低音可以在上面的弦重複(使用者確認過),和弦外的低音也一樣:D/C♯ 的 × 4 0 2 2 2(C♯ 在 5 弦與 2 弦)
+      { const { tones } = voicingTones(2, chordById("maj"));
+        if (!evalVoicing([-1, 4, 0, 2, 2, 2], tones, 2, 1, 1)) fails.push("D/C♯ 的 × 4 0 2 2 2 應該可以(低音在上面重複)"); }
       if (!has(0, "69", null, "× 3 2 2 3 3")) fails.push("C6/9 的 × 3 2 2 3 3 是常見按法,不該被刪");
       if (!has(0, "9s5", null, "8 7 8 7 9 ×")) fails.push("C9♯5 的 8 7 8 7 9 × 按得到,不該被刪");
       return { total: total + 4, fails };
