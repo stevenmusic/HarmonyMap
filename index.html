@@ -384,7 +384,8 @@ main{
   color:var(--ivory);font-family:inherit;font-size:var(--fs-sm);
 }
 .search-wrap input:focus{outline:none;border-color:var(--gold)}
-.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.6}
+/* 放大鏡蓋在輸入框上:點到它也要能打字(pointer-events:none 讓點擊穿過去給輸入框) */
+.search-wrap svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);opacity:.6;pointer-events:none}
 /* 清單本身不再自己捲(上半部已經釘住了,交給頁面捲就好),
    否則會出現「捲軸裡還有捲軸」,手機上很難操作 */
 .type-group + .type-group{margin-top:14px}
