@@ -212,6 +212,9 @@ main{
 @media (max-width:380px){
   .inst-switch button{width:48px} .tabs button{padding:9px 2px}
 }
+/* 320px 的英文介面:選中的分頁是粗體,「Identify」要 54px、格子只有 52px,會變成「Ident…」。
+   分頁寬度固定(換語言不能移位),所以改字級:小一階就放得下 */
+@media (max-width:340px){ .tabs button{font-size:var(--fs-sm)} }
 
 /* ── 根音:字母列 + 升降記號 ── */
 .root-row{display:flex;gap:6px;flex-wrap:wrap}
@@ -732,6 +735,8 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
      左邊的根音/辨識卡片才不會因為卡片高度不同、或換樂器而上下跳 */
   .topbar{display:grid;grid-template-columns:minmax(280px,340px) 1fr;grid-template-rows:auto 1fr;gap:10px 14px;align-items:start}
   .topbar .tab-row{grid-column:1;grid-row:1}
+  /* 左欄只有 340px,三個分頁各約 65px:英文的粗體「Identify」放不下,跟窄螢幕一樣把左右內距收到 2px */
+  .tabs button{padding:9px 2px}
   .topbar #rootCard,.topbar #findCard{grid-column:1;grid-row:2}
   .topbar .kb-wrap,.topbar .kb-stage{grid-column:2;grid-row:1 / span 2}
   /* 左欄只有 280~340px 寬:十顆排一列每顆只剩 23px,升降記號改排第二列;
@@ -2666,7 +2671,7 @@ function fretAt(px, py){
   return { s, f };
 }
 
-window.addEventListener("resize", () => { syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); syncStickyMetrics(); });
+window.addEventListener("resize", () => { syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); syncStickyMetrics(); if (PRACTICE.open) fitStageNames(); });
 
 /* ══════════════════════════════════════════════════════════════
    7. 音訊:與 ScrollScore 同一套音源
@@ -4397,6 +4402,17 @@ function ringString(card, s, midi){
   line.classList.add("ring");
   if (pcOf(midi) === rootPc()) line.classList.add("root");
 }
+/* 「現在 / 下一個」的和弦名稱兩格字級要一致(使用者要求),但 A♭m7♭5/C♭ 這種長名稱在 320~360px 放不下。
+   兩格一起縮到「比較長的那個」剛好放得下為止(最多縮到 60%),不各縮各的 */
+function fitStageNames(){
+  const els = [$("prNow"), $("prNext")].filter(Boolean);
+  els.forEach(e => { e.style.fontSize = ""; });
+  const k = Math.min(1, ...els.map(e => e.clientWidth && e.scrollWidth > e.clientWidth ? e.clientWidth / e.scrollWidth : 1));
+  if (k < 1) {
+    const px = parseFloat(getComputedStyle(els[0]).fontSize) * Math.max(0.6, k * 0.98);
+    els.forEach(e => { e.style.fontSize = px + "px"; });
+  }
+}
 function renderPractice(){
   const c = $("practiceCard"), stage = $("practiceStage");
   const P = PRACTICE, cur = P.steps[P.step], nxt = P.steps.length > 1 ? P.steps[(P.step + 1) % P.steps.length] : cur;
@@ -4421,6 +4437,7 @@ function renderPractice(){
   if (P.steps.length) {
     $("prNow").textContent = stepName(cur);
     $("prNext").textContent = stepName(nxt);
+    fitStageNames();
     // 點圖就聽那個和弦
     stage.querySelector(".now").onclick = () => withStep(cur, () => playCurrent());
     stage.querySelector(".next").onclick = () => withStep(nxt, () => playCurrent());

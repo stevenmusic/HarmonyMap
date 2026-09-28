@@ -747,6 +747,12 @@ async function openPage(browser, opts = {}){
         return [Math.round(r.left), Math.round(r.width), e.scrollWidth > e.clientWidth + 1 ? "cut" : ""].join("/"); }).join(" "));
       const a1 = await pos(); await z.click("#langToggle"); const a2 = await pos();
       total++; if (a1 !== a2 || /cut/.test(a1 + a2)) fails.push("換語言分頁移位或文字被切(" + w + "px): " + a1 + " → " + a2);
+      // 選中的分頁是粗體、比較寬,每一個分頁都要在選中時放得下(320px 的「Identify」曾經變成「Ident…」)
+      for (const tb of ["tabScale", "tabFind", "tabChord"]) {
+        await z.click("#" + tb);
+        const cut = await z.evaluate(id => { const e = document.getElementById(id); return e.scrollWidth > e.clientWidth + 1 ? e.textContent : ""; }, tb);
+        total++; if (cut) fails.push("選中的分頁文字被切(" + w + "px): " + cut);
+      }
       await z.close();
     }
     const hp = await q.evaluate(() => { toggleHelp(true); const m = $("helpPop").innerText.match(/[\u3400-\u9fff]+/g); toggleHelp(false); return m ? m.slice(0, 3).join(",") : ""; });
@@ -815,6 +821,14 @@ async function openPage(browser, opts = {}){
       for (const [r, k] of [["A", "min"], ["F", "maj"], ["G", "7"], ["E", "m7"]]) { await q.locator("#prLetters .key-btn", { hasText: new RegExp("^" + r + "$") }).click(); await q.locator("#prQuick .quick-btn", { hasText: new RegExp("^" + k + "$") }).click(); }
       const p2 = await pos(); await q.click("#prUp"); await q.click("#prUp"); const p3 = await pos();
       total++; if (p2 !== p3) fails.push("練習移調時設定列移位: " + p2 + " → " + p3);
+      // 長和弦名稱(A♭m7♭5/C♭)在 320px 要放得下,兩格字級一樣
+      const fit = await q.evaluate(() => {
+        const keep = PRACTICE.steps; PRACTICE.steps = [{ letter: 0, acc: 0, id: "maj7", bass: null }, { letter: 5, acc: -1, id: "m7b5", bass: 3 }]; PRACTICE.step = 0; render();
+        const a = $("prNow"), b = $("prNext");
+        const r = { over: b.scrollWidth > b.clientWidth + 1 || a.scrollWidth > a.clientWidth + 1, same: getComputedStyle(a).fontSize === getComputedStyle(b).fontSize };
+        PRACTICE.steps = keep; render(); return r;
+      });
+      total++; if (fit.over || !fit.same) fails.push("練習的現在/下一個:長名稱被切或兩格字級不同 " + JSON.stringify(fit));
       await q.click("#prClose");
       // 矮螢幕往下捲之後換分頁,分頁鈕要留在原地:吉他音階時釘住區是釘著的,換到辨識會改成不釘
       await q.click("#instGuitar"); await q.click("#tabScale");
