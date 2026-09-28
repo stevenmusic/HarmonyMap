@@ -618,6 +618,8 @@ footer{
   padding:16px 14px calc(18px + env(safe-area-inset-bottom));
   text-align:center;color:var(--muted);font-size:var(--fs-2xs);line-height:1.8;
 }
+footer a{color:var(--muted-bright);text-decoration:none;border-bottom:1px solid var(--line)}
+footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 /* ── 觸控裝置:點擊目標放大(照抄 ScrollScore 的 pointer:coarse 三條規則)────────── */
 @media (pointer:coarse){
   .btn{height:44px;min-width:44px}
@@ -677,9 +679,6 @@ footer{
 
 <header>
   <div class="header-left">
-    <a href="https://stevenmusic.github.io/" class="home-link" data-i18n-attr="aria-label:homeAria,title:homeAria">
-      <span aria-hidden="true">←</span><span class="btn-label" data-i18n="homeText">首頁</span>
-    </a>
     <h1>Harmony<span>Map</span></h1>
     <span class="tagline" data-i18n="tagline">和弦與音階地圖</span>
   </div>
@@ -812,7 +811,8 @@ footer{
 </main>
 
 <footer>
-  HarmonyMap
+  HarmonyMap<br>
+  <span data-i18n="contactLabel">問題回報：</span><a href="mailto:steventsaimusic@gmail.com">steventsaimusic@gmail.com</a>
 </footer>
 
 <script>
@@ -833,7 +833,7 @@ let LANG = localStorage.getItem(LANG_KEY) === "en" ? "en" : "zh"; // 沒存過�
 const I18N = {
   zh: {
     pageTitle: "HarmonyMap — 和弦與音階地圖",
-    homeAria: "回首頁", homeText: "首頁", tagline: "和弦與音階地圖",
+    homeAria: "回首頁", homeText: "首頁", contactLabel: "問題回報：", tagline: "和弦與音階地圖",
     langToggleText: "EN", langToggleLabel: "切換為英文", langToggleTitle: "切換語言",
     themeToggleLabel: "淺色模式", themeToggleTitle: "切換淺色/深色主題",
     tabChord: "和弦", tabScale: "音階", tabFind: "反查",
@@ -914,7 +914,7 @@ const I18N = {
   },
   en: {
     pageTitle: "HarmonyMap — Chord & Scale Map",
-    homeAria: "Back to home", homeText: "Home", tagline: "Chord & Scale Map",
+    homeAria: "Back to home", homeText: "Home", contactLabel: "Feedback: ", tagline: "Chord & Scale Map",
     langToggleText: "中", langToggleLabel: "Switch to Chinese", langToggleTitle: "Switch language",
     themeToggleLabel: "Light mode", themeToggleTitle: "Switch light/dark theme",
     tabChord: "Chord", tabScale: "Scale", tabFind: "Find",
