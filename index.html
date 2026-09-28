@@ -3676,7 +3676,7 @@ function guitarDiagramSVG(){
 /* 直式和弦圖:左邊 6 弦、右邊 1 弦。練習卡片與吉他和弦分頁共用。
    弦的 x 座標(VSVG.x0 + 弦 × VSVG.gap,viewBox 座標)也拿來反推點到哪一條弦 */
 const VSVG = { x0: 16, gap: 18, y0: 26, rowH: 20, rows: 4 };
-VSVG.W = VSVG.x0 + VSVG.gap * 5 + 30; VSVG.H = VSVG.y0 + VSVG.rowH * VSVG.rows + 8;
+VSVG.W = VSVG.x0 + VSVG.gap * 5 + 34; VSVG.H = VSVG.y0 + VSVG.rowH * VSVG.rows + 8;
 function voicingSVG(v, rp){
   const fr = v.frets.filter(f => f > 0);
   const maxF = fr.length ? Math.max(...fr) : 0, minF = fr.length ? Math.min(...fr) : 0;
@@ -3686,7 +3686,8 @@ function voicingSVG(v, rp){
   let g = '<rect x="' + x0 + '" y="' + y0 + '" width="' + gap * 5 + '" height="' + rowH * rows + '" fill="var(--surface-inset)"/>';
   for (let r = 0; r <= rows; r++) g += '<line x1="' + x0 + '" x2="' + (x0 + gap * 5) + '" y1="' + (y0 + r * rowH) + '" y2="' + (y0 + r * rowH) + '" stroke="var(--muted)" stroke-width="' + (r === 0 && base === 1 ? 4 : 1.2) + '"/>';
   for (let s = 0; s < 6; s++) g += '<line class="str" data-s="' + s + '" x1="' + xs(s) + '" x2="' + xs(s) + '" y1="' + y0 + '" y2="' + (y0 + rowH * rows) + '" stroke="var(--muted-bright)" stroke-width="' + (1.8 - s * 0.2) + '"/>';
-  if (base > 1) g += '<text x="' + (x0 + gap * 5 + 6) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="11" fill="var(--muted)">' + base + 'fr</text>';
+  // 格數標在 1 弦右邊、避開 1 弦上的音點(半徑 7)
+  if (base > 1) g += '<text x="' + (x0 + gap * 5 + 10) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="11" fill="var(--muted)">' + base + 'fr</text>';
   if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
   v.frets.forEach((f, s) => {
     const col = f >= 0 && pcOf(GTR_OPEN[s] + f) === rp ? "var(--gold)" : "var(--teal)";
