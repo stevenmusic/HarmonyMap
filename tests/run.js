@@ -273,14 +273,32 @@ async function openPage(browser, opts = {}){
     await q.locator("#kbSummary b").click(); await expect("摘要列點和弦名稱", "n60,64,67,71");
     // 根音卡片沒有 ♮:♭ ♯ 是開關,按字母回到本位音
     const rn = () => q.evaluate(() => rootName());
-    total++; if (await q.locator("#accRow .key-btn").count() !== 2) fails.push("根音卡片應該只有 ♭ ♯ 兩顆");
+    total++; if ((await q.evaluate(() => [...document.querySelectorAll("#accRow .key-btn")].map(b => b.textContent).join(""))) !== "♭♯/") fails.push("和弦分頁的根音卡片應該是 ♭ ♯ /");
     await q.locator("#letterRow .key-btn", { hasText: /^B$/ }).click(); await q.locator("#accRow .key-btn").nth(0).click();
     total++; if ((await rn()) !== "B♭") fails.push("B + ♭ = " + await rn());
     await q.locator("#accRow .key-btn").nth(0).click();
     total++; if ((await rn()) !== "B") fails.push("♭ 再按一次應該取消: " + await rn());
     await q.locator("#accRow .key-btn").nth(1).click(); await q.locator("#letterRow .key-btn", { hasText: /^E$/ }).click();
     total++; if ((await rn()) !== "E") fails.push("按字母應該回到本位音: " + await rn());
-    await q.evaluate(() => { STATE.letter = 0; STATE.acc = 0; render(); }); await take();
+    // 根音卡片的 /:下一個字母(+ ♭ ♯)是低音;選好之後再按字母是換根音(低音照規則跟著走)
+    await q.evaluate(() => { STATE.letter = 0; STATE.acc = 0; STATE.chordId = "maj"; STATE.bassIv = null; render(); });
+    const title = () => q.evaluate(() => chordTitle(chordById(STATE.chordId)));
+    const L = x => q.locator("#letterRow .key-btn", { hasText: new RegExp("^" + x + "$") });
+    await q.click("#rootSlash"); await L("E").click();
+    total++; if ((await title()) !== "C/E") fails.push("根音卡片 / + E: " + await title());
+    total++; if ((await take()) !== "n64,67,72") fails.push("選好低音要彈 C/E 的轉位");
+    await q.locator("#accRow .key-btn").nth(0).click();
+    total++; if ((await title()) !== "C/E♭") fails.push("根音卡片 / + E + ♭: " + await title());
+    await L("G").click();
+    total++; if ((await title()) !== "G/B♭" || await q.evaluate(() => !!rootSlashState())) fails.push("選好低音後按字母應該換根音: " + await title());
+    await q.click("#rootSlash"); await L("G").click();
+    total++; if ((await title()) !== "G") fails.push("低音 = 根音應該回到原位: " + await title());
+    await q.click("#rootSlash"); await q.locator("#quickGrid .quick-btn", { hasText: /^m7$/ }).click(); await L("A").click();
+    total++; if ((await title()) !== "Am7") fails.push("換和弦後 / 應該失效: " + await title());
+    await q.click("#tabScale");
+    total++; if (await q.locator("#accRow .key-btn").count() !== 2) fails.push("音階分頁不該有 /");
+    await q.click("#tabChord");
+    await q.evaluate(() => { STATE.letter = 0; STATE.acc = 0; STATE.chordId = "maj7"; STATE.bassIv = null; render(); }); await take();
 
     await q.click("#instGuitar");
     await q.evaluate(() => { STATE.chordId = "maj"; render(); });
@@ -385,7 +403,13 @@ async function openPage(browser, opts = {}){
     await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^A$/ }).click();
     await q.locator("#prLetters .key-btn", { hasText: /^G$/ }).click();
     check((await steps()) === "C G Am F/A" && await q.evaluate(() => !PRACTICE.slash && PRACTICE.pad.letter === 4), "選好低音後按字母應該是下一個根音: " + await steps());
+    // 根音 / 低音:還沒按種類就按 / = 大三和弦(G / F 三下就是 G/F,使用者嫌 G maj / F 太麻煩)
     await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^F$/ }).click();
+    check((await steps()) === "C G Am F/A G/F", "G / F 應該是 G/F: " + await steps());
+    await q.click("#prUndo");
+    await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^F$/ }).click();
+    check((await steps()) === "C G Am F", "低音選回根音: " + await steps());
+    await q.click("#prSlash"); await q.locator("#prQuick .quick-btn", { hasText: /^min$/ }).click(); await q.click("#prUndo");
     await pad("B", -1, "maj");
     check((await steps()) === "C G Am F B♭" && await q.evaluate(() => !PRACTICE.slash), "按和弦種類要離開斜線模式、新加一個: " + await steps());
     await q.locator("#prLetters .key-btn", { hasText: /^B$/ }).click();
@@ -433,10 +457,9 @@ async function openPage(browser, opts = {}){
     await q.evaluate(() => document.activeElement && document.activeElement.blur());
     await q.keyboard.press("g"); await q.keyboard.press("-");
     check(await q.evaluate(() => PRACTICE.pad.letter === 4 && PRACTICE.pad.acc === -1), "快捷鍵 g、- 沒有設定輸入板根音");
-    await q.keyboard.press("/"); await q.keyboard.press("a");
-    check((await steps()) === "C D/F♯ Em/A", "快捷鍵 / a: " + await steps());
+    await q.keyboard.press("c"); await q.keyboard.press("/"); await q.keyboard.press("e");
+    check((await steps()) === "C D/F♯ Em C/E", "快捷鍵 c / e: " + await steps());
     await q.keyboard.press("Backspace");
-    await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");
     await q.keyboard.press("Backspace");
     check((await steps()) === "C D/F♯", "Backspace 沒有刪除最後一個: " + await steps());
     await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");
