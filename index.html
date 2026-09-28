@@ -2854,8 +2854,9 @@ function buildRootPicker(){
     b.title = t(key);
     // 剛用 / 選好低音時,♭ ♯ 改的是低音,亮的也是低音的記號(青色)
     const bassMode = sl && sl.letter >= 0;
-    b.setAttribute("aria-pressed", String(v === (bassMode ? sl.acc : STATE.acc)));
-    if (bassMode) b.classList.add("bass");
+    const on = v === (bassMode ? sl.acc : STATE.acc);
+    b.setAttribute("aria-pressed", String(on));
+    if (bassMode && on) b.classList.add("bass");   // 只有真的選中的那顆亮青色,沒選的維持原樣(不然滿版都是綠框)
     b.onclick = () => rootAcc(v);
     ar.appendChild(b);
   });
@@ -4091,7 +4092,16 @@ function renderSummary(){
     // 和弦用 displayNotes:斜線和弦的低音排在最前面(C/B → B C E G)
     // 吉他和弦:點音名發出「這個指法裡那個音」(在哪條弦上就撥哪條),不是另一個八度的音
     const v = isChord && STATE.inst === "guitar" ? currentVoicing() : null;
-    tones = (isChord ? displayNotes() : currentNotes()).map(n => {
+    let list = isChord ? displayNotes() : currentNotes();
+    // 吉他的斜線和弦:displayNotes 不加低音(低音由指法決定),摘要列要自己把低音排在最前面,
+    // 不然 C/B 只寫 C E G,看不出 B 在哪
+    const bi = isChord && STATE.inst === "guitar" ? bassInfo() : null;
+    if (bi) {
+      const rest = list.filter(n => pcOf(n.midi) !== bi.pc);
+      const own = list.find(n => pcOf(n.midi) === bi.pc);
+      list = [own || Object.assign({}, spell(STATE.letter, STATE.acc, bi.tok), { midi: rootMidi() + bi.iv - 12 })].concat(rest);
+    }
+    tones = list.map(n => {
       let midi = n.midi, str = -1;
       if (v) v.frets.forEach((f, si) => { if (str < 0 && f >= 0 && pcOf(GTR_OPEN[si] + f) === pcOf(n.midi)) { str = si; midi = GTR_OPEN[si] + f; } });
       return { text: STATE.label === "do" ? toSolfege(n.name) : n.name, midi, str };

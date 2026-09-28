@@ -299,6 +299,7 @@ async function openPage(browser, opts = {}){
     // 根音一直是金色,低音用青色框另外標
     await q.click("#rootSlash"); await L("E").click();
     total++; if (!(await q.evaluate(() => { const bs = [...document.querySelectorAll("#letterRow .key-btn")]; return bs.find(b => b.textContent === "A").getAttribute("aria-pressed") === "true" && bs.find(b => b.textContent === "E").classList.contains("bass"); }))) fails.push("根音要維持金色、低音另外標");
+    total++; if (await q.locator("#accRow .key-btn.bass").count() !== 0) fails.push("沒選中的 ♭ ♯ 不該亮青框");
     await q.click("#rootSlash");
     await q.click("#tabScale");
     total++; if (await q.locator("#accRow .key-btn").count() !== 2) fails.push("音階分頁不該有 /");
@@ -326,6 +327,11 @@ async function openPage(browser, opts = {}){
     // 點另一張圖 = 選它並刷一次
     await q.locator("#gtrDiagrams .gd").nth(1).click();
     total++; if ((await q.evaluate(() => STATE.vIdx)) !== 1 || !(await take()).startsWith("n")) fails.push("點另一張指法圖沒有選它並發聲");
+    // 吉他斜線和弦:摘要列要列出低音、排最前面(C/B 原本只寫 C E G)
+    await q.evaluate(() => { STATE.chordId = "maj"; STATE.bassIv = 11; STATE.bassFor = "maj"; render(); });
+    const gs = await q.evaluate(() => [...document.querySelectorAll("#kbSummary .tn")].map(x => x.textContent).join(" "));
+    total++; if (gs !== "B C E G") fails.push("吉他 C/B 摘要列: " + gs);
+    await q.evaluate(() => { STATE.bassIv = null; render(); }); await take();
     // 音階分頁仍然是長指板
     await q.click("#tabScale");
     total++; if (await q.evaluate(() => $("keyboardCanvas").getBoundingClientRect().height === 0 || !$("gtrDiagrams").hidden)) fails.push("音階分頁應該用長指板");
