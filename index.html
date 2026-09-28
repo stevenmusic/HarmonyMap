@@ -490,7 +490,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-pad .quick-grid{margin-top:8px;padding-top:8px}
 .pr-edit{display:flex;gap:6px;align-items:center;margin-bottom:8px}
 .pr-edit .pr-steps{flex:1;min-width:0;margin:0}
-.gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px 8px 0}
+/* 高度由 JS 設成跟鋼琴鍵盤一樣(resizeKeyboardCanvas),和弦圖在格子裡等比例縮放塞滿 */
+.gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr);gap:6px;padding:6px 8px 0;box-sizing:border-box}
 .gtr-dgs[hidden]{display:none}
 .pos-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px 10px 0}
 .pos-row[hidden]{display:none}
@@ -504,7 +505,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 .gtr-dgs .gd-lab{font-size:var(--fs-2xs);color:var(--muted-bright);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gtr-dgs .gd.on .gd-lab{color:var(--gold)}
 /* 和弦圖儘量大、少留白(使用者要求):撐滿格子,只在很寬的桌機擋一個上限,免得釘住區太高 */
-.gtr-dgs svg{display:block;width:100%;max-width:210px;height:auto;margin:0 auto}
+.gtr-dgs .gd{display:flex;flex-direction:column;min-height:0}
+.gtr-dgs svg{display:block;flex:1 1 0;min-height:0;width:100%;height:100%;margin:0 auto}
 /* 撥弦時那條弦亮一下(根音金色、其他青色),0.9 秒淡掉;系統減少動態時 animation 會被縮成一瞬間 */
 .gtr-dgs line.str.ring{animation:strRing .9s ease-out}
 .gtr-dgs line.str.ring.root{animation-name:strRingRoot}
@@ -709,7 +711,9 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
    才會贏過上面那些 max-width:900px 的規則,不會兩套版面打架 */
 @media (min-width:900px){
   /* 釘住的那塊裡面:左邊放分頁與根音、右邊放鍵盤;下半部左邊清單、右邊說明 */
-  .topbar{display:grid;grid-template-columns:minmax(280px,340px) 1fr;gap:10px 14px;align-items:start}
+  /* 第一列固定是分頁那排的高度(auto),右邊跨兩列的鍵盤多出來的高度全給第二列(1fr),
+     左邊的根音/辨識卡片才不會因為卡片高度不同、或換樂器而上下跳 */
+  .topbar{display:grid;grid-template-columns:minmax(280px,340px) 1fr;grid-template-rows:auto 1fr;gap:10px 14px;align-items:start}
   .topbar .tab-row{grid-column:1;grid-row:1}
   .topbar #rootCard,.topbar #findCard{grid-column:1;grid-row:2}
   .topbar .kb-wrap,.topbar .kb-stage{grid-column:2;grid-row:1 / span 2}
@@ -1758,18 +1762,24 @@ function drawKeyLabels(ctx, x, y, w, h, labelMap){
 function resizeKeyboardCanvas(){
   const cv = $("keyboardCanvas");
   if (!cv) return;
-  const w = cv.getBoundingClientRect().width;
+  // 吉他和弦分頁的畫布是藏起來的(寬度 0),寬度改量外框,顯示區高度才算得出來
+  const w = cv.getBoundingClientRect().width || cv.parentElement.clientWidth;
   /* 鍵盤是釘住的,螢幕越矮它就越該收斂,否則上半部佔滿整個畫面、下面的清單沒空間捲。
      用「視窗高度的 22%」當上限而不是再開一個高度斷點:斷點會在某個高度突然跳一階,
      連續縮放則是一路平滑收斂,而且直向手機與桌機(844/900px 高)算出來仍是原本的 170px 上限,
      外觀完全沒變,只有真的很矮的畫面才會收 */
   const maxH = Math.min(KB_MAX_H, window.innerHeight * 0.22);
+  /* 鋼琴與吉他的顯示區一樣高(使用者要求:切換樂器時下面的根音那一排不能移位)。
+     基準是「鋼琴在這個寬度、這個分頁會有的高度」;吉他的指板(音階時連同把位那排按鈕)、
+     和弦分頁的三張和弦圖都塞進同一個高度 */
+  const H = computeKeyboardHeight(w, KB_MIN_H, Math.max(KB_MIN_H, maxH));
   if (STATE.inst === "guitar") {
-    // 指板的高度由六條弦決定,跟可見的白鍵數無關:寬度的 42%,一樣受同一個 22vh 上限管
-    const cap = Math.max(96, maxH);
-    cv.style.height = Math.min(cap, Math.max(96, w * 0.42)) + "px";
+    const row = $("scalePosRow");
+    const rowH = row && !row.hidden ? row.getBoundingClientRect().height : 0;
+    cv.style.height = Math.max(60, H - rowH) + "px";
+    $("gtrDiagrams").style.height = H + "px";
   } else {
-    cv.style.height = computeKeyboardHeight(w, KB_MIN_H, Math.max(KB_MIN_H, maxH)) + "px";
+    cv.style.height = H + "px";
   }
   const rect = cv.getBoundingClientRect();
   // ScrollScore 的畫布是要拿去錄影的,所以用 CSS px;這裡是給人盯著看音名的,
@@ -3936,7 +3946,8 @@ function render(){
     rebuildKeyboardRange([base, base + 24]);
   } else {
     rebuildKeyboardRange(keyboardNotes().map(n => n.midi));
-    if (STATE.tab === "scale" && STATE.inst === "piano") scaleOctaveRange(keyboardNotes().map(n => n.midi));
+    // 吉他也照鋼琴的音域算(不畫出來),顯示區的高度才能跟鋼琴一樣
+    if (STATE.tab === "scale") scaleOctaveRange(keyboardNotes().map(n => n.midi));
   }
   renderScalePosRow();
   resizeKeyboardCanvas();

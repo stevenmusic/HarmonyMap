@@ -733,6 +733,21 @@ async function openPage(browser, opts = {}){
       if (q._errors.length) fails.push(tag + ": 頁面錯誤 " + q._errors.join("; "));
       await q.close();
     }
+    // 切換鋼琴/吉他時顯示區同高、底下的根音卡片不能移位(使用者要求)
+    for (const [w, h] of [[320, 568], [390, 844], [768, 1024], [1280, 860]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h } });
+      for (const tab of ["Chord", "Scale", "Find"]) {
+        await q.click("#tab" + tab);
+        const m = {};
+        for (const inst of ["Piano", "Guitar"]) {
+          await q.click("#inst" + inst); await q.waitForTimeout(60);
+          m[inst] = await q.evaluate(() => { const c = $("rootCard").hidden ? $("findCard") : $("rootCard");
+            return Math.round(document.querySelector(".kb-wrap").getBoundingClientRect().height) + "/" + Math.round(c.getBoundingClientRect().top); });
+        }
+        total++; if (m.Piano !== m.Guitar) fails.push("切換樂器移位(" + w + "×" + h + " " + tab + "): 鋼琴 " + m.Piano + " 吉他 " + m.Guitar);
+      }
+      await q.close();
+    }
     report("版面", total, fails);
   }
 
