@@ -451,14 +451,15 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-pad .quick-grid{margin-top:8px;padding-top:8px}
 .pr-edit{display:flex;gap:6px;align-items:center;margin-bottom:8px}
 .pr-edit .pr-steps{flex:1;min-width:0;margin:0}
-.gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px 10px 0}
+.gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px 8px 0}
 .gtr-dgs[hidden]{display:none}
-.gtr-dgs .gd{border:1px solid var(--line);border-radius:var(--radius-md);padding:6px 6px 2px;cursor:pointer;
+.gtr-dgs .gd{border:1px solid var(--line);border-radius:var(--radius-md);padding:4px 3px 2px;cursor:pointer;
              touch-action:none;background:var(--surface-inset);min-width:0}
 .gtr-dgs .gd.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
 .gtr-dgs .gd-lab{font-size:var(--fs-2xs);color:var(--muted-bright);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gtr-dgs .gd.on .gd-lab{color:var(--gold)}
-.gtr-dgs svg{display:block;width:100%;max-width:150px;height:auto;margin:0 auto}
+/* 和弦圖儘量大、少留白(使用者要求):撐滿格子,只在很寬的桌機擋一個上限,免得釘住區太高 */
+.gtr-dgs svg{display:block;width:100%;max-width:210px;height:auto;margin:0 auto}
 /* 撥弦時那條弦亮一下(根音金色、其他青色),0.9 秒淡掉;系統減少動態時 animation 會被縮成一瞬間 */
 .gtr-dgs line.str.ring{animation:strRing .9s ease-out}
 .gtr-dgs line.str.ring.root{animation-name:strRingRoot}
@@ -1991,6 +1992,8 @@ function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
   VOICING_CACHE.set(key, res);
   return res;
 }
+const GTR_MAX_USE_FRET = 12;   // 最高按到第幾格(原聲吉他琴頸在 12/14 格接琴身)
+const GTR_LIST_MARGIN = 45, GTR_ALGO_MARGIN = 12;
 function voicingsCore(rPc, def, bassPc = null, noShapes = false){
   const key = rPc + "|" + def.id + "|" + bassPc + (noShapes ? "|raw" : "");
   if (VOICING_CACHE.has(key)) return VOICING_CACHE.get(key);
@@ -2054,21 +2057,18 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
   const picked = [];
   // 沒有指定低音時,最低音不是根音的指法聽起來是轉位、不是這個和弦,有別的選擇就不列
   const pool = bassPc == null && all.some(v => v.bassIsRoot) ? all.filter(v => v.bassIsRoot) : all;
-  /* 每個和弦只給三種指法(使用者要求,多了太亂):
-       1. 最常用的開放和弦:開放和弦表有的就用表上的;這種和弦不在表裡時,只收資料庫有的開放指法;
-          表裡有這種和弦、但這個根音沒有(Cm)就不給
-       2. 五弦封閉和弦:根音在 5 弦、6 弦不彈、沒有空弦
-       3. 六弦封閉和弦:根音在 6 弦、沒有空弦
-     封閉和弦的食指橫按要一路壓到 1 弦:1 弦在橫按那一格是和弦音的話,不彈 1 弦的指法不收
-     (8 10 9 9 8 × 反而難彈,要另外悶掉 1 弦)。斜線和弦照原本的方式挑 */
+  /* 沒有指定低音:列出「最實用的 3 種」(使用者要求;試過 4 種,手機上每張圖太小,改回 3 種)。
+     原本固定「開放 / 五弦封閉 / 六弦封閉」三格,會硬塞出 Am7 的 × 12 14 12 13 12 這種手已經貼到琴身的按法,
+     又漏掉 × 0 5 5 5 5 這種實際會用的。現在所有按得到的指法一起比分數,挑最好的幾個、彼此不重複:
+       - 最高按到第 12 格:原聲吉他琴頸在第 12(古典)或 14 格接琴身,琴跟擋住手,12 格以上實際很難按;
+         第 8 格以上每高一格多扣分(橫按在高把位弦距窄、手型難維持)
+       - 開放和弦表上的指法、資料庫第一名照樣排最前面(加分已經在 cost 裡)
+       - 食指橫按要一路壓到 1 弦(coversTop)、手指 ≤ 4(handFingers)、橫按又撐到第 4 格的只收 E/A 形
+       - 兩個指法最低音在同一條弦、把位只差 1 格以內,算同一種,只留分數好的 */
   if (bassPc == null) {
-    // 開放和弦 = 有空弦、而且整個和弦都在前 4 格內(× 3 0 0 5 5 雖然有空弦,手已經在第 5 格)
     const isOpenPos = v => v.frets.some(f => f === 0) && Math.max(...v.frets) <= 4;
-    const closed = v => !v.frets.some(f => f === 0);
     const lowStr = v => v.frets.findIndex(f => f >= 0);
-    /* 食指橫按「壓得到 1 弦卻不彈 1 弦」的不收(8 10 9 9 8 × 反而要另外悶 1 弦)。
-       只管有橫按的;而且只在橫按真的延伸得到 1 弦時才要求:中間經過的每條弦在橫按那格要嘛有按更高的格,
-       要嘛本來就是和弦音——Cdim 的 8 9 10 8 × × 延伸下去會壓到 2 弦的 G(不是和弦音),1 弦本來就只能悶 */
+    const maxFret = v => Math.max(0, ...v.frets);
     const coversTop = v => {
       if (!v.barreShown || v.frets[5] >= 0) return true;
       for (let s = v.barreHi + 1; s <= 5; s++) {
@@ -2077,12 +2077,6 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
       }
       return false;
     };
-    const bestOf = arr => arr.filter(coversTop)[0] || null;   // all 已照分數排好;沒有合格的就不列
-    // 不在開放和弦表裡的和弦:資料庫的第一名剛好是開放指法時才算「最常用的開放和弦」
-    /* 「真的有人這樣彈」的封閉和弦才列,沒有就不列,不硬湊(使用者要求):
-       資料庫有列,或是這種和弦自己的 E/A 開放形狀往上推;而且手按得到——
-       最多 4 指(相鄰幾條弦同一格可以用一指壓,例如 C6 的 × 3 5 5 5 5 無名指一次壓四條),
-       食指橫按時不能再撐到第 4 格(Cadd9 的 8 7 10 7 8 × 太難) */
     const handFingers = v => {
       const rest = [];
       v.frets.forEach((f, s) => { if (f > 0 && !(v.barreShown && f === v.minF && s >= v.barreLo && s <= v.barreHi)) rest.push([s, f]); });
@@ -2090,24 +2084,39 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
       rest.forEach(([s, f], i) => { if (!(i && rest[i - 1][0] === s - 1 && rest[i - 1][1] === f)) runs++; });
       return runs + (v.barreShown ? 1 : 0);
     };
-    // E/A 形本身就是開放和弦把上弦枕換成食指,開放時按得到,推上去就按得到(A 形 sus4 的 × 7 9 9 10 7);
-    // 「橫按又撐 4 格」只擋資料庫裡其他的指法
-    const realClosed = v => handFingers(v) <= 4 && (v.shape || (v.ref && !(v.barreShown && v.span >= 3)));
-    const open = canon ? all.find(v => v.canon) : canon === undefined ? pool.find(v => v.ref === 1 && isOpenPos(v)) : null;
-    // 封閉和弦的根音在最低那條弦上,食指(或中指)就壓在根音那一格附近:最低格不能比根音低超過 1 格
-    // (C9 的 × 3 2 3 3 3 可以;C5 的 8 × 5 5 8 8 手根本不在根音上,不算)
-    const onRoot = (v, str, rf) => closed(v) && lowStr(v) === str && v.frets[str] === rf && v.minF >= rf - 1 && realClosed(v);
-    const rf5 = pcOf(rPc - 9) || 12, rf6 = pcOf(rPc - 4) || 12;
-    const five = bestOf(pool.filter(v => onRoot(v, 1, rf5)));
-    const six = bestOf(pool.filter(v => onRoot(v, 0, rf6)));
-    for (const v of [open, five, six]) if (v && !picked.includes(v)) picked.push(v);
-    // 三種都沒有(罕用和弦):只列一個——資料庫第一名,沒有資料就列評分最好的那一個
+    const played = v => v.frets.filter(f => f >= 0).length;
+    // 按到第 5 格以上又混空弦:空弦只能是最低那條(當低音持續音,Am7 的 × 0 5 5 5 5);
+    // 空弦夾在高把位中間(D♭7 的 9 8 6 6 0 ×)手要撐很開、聽起來也散
+    const openOnlyBass = v => maxFret(v) < 5 || v.frets.every((f, s) => f !== 0 || s === lowStr(v));
+    // 1、2 弦至少要彈一條:兩條高音弦都悶掉的(G 形的 9 8 6 6 × ×)聲音很悶、實際很少用
+    const topRings = v => v.frets[4] >= 0 || v.frets[5] >= 0;
+    // 中間夾著不彈的弦要另外悶,只有「根音在 6 弦、5 弦不彈」的爵士按法是常用的(9 × 10 10 9 ×)
+    const innerMute = v => { const lo = lowStr(v), hi = 5 - [...v.frets].reverse().findIndex(f => f >= 0);
+      for (let s = lo + 1; s < hi; s++) if (v.frets[s] < 0 && !(s === 1 && lo === 0 && v.frets[0] > 0)) return true; return false; };
+    const usable = v => maxFret(v) <= GTR_MAX_USE_FRET && coversTop(v) && handFingers(v) <= 4 &&
+      (v.canon || played(v) >= 4) && openOnlyBass(v) && (v.canon || (topRings(v) && !innerMute(v))) &&
+      (v.shape || v.canon || !(v.barreShown && v.span >= 3)) &&
+      // 表裡有這種和弦、這個根音卻沒有標準開放和弦(Cm):低把位帶空弦的一律不列(× 3 1 0 1 × 沒人這樣教)
+      !(canon === null && isOpenPos(v));
+    const score = v => v.cost + Math.max(0, v.minF - 7) * 4;
+    const cands = pool.filter(usable).sort((a, b) => score(a) - score(b));
+    const raw = v => score(v) - (v.bonus || 0);
+    const same = (a, b) => lowStr(a) === lowStr(b) && Math.abs(a.minF - b.minF) <= 1 && isOpenPos(a) === isOpenPos(b);
+    for (const v of cands) {
+      // 最多 3 種:4 種在手機上每張圖只剩 82px 寬,看不清楚(使用者決定「太小就列三種」)
+      if (picked.length >= 3) break;
+      if (picked.some(p => same(p, v))) continue;
+      if (picked.length && raw(v) > Math.min(...picked.map(raw)) + GTR_LIST_MARGIN) break;
+      // 資料庫沒有、也不是 E/A 形的(純窮舉出來的)要分數夠接近才列,避免硬湊出沒人這樣彈的按法
+      if (picked.length && !v.ref && !v.shape && !v.canon && raw(v) > Math.min(...picked.map(raw)) + GTR_ALGO_MARGIN) continue;
+      picked.push(v);
+    }
     let fallback = false;
     if (!picked.length && pool.length) { picked.push(pool.find(v => v.ref === 1) || pool[0]); fallback = true; }
     if (picked.length) {
-      const best = open || picked.slice().sort((a, b) => a.cost - b.cost)[0];
-      picked.sort((a, b) => (b === open) - (a === open) || a.minF - b.minF);
-      const res = { list: picked, best: picked.indexOf(best), fallback };
+      const best = picked[0];
+      picked.sort((a, b) => a.minF - b.minF || isOpenPos(b) - isOpenPos(a));
+      const res = { list: picked, best: picked.indexOf(best), fallback: fallback || picked.length === 1 };
       VOICING_CACHE.set(key, res);
       return res;
     }
@@ -3938,7 +3947,8 @@ function guitarDiagramSVG(){
 /* 直式和弦圖:左邊 6 弦、右邊 1 弦。練習卡片與吉他和弦分頁共用。
    弦的 x 座標(VSVG.x0 + 弦 × VSVG.gap,viewBox 座標)也拿來反推點到哪一條弦 */
 const VSVG = { x0: 16, gap: 18, y0: 26, rowH: 20, rows: 4 };
-VSVG.W = VSVG.x0 + VSVG.gap * 5 + 34; VSVG.H = VSVG.y0 + VSVG.rowH * VSVG.rows + 8;
+// 右邊只留格數標示(「12fr」)需要的寬度,不要多留白
+VSVG.W = VSVG.x0 + VSVG.gap * 5 + 26; VSVG.H = VSVG.y0 + VSVG.rowH * VSVG.rows + 8;
 function voicingSVG(v, rp){
   const fr = v.frets.filter(f => f > 0);
   const maxF = fr.length ? Math.max(...fr) : 0, minF = fr.length ? Math.min(...fr) : 0;
@@ -3952,7 +3962,7 @@ function voicingSVG(v, rp){
   for (let s = 0; s < 6; s++) g += '<line class="str" data-s="' + s + '" x1="' + xs(s) + '" x2="' + xs(s) + '" y1="' + y0 + '" y2="' + (y0 + rowH * rows) + '" stroke="var(--muted-bright)" stroke-width="' + (1.8 - s * 0.2) + '"/>';
   g += '<line x1="' + (x0 - 0.9) + '" x2="' + (x0 + gap * 5 + 0.9) + '" y1="' + y0 + '" y2="' + y0 + '" stroke="var(--muted-bright)" stroke-width="' + (base === 1 ? 3.5 : 2.6) + '" stroke-linecap="square"/>';
   // 格數標在 1 弦右邊、避開 1 弦上的音點(半徑 7)
-  if (base > 1) g += '<text x="' + (x0 + gap * 5 + 10) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="11" fill="var(--muted)">' + base + 'fr</text>';
+  if (base > 1) g += '<text x="' + (x0 + gap * 5 + 8) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="10" fill="var(--muted)">' + base + 'fr</text>';
   if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
   v.frets.forEach((f, s) => {
     const col = f >= 0 && pcOf(GTR_OPEN[s] + f) === rp ? "var(--gold)" : "var(--teal)";

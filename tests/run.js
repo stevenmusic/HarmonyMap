@@ -198,9 +198,10 @@ async function openPage(browser, opts = {}){
     report("和弦資料庫一致", r.total, r.fails);
   }
 
-  /* ── 3c. 每個和弦只給三種指法:最常用的開放和弦、五弦封閉、六弦封閉(使用者要求) ──
-     封閉和弦:根音在最低那條弦、沒有空弦、最低格不比根音低超過 1 格;
-     1 弦在橫按那一格是和弦音時,1 弦一定要彈(食指整排壓下去) */
+  /* ── 3c. 每個和弦列出最實用的 3 種指法(使用者要求;不再固定「開放 / 五弦封閉 / 六弦封閉」) ──
+     最高按到第 12 格(再上去手會碰到琴身)、1 或 2 弦至少彈一條、至少 4 條弦、中間不夾悶掉的弦(6 弦根音的爵士按法例外)、
+     第 5 格以上混空弦時空弦只能是低音、兩個指法不能是「同一條低音弦、差 1 格以內」的同一種;
+     食指橫按的,1 弦在橫按那格是和弦音就一定要彈 */
   {
     const r = await p.evaluate(() => {
       VOICING_CACHE.clear();
@@ -212,35 +213,38 @@ async function openPage(browser, opts = {}){
         const pcs = new Set(c.t.map(t => pcOf(rp + tokenSemi(t))));
         total++;
         if (vs.list.length > 3) fails.push(tag + ": 列了 " + vs.list.length + " 個指法");
-        const kinds = [];
-        for (const v of vs.list) {
-          const f = v.frets, low = f.findIndex(x => x >= 0), hasOpen = f.some(x => x === 0);
-          const rf = [pcOf(rp - 4) || 12, pcOf(rp - 9) || 12];
-          let k = null;
-          if (hasOpen && Math.max(...f) <= 4) k = "open";
-          else if (!hasOpen && low <= 1 && f[low] === rf[low] && v.minF >= rf[low] - 1) k = low === 0 ? "six" : "five";
-          if (!k) { if (vs.list.length > 1) fails.push(tag + ": " + gtrTabText(f) + " 不屬於三種"); continue; }
-          if (kinds.includes(k)) fails.push(tag + ": 重複的 " + k);
-          kinds.push(k);
-          // 封閉和弦不硬湊:要嘛資料庫有列,要嘛是這種和弦自己的 E/A 開放形狀往上推
-          if (vs.fallback) continue;   // 三種都沒有時只列一個(資料庫第一名或評分最好的),不算硬湊
-          if (k !== "open" && !v.ref && !v.shape) fails.push(tag + ": " + gtrTabText(f) + " 資料庫沒有、也不是 E/A 形");
-          if (k !== "open" && !v.shape && v.barreShown && v.span >= 3) fails.push(tag + ": " + gtrTabText(f) + " 橫按又撐 4 格");
-        }
-        // 1 弦:食指橫按的封閉和弦,1 弦在橫按那格是和弦音就一定要彈
+        if (vs.fallback) continue;   // 只有一個(罕用和弦的資料庫第一名 / 評分最好的)時不套下面的規則
+        const low = f => f.findIndex(x => x >= 0);
+        vs.list.forEach((v, i) => {
+          const f = v.frets, T = tag + " " + gtrTabText(f);
+          if (Math.max(...f) > 12) fails.push(T + ": 超過第 12 格");
+          if (v.canon) return;
+          if (f[4] < 0 && f[5] < 0) fails.push(T + ": 1、2 弦都沒彈");
+          if (f.filter(x => x >= 0).length < 4) fails.push(T + ": 少於 4 條弦");
+          const hi = 5 - [...f].reverse().findIndex(x => x >= 0);
+          for (let s = low(f) + 1; s < hi; s++) if (f[s] < 0 && !(s === 1 && low(f) === 0 && f[0] > 0)) fails.push(T + ": 中間夾悶掉的弦");
+          if (Math.max(...f) >= 5 && f.some((x, s) => x === 0 && s !== low(f))) fails.push(T + ": 高把位的空弦不是低音");
+          vs.list.slice(0, i).forEach(u => {
+            const open = w => w.frets.some(x => x === 0) && Math.max(...w.frets) <= 4;
+            if (low(u.frets) === low(f) && Math.abs(u.minF - v.minF) <= 1 && open(u) === open(v)) fails.push(T + ": 跟 " + gtrTabText(u.frets) + " 是同一種");
+          });
+        });
         const all = [];
         for (const v of vs.list) {
           const f = v.frets;
-          if (!v.barreShown || f.some(x => x === 0) || f[5] >= 0 || vs.fallback) continue;
-          let canReach = true;   // 橫按延伸得到 1 弦(中間每條弦要嘛按更高格、要嘛在橫按那格是和弦音)
+          if (!v.barreShown || f.some(x => x === 0) || f[5] >= 0) continue;
+          let canReach = true;
           for (let s = v.barreHi + 1; s <= 5; s++) if (f[s] < v.minF && !pcs.has(pcOf(GTR_OPEN[s] + v.minF))) canReach = false;
           if (canReach) all.push(gtrTabText(f));
         }
         if (all.length) fails.push(tag + ": 封閉和弦 1 弦沒彈 " + all.join(", "));
       }
+      // 使用者的例子:Am7 不能再列 × 12 14 12 13 12(手貼到琴身)
+      total++;
+      if (chordVoicingsFor(9, chordById("m7")).list.some(v => Math.max(...v.frets) > 12)) fails.push("Am7 還列了第 12 格以上的指法");
       return { total, fails };
     });
-    report("指法只有三種", r.total, r.fails);
+    report("指法挑選", r.total, r.fails);
   }
 
   /* ── 3c. 每一個列出來的指法都要按得到(80 種 × 12 根音 × 原位與 11 種低音,清單裡的每一個,不只第一個) ── */
