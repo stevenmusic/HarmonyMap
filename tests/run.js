@@ -445,6 +445,12 @@ async function openPage(browser, opts = {}){
     await q.click("#instPiano");
     const po = await q.evaluate(() => { STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; render(); const c = KB_WHITE_KEYS.length; STATE.letter = 4; render(); const g = [KB_LOW % 12, KB_WHITE_KEYS.length]; STATE.tab = "chord"; STATE.letter = 0; render(); return [c, g]; });
     total++; if (po[0] !== 8 || po[1][0] !== 5 || po[1][1] !== 9) fails.push("鋼琴音階一個八度: " + JSON.stringify(po));
+    // 每個音階的公式都在一個八度內、由低到高,鋼琴上剛好是主音到高八度主音(新增音階時別超過)
+    const over = await q.evaluate(() => { const bad = []; STATE.tab = "scale"; STATE.inst = "piano";
+      for (const sc of SCALES) { STATE.scaleId = sc.id; const se = sc.t.map(tokenSemi), d = displayNotes().map(n => n.midi);
+        if (Math.max(...se) >= 12 || !se.every((x, i) => !i || x > se[i - 1]) || Math.max(...d) - Math.min(...d) !== 12) bad.push(sc.id); }
+      STATE.tab = "chord"; STATE.inst = "guitar"; render(); return bad; });
+    total++; if (over.length) fails.push("音階超過一個八度: " + over.join(", "));
     await q.click("#instGuitar");
     // 音階分頁仍然是長指板
     await q.click("#tabScale");
