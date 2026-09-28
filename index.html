@@ -1899,6 +1899,24 @@ function gtrRef(rPc, id, bassPc){
   const s = GTR_REF[rPc + "|" + id + "|" + (bassPc == null ? "" : bassPc)];
   return s ? s.split(" ").map(v => [...v].map(c => c === "x" ? -1 : parseInt(c, 36))) : [];
 }
+/* 標準開放斜線和弦表:初學教材、流行歌譜上「大家都這樣彈」的那一個,優先於資料庫的投票。
+   資料庫把 Am/G 的 × × 5 5 5 5 排第一、3 0 2 2 1 0 排第二,但每本教材教的都是 3 0 2 2 1 0(使用者指出)。
+   鍵是「根音|和弦|低音」,低音用字母(♯ 寫 #);指法由 6 弦寫到 1 弦,x = 不彈 */
+const SLASH_CANON = {
+  "C|maj|E": "032010", "C|maj|G": "332010", "C|maj|B": "x22010",
+  "D|maj|F#": "200232", "D|maj|A": "x00232", "D|maj|C": "x30232",
+  "G|maj|B": "x20003", "G|maj|D": "xx0003", "G|maj|F#": "2x0003",
+  "A|min|G": "302210", "A|min|F#": "202210", "A|min|C": "x32210", "A|min|E": "002210",
+  "E|min|B": "x22000", "A|maj|E": "002220", "F|maj|C": "x33211", "F|maj|A": "x03211", "D|min|C": "x30231"
+};
+function slashCanon(rPc, id, bassPc){
+  for (const k in SLASH_CANON) {
+    const [r, cid, b] = k.split("|");
+    if (cid === id && OPEN_CANON_PC[r] === rPc && pcOf(OPEN_CANON_PC[b[0]] + (b[1] === "#" ? 1 : 0)) === bassPc)
+      return SLASH_CANON[k].split("").map(c => c === "x" ? -1 : +c);
+  }
+  return null;
+}
 function openCanon(rPc, id){
   const tbl = OPEN_CANON[id];
   if (!tbl) return undefined; // 這種和弦沒有公認的開放指法表,照評分走
@@ -1997,6 +2015,13 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     if (!v) { v = evalVoicing(fr, tones, rPc, bassPc, extraPc, true); if (!v) return; all.push(v); byKey.set(key6(fr), v); }
     v.ref = i + 1;
   });
+  // 標準開放斜線和弦(Am/G = 3 0 2 2 1 0):不在候選裡就補進來,一定排第一
+  const sCanon = bassPc != null ? slashCanon(rPc, def.id, bassPc) : null;
+  if (sCanon) {
+    let v = byKey.get(key6(sCanon));
+    if (!v) { v = evalVoicing(sCanon, tones, rPc, bassPc, extraPc, true); if (v) { all.push(v); byKey.set(key6(sCanon), v); } }
+    if (v) v.slashCanon = true;
+  }
   const openPos = v => v.minF < 3 && v.frets.some(f => f === 0);
   const canon = bassPc == null ? openCanon(rPc, def.id) : undefined;
   for (const v of all) {
@@ -2010,6 +2035,7 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     // 資料庫第一名一定排第一(即使中間悶掉兩條弦,例如 Gm7♭5 的 3 × × 3 2 1——爵士的 drop 3 指法,
     // 評分會因為「中間夾不彈的弦」扣很多分);第二名以後只加一點,跟窮舉的指法一起照評分排
     if (v.ref && !(canon === null && openPos(v))) v.bonus -= v.ref === 1 ? 100 : 30;
+    if (v.slashCanon) { v.bonus -= 150; v.canon = true; }
     v.cost += v.bonus;
   }
   if (!noShapes) {

@@ -106,6 +106,17 @@ async function openPage(browser, opts = {}){
         const got = vs.list[vs.best] ? gtrTabText(vs.list[vs.best].frets) : "none";
         if (got !== exp) fails.push(n + chordById(id).sym + ": " + got + " ≠ " + exp);
       }
+      // 標準開放斜線和弦(SLASH_CANON)一定排第一,同一組音的另一個名稱也一樣(Am/G 與 Am7/G 都是 3 0 2 2 1 0)
+      for (const k in SLASH_CANON) {
+        total++;
+        const [r0, id, bb] = k.split("|"), rp = OPEN_CANON_PC[r0], bp = pcOf(OPEN_CANON_PC[bb[0]] + (bb[1] === "#" ? 1 : 0));
+        const exp = SLASH_CANON[k].split("").map(c => c === "x" ? "×" : c).join(" ");
+        const vs = chordVoicingsFor(rp, chordById(id), bp);
+        const got = vs.list[vs.best] ? gtrTabText(vs.list[vs.best].frets) : "none";
+        if (got !== exp) fails.push("SLASH_CANON " + k + ": " + got + " ≠ " + exp);
+        const pair = slashPair(chordById(id), pcOf(bp - rp));
+        if (pair) { const o = chordVoicingsFor(rp, pair.full, bp); const g2 = o.list[o.best] ? gtrTabText(o.list[o.best].frets) : "none"; if (g2 !== exp) fails.push("SLASH_CANON 同音異名 " + pair.full.id + ": " + g2 + " ≠ " + exp); }
+      }
       for (const id in OPEN_CANON) for (const L in OPEN_CANON[id]) {
         total++;
         const vs = chordVoicingsFor(OPEN_CANON_PC[L], chordById(id));
@@ -178,7 +189,8 @@ async function openPage(browser, opts = {}){
           if (exp) { total++; if (exp.join(",") !== got.join(",")) fails.push(tag + ": " + gtrTabText(got) + " ≠ " + gtrTabText(exp) + (canon ? "(開放和弦表)" : "(資料庫第一名)")); }
         } else {
           total++;
-          if (!ref.some(f => f.join(",") === got.join(","))) fails.push(tag + ": 斜線和弦的第一個指法不在資料庫裡 " + gtrTabText(got));
+          // 標準開放斜線和弦表優先於資料庫(跟 OPEN_CANON 一樣),表上有的不檢查
+          if (!slashCanon(+key, id, +bass) && !ref.some(f => f.join(",") === got.join(","))) fails.push(tag + ": 斜線和弦的第一個指法不在資料庫裡 " + gtrTabText(got));
         }
       }
       return { total, fails };
