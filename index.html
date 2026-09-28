@@ -489,7 +489,14 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-pad{margin-bottom:10px}
 .pr-pad .quick-grid{margin-top:8px;padding-top:8px}
 .pr-edit{display:flex;gap:6px;align-items:center;margin-bottom:8px}
-.pr-edit .pr-steps{flex:1;min-width:0;margin:0}
+/* 進行永遠只有一行(橫向捲動,自動捲到現在/剛加的那個):會換行的話,加和弦、移調時底下的設定列跟著上下跳,
+   手指會點錯(320px 上移調 + 一按,整列掉 29px)。上下留 5px 給光暈,不然會被捲動區切掉 */
+.pr-edit .pr-steps{flex:1;min-width:0;margin:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:5px 4px;
+  scrollbar-width:none;overscroll-behavior-x:contain}
+.pr-edit .pr-steps::-webkit-scrollbar{display:none}
+.pr-edit .kb-gear{width:32px;height:32px;margin:0}
+.kb-gear:disabled{opacity:.4;cursor:default}
+.pr-edit .pr-steps span{flex:0 0 auto;white-space:nowrap}
 /* 高度由 JS 設成跟鋼琴鍵盤一樣(resizeKeyboardCanvas),和弦圖在格子裡等比例縮放塞滿 */
 .gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr);gap:6px;padding:6px 8px 0;box-sizing:border-box}
 .gtr-dgs[hidden]{display:none}
@@ -512,7 +519,9 @@ html[data-lang="en"] .chip i{white-space:normal}
 .gtr-dgs line.str.ring.root{animation-name:strRingRoot}
 @keyframes strRing{0%{stroke:var(--teal);stroke-width:4;filter:drop-shadow(0 0 4px var(--teal))}100%{}}
 @keyframes strRingRoot{0%{stroke:var(--gold);stroke-width:4;filter:drop-shadow(0 0 4px var(--gold))}100%{}}
-.kb-stage{border:1px solid var(--line);border-radius:var(--radius-md);padding:10px;background:var(--panel)}
+.kb-stage{border:1px solid var(--line);border-radius:var(--radius-md);padding:10px;background:var(--panel);position:relative}
+.kb-stage .pr-ghost{visibility:hidden}
+.kb-stage > .pr-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px 24px}
 .kb-stage[hidden],.kb-wrap[hidden]{display:none}
 .kb-stage .pr-now > div{cursor:pointer}
 .pr-empty{color:var(--muted);font-size:var(--fs-sm);text-align:center;padding:18px 8px}
@@ -682,6 +691,9 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 @media (pointer:coarse){
   .btn{height:44px;min-width:44px}
   select.mini{min-height:38px}
+  /* iOS 點進字級 < 16px 的輸入框/下拉選單會自動放大整頁,而且不會縮回來。
+     各欄位的字級有用 id 選擇器寫的,這裡要 !important 才蓋得過 */
+  input,select,textarea{font-size:16px !important}
 }
 /* 手機橫向:螢幕高度本來就很吃緊,44px 的按鈕會再吃掉寶貴的高度。
    這裡取 36px 折衷——比純高度斷點的 28px 好按,又不會把清單壓得更小。
@@ -1484,7 +1496,12 @@ const SCALES = [
   {id:"messiaen7",  zh:"梅湘第七模式",    en:"Messiaen Mode 7",      g:"進階與罕用", t:["1","♭2","2","♭3","4","♭5","5","♭6","6","7"], lv:1, d:"十個音的有限移調模式,只差兩個音就是半音階,梅湘用它寫最濃密的色塊。", d_en:"A ten-note mode of limited transposition, two notes short of the full chromatic scale — Messiaen used it for his densest color blocks."}
 ];
 
-/* 和弦 → 建議音階(點一下可以直接跳到那個音階看組成音) */
+/* 和弦 → 建議音階(點一下可以直接跳到那個音階看組成音)。
+   規則(和弦音階理論):建議的音階一定要包含這個和弦的每一個組成音(照音高比),測試會逐一檢查。
+   原本有 15 組不合(例如 7♭9 配 altered 少了完全五度、maj7sus4 配 Mixolydian 的 ♭7 撞到 7、
+   增六和弦配同根音的和聲小調連三音都沒有),還有 13 種和弦沒有建議,全部照教材的標準配法補正:
+   有完全五度的 7♭9 / 7♭13 / 7♭9♭13 用 phrygDom / mixob6 / dimHW,沒有五度的變化屬和弦才用 altered;
+   7♯9 用 dimHW 與九音藍調音階(含大三度,藍調的味道還在);增六和弦照它的屬七同音用 lydianDom */
 const CHORD_SCALES = {
   maj:["ionian","lydian","majPent"], min:["dorian","aeolian","minPent"],
   dim:["dimWH","locrian"], aug:["wholeTone","augmented"],
@@ -1498,23 +1515,27 @@ const CHORD_SCALES = {
   "7b5":["lydianDom","wholeTone"], "7sus4":["mixolydian","dorian"],
   maj9:["ionian","lydian"], "9":["mixolydian","bebopDom"], m9:["dorian","aeolian"],
   mMaj9:["melMinor"], m9b5:["locrian2"], "9sus4":["mixolydian","dorian"],
-  "7b9":["dimHW","phrygDom","altered"], "7s9":["altered","dimHW","bluesMin"],
+  "7b9":["dimHW","phrygDom"], "7s9":["dimHW","blues9"],
   "11":["mixolydian","dorian"], m11:["dorian","aeolian"],
   maj7s11:["lydian"], "7s11":["lydianDom","dimHW"],
   "13":["mixolydian","bebopDom"], maj13:["ionian","lydian"], m13:["dorian"],
-  "13sus4":["mixolydian"], "7b13":["mixob6","altered"],
-  "7b9s11":["dimHW"], "7s9b13":["altered"], "7alt":["altered","dimHW"],
+  "13sus4":["mixolydian"], "7b13":["mixob6","phrygDom"],
+  "7b9s11":["dimHW"], "7s9b13":["altered"], "7alt":["altered"],
   // ── 新增的和弦 ──
   m69:["dorian","melMinor"], adds11:["lydian"],
-  "7sus2":["mixolydian"], maj7sus4:["ionian","mixolydian"],
-  maj7b5:["lydian","lydianAug"], dimMaj7:["dimWH","harmMinor"], m7s5:["melMinor"],
-  "7s5s9":["altered","wholeTone"], "7s5b9":["altered","dimHW"],
+  "7sus2":["mixolydian"], maj7sus4:["ionian"],
+  maj7b5:["lydian","lydianAug"], dimMaj7:["dimWH"], m7s5:["aeolian","phrygian"],
+  "7s5s9":["altered"], "7s5b9":["altered","phrygDom"],
   "9s11":["lydianDom"], maj9s11:["lydian"], "13s11":["lydianDom"],
   mMaj11:["melMinor","harmMinor"], m11b5:["locrian2"],
-  "7b9b13":["dimHW","altered"], "7sus4b9":["phrygDom","hijaz"],
-  m7add11:["dorian","minPent"], sus2sus4:["mixolydian","majPent"],
+  "7b9b13":["phrygDom"], "7sus4b9":["phrygDom","hijaz"],
+  m7add11:["dorian","minPent"], sus2sus4:["mixolydian","egyptian"],
   mb6:["aeolian","harmMinor"], "69s11":["lydian"], maj13s11:["lydian"],
-  it6:["harmMinor"], fr6:["wholeTone","lydianDom"], ger6:["harmMinor","mixolydian"]
+  it6:["lydianDom","mixolydian"], fr6:["wholeTone","lydianDom"], ger6:["lydianDom","mixolydian"],
+  maj9s5:["lydianAug"], "9b5":["wholeTone","lydianDom"], "9s5":["wholeTone"],
+  "7b9s9":["dimHW"], "7b5b9":["dimHW","altered"], "7b5s9":["altered","dimHW"], "7s9s11":["dimHW"],
+  "13b9":["dimHW"], "13s9":["dimHW"], madd11:["dorian","aeolian","minPent"], mMaj13:["melMinor"],
+  "6sus4":["mixolydian","ionian"], quartal:["dorian","minPent"]
 };
 
 /* ══════════════════════════════════════════════════════════════
@@ -1859,10 +1880,10 @@ function gtrFingersNeeded(fr){
   return runs + (barre ? 1 : 0);
 }
 function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
-  const played = [];
-  for (let s = 0; s < 6; s++) if (frets[s] >= 0) played.push(s);
-  if (played.length < Math.min(3, tones.length)) return null;
-  const lowS = played[0], highS = played[played.length - 1];
+  // 窮舉時一個和弦要評估上萬次(C13 約 2 萬),這裡刻意不配置陣列與 Set,用迴圈與位元遮罩
+  let nPlayed = 0, lowS = -1, highS = -1, have = 0;
+  for (let s = 0; s < 6; s++) if (frets[s] >= 0) { nPlayed++; if (lowS < 0) lowS = s; highS = s; have |= 1 << pcOf(GTR_OPEN[s] + frets[s]); }
+  if (nPlayed < Math.min(3, tones.length)) return null;
   const lowPc = pcOf(GTR_OPEN[lowS] + frets[lowS]);
   // 指定了低音(斜線和弦)就一定要是它。低音在上面的弦重複是可以的(使用者確認過):
   // 斜線只規定「最低的是誰」,C/G 的 3 3 2 0 1 0、D/F♯ 的 2 0 0 2 3 2 本來就重複了低音,
@@ -1870,23 +1891,22 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
   if (bassPc != null && lowPc !== bassPc) return null;
   const bassIsRoot = lowPc === rPc;
   let cost = bassIsRoot || bassPc != null ? 0 : 40; // 最低音不是根音的話,聽起來就是轉位,不是使用者選的那個和弦
-  const have = new Set(played.map(s => pcOf(GTR_OPEN[s] + frets[s])));
   const missing = [];
-  for (const tn of tones) if (!have.has(tn.pc)) { cost += tn.w; missing.push(tn.tok); }
+  for (const tn of tones) if (!(have >> tn.pc & 1)) { cost += tn.w; missing.push(tn.tok); }
 
-  const fretted = [];
-  for (let s = 0; s < 6; s++) if (frets[s] > 0) fretted.push(s);
-  let minF = 0, fingers = 0, barre = false, barreLo = -1, barreHi = -1;
-  if (fretted.length) {
-    minF = Math.min(...fretted.map(s => frets[s]));
-    const maxF = Math.max(...fretted.map(s => frets[s]));
-    fingers = fretted.length;
-    const atMin = fretted.filter(s => frets[s] === minF);
-    if (atMin.length >= 2) {
+  let nFretted = 0, minF = Infinity, maxF = -Infinity;
+  for (let s = 0; s < 6; s++) if (frets[s] > 0) { nFretted++; if (frets[s] < minF) minF = frets[s]; if (frets[s] > maxF) maxF = frets[s]; }
+  if (!nFretted) minF = 0;
+  let fingers = 0, barre = false, barreLo = -1, barreHi = -1;
+  if (nFretted) {
+    fingers = nFretted;
+    let aLo = -1, aHi = -1, aN = 0;
+    for (let s = 0; s < 6; s++) if (frets[s] === minF) { if (aLo < 0) aLo = s; aHi = s; aN++; }
+    if (aN >= 2) {
       // 橫按:食指壓住最低格上最外側兩條弦之間的每一條弦,這段範圍裡不能有空弦或不彈的弦
       let ok = true;
-      for (let s = atMin[0]; s <= atMin[atMin.length - 1]; s++) if (frets[s] < minF) ok = false;
-      if (ok) { fingers = fretted.length - atMin.length + 1; barre = true; barreLo = atMin[0]; barreHi = atMin[atMin.length - 1]; }
+      for (let s = aLo; s <= aHi; s++) if (frets[s] < minF) ok = false;
+      if (ok) { fingers = nFretted - aN + 1; barre = true; barreLo = aLo; barreHi = aHi; }
     }
     /* 食指只橫按中間幾條弦、其他手指卻同時落在橫按的兩側(低音那側和高音那側都有比橫按高的格):
        7 7 5 5 5 7(Cmaj7/B)要無名指壓 5 弦、小指跨過整個橫按去壓 1 弦,手指會交叉,沒有人按得到(使用者回報)。
@@ -1894,7 +1914,8 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
        (× 8 5 5 5 8:無名指 5 弦、小指 1 弦,撐三格又橫跨整個橫按),手都張不開。
        還按得到的例子:C6/9 的 × 3 2 2 3 3、8 7 7 7 8 8(只高一格)、C9♯5 的 8 7 8 7 9 ×(兩側不同格) */
     if (barre) {
-      const lowSide = fretted.filter(s => s < barreLo && frets[s] > minF), highSide = fretted.filter(s => s > barreHi && frets[s] > minF);
+      const lowSide = [], highSide = [];
+      for (let s = 0; s < 6; s++) if (frets[s] > minF) { if (s < barreLo) lowSide.push(s); else if (s > barreHi) highSide.push(s); }
       if (lowSide.length && highSide.length &&
           (lowSide.length >= 2 || lowSide.some(a => frets[a] >= minF + 2 && highSide.some(b => frets[a] === frets[b] && b - a >= 4)))) return null;
     }
@@ -1907,23 +1928,20 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
     // 四根手指全用上、最低格又落在不相鄰的幾條弦、中間夾著空弦所以不能橫按
     // (× 1 0 3 3 1、× 3 1 0 1 3):同一個和弦有橫按指法時應該選橫按。
     // 只用兩三根手指的不算(A7 的 × 0 2 0 2 0 是標準指法),G 的兩個 3 格也不在最低格
-    if (!barre && fingers === 4) {
-      const ss = fretted.filter(s => frets[s] === minF);
-      // 6 弦那一格可以用拇指從琴頸上方勾住(D/F♯ 的 2 0 0 2 3 2),不算
-      if (ss.length >= 2 && ss[0] !== 0 && ss[ss.length - 1] - ss[0] !== ss.length - 1) cost += 5;
-    }
+    // 6 弦那一格可以用拇指從琴頸上方勾住(D/F♯ 的 2 0 0 2 3 2),不算
+    if (!barre && fingers === 4 && aN >= 2 && aLo !== 0 && aHi - aLo !== aN - 1) cost += 5;
     // 高把位混空弦彈得到,但手要撐很開,不當首選
-    if (minF >= 3) cost += 4 * frets.filter(f => f === 0).length;
+    if (minF >= 3) for (let s = 0; s < 6; s++) if (frets[s] === 0) cost += 4;
   }
-  cost += 3 * (6 - played.length);
+  cost += 3 * (6 - nPlayed);
   // 中間夾一條不彈的弦要另外用手指悶住。例外:根音在 6 弦、5 弦不彈是爵士的標準按法
   // (m7♭5 的 7 × 7 7 6 ×、dim7 的 8 × 7 8 7 ×),6 弦的手指順便就把 5 弦悶掉了
   for (let s = lowS; s <= highS; s++) if (frets[s] < 0) cost += (s === 1 && lowS === 0) ? 6 : 20;
   /* 畫成直排、標成「橫按」的條件:真的非橫按不可才算。× 0 2 2 2 0 雖然可以一指壓三條,
      但通常用三根手指按,畫一條橫槓反而誤導;超過四個按弦音(F、Bm),或沒有空弦、
      一指壓三條以上(Dmaj7 的 × 5 7 6 7 5)才是橫按和弦 */
-  const barreShown = barre && (fretted.length > 4 || (!frets.some(f => f === 0) && barreHi - barreLo >= 2));
-  const span = fretted.length ? Math.max(...fretted.map(s => frets[s])) - minF : 0;
+  const barreShown = barre && (nFretted > 4 || (!frets.includes(0) && barreHi - barreLo >= 2));
+  const span = nFretted ? maxF - minF : 0;
   return { frets: frets.slice(), cost, missing, barre, barreShown, barreLo, barreHi, bassIsRoot, minF, fingers, span };
 }
 
@@ -2081,6 +2099,7 @@ function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
 }
 const GTR_MAX_USE_FRET = 12;   // 最高按到第幾格(原聲吉他琴頸在 12/14 格接琴身)
 const GTR_LIST_MARGIN = 45, GTR_ALGO_MARGIN = 12;
+const TAB_COLLATOR = new Intl.Collator();
 function voicingsCore(rPc, def, bassPc = null, noShapes = false){
   const key = rPc + "|" + def.id + "|" + bassPc + (noShapes ? "|raw" : "");
   if (VOICING_CACHE.has(key)) return VOICING_CACHE.get(key);
@@ -2092,32 +2111,34 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     return a;
   });
   const all = [], cur = [];
-  (function dfs(s, lo, hi){
+  (function dfs(s, lo, hi, low){
     if (s === 6) { const v = evalVoicing(cur, tones, rPc, bassPc, extraPc); if (v) all.push(v); return; }
     for (const f of opts[s]) {
+      // 指定了低音:最低那條彈的弦一定要是它(evalVoicing 也會擋,這裡先剪枝,省掉整棵子樹)
+      if (f >= 0 && !low && bassPc != null && pcOf(GTR_OPEN[s] + f) !== bassPc) continue;
       let nlo = lo, nhi = hi;
       if (f > 0) {
         nlo = Math.min(lo, f); nhi = Math.max(hi, f);
         if (nhi - nlo > GTR_MAX_SPAN || nlo > 12) continue;
       }
       cur[s] = f;
-      dfs(s + 1, nlo, nhi);
+      dfs(s + 1, nlo, nhi, low || f >= 0);
     }
-  })(0, Infinity, -Infinity);
+  })(0, Infinity, -Infinity, false);
   // 資料庫指法:不在窮舉結果裡的(跨度 4 格、手指數估算超過 4)直接評估後補進來
   const ref = gtrRef(rPc, def.id, bassPc);
-  const key6 = f => f.join(",");
-  const byKey = new Map(all.map(v => [key6(v.frets), v]));
+  // 只有資料庫那幾個指法要找,逐一比對就好,不必替幾千個候選各組一次字串
+  const find6 = fr => all.find(v => v.frets.every((f, s) => f === fr[s]));
   ref.forEach((fr, i) => {
-    let v = byKey.get(key6(fr));
-    if (!v) { v = evalVoicing(fr, tones, rPc, bassPc, extraPc, true); if (!v) return; all.push(v); byKey.set(key6(fr), v); }
+    let v = find6(fr);
+    if (!v) { v = evalVoicing(fr, tones, rPc, bassPc, extraPc, true); if (!v) return; all.push(v); }
     v.ref = i + 1;
   });
   // 標準開放斜線和弦(Am/G = 3 0 2 2 1 0):不在候選裡就補進來,一定排第一
   const sCanon = bassPc != null ? slashCanon(rPc, def.id, bassPc) : null;
   if (sCanon) {
-    let v = byKey.get(key6(sCanon));
-    if (!v) { v = evalVoicing(sCanon, tones, rPc, bassPc, extraPc, true); if (v) { all.push(v); byKey.set(key6(sCanon), v); } }
+    let v = find6(sCanon);
+    if (!v) { v = evalVoicing(sCanon, tones, rPc, bassPc, extraPc, true); if (v) all.push(v); }
     if (v) v.slashCanon = true;
   }
   const openPos = v => v.minF < 3 && v.frets.some(f => f === 0);
@@ -2140,7 +2161,12 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     const tps = shapeTemplates(def, bassPc == null ? null : pcOf(bassPc - rPc));
     for (const v of all) if (matchesShape(v.frets, rPc, tps)) { v.cost -= 3; v.shape = true; } // 有開放和弦可彈時仍以開放和弦為先(B7 的 × 2 1 2 0 2)
   }
-  all.sort((a, b) => a.cost - b.cost || a.minF - b.minF || gtrTabText(a.frets).localeCompare(gtrTabText(b.frets)));
+  // 同分時照指法字串排(localeCompare 的順序)。字串先算好一次、比較用同一個 Collator:
+  // 原本每次比較都重組字串再 localeCompare,9、13 和弦幾千個候選光排序就要一百多 ms(模擬操作時抓到的卡頓)
+  const tabOf = v => v.tab || (v.tab = gtrTabText(v.frets));
+  const cmpAll = (a, b) => a.cost - b.cost || a.minF - b.minF || TAB_COLLATOR.compare(tabOf(a), tabOf(b));
+  // 沒有指定低音時只會用到「按得到的那幾個」,先篩再排(結果跟整份排好再篩一樣),C13 不必排一萬多個
+  if (bassPc != null) all.sort(cmpAll);
   const picked = [];
   // 沒有指定低音時,最低音不是根音的指法聽起來是轉位、不是這個和弦,有別的選擇就不列
   const pool = bassPc == null && all.some(v => v.bassIsRoot) ? all.filter(v => v.bassIsRoot) : all;
@@ -2186,7 +2212,7 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
       // 表裡有這種和弦、這個根音卻沒有標準開放和弦(Cm):低把位帶空弦的一律不列(× 3 1 0 1 × 沒人這樣教)
       !(canon === null && isOpenPos(v));
     const score = v => v.cost + Math.max(0, v.minF - 7) * 4;
-    const cands = pool.filter(usable).sort((a, b) => score(a) - score(b));
+    const cands = pool.filter(usable).sort((a, b) => score(a) - score(b) || cmpAll(a, b));
     const raw = v => score(v) - (v.bonus || 0);
     const same = (a, b) => lowStr(a) === lowStr(b) && Math.abs(a.minF - b.minF) <= 1 && isOpenPos(a) === isOpenPos(b);
     for (const v of cands) {
@@ -2199,7 +2225,7 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
       picked.push(v);
     }
     let fallback = false;
-    if (!picked.length && pool.length) { picked.push(pool.find(v => v.ref === 1) || pool[0]); fallback = true; }
+    if (!picked.length && pool.length) { picked.push(pool.find(v => v.ref === 1) || pool.reduce((m, v) => cmpAll(v, m) < 0 ? v : m)); fallback = true; }
     if (picked.length) {
       const best = picked[0];
       picked.sort((a, b) => a.minF - b.minF || isOpenPos(b) - isOpenPos(a));
@@ -2256,6 +2282,55 @@ function voicingLabel(v){
   if (rs >= 0) s += " · " + t("vRootOn", { n: 6 - rs });
   return s;
 }
+/* 吉他換和弦時指法是即時算的(C13 要窮舉上萬種按法,手機上要一兩百毫秒)。
+   先把「下一下最可能點到的」算好放進快取:目前根音的快速鍵和弦,吉他模式再加上這個根音的其他和弦。
+   在背景執行緒(Web Worker)算:在主執行緒算的話,使用者剛好在那一刻點下去就會頓一下(模擬操作時抓到)。
+   Worker 用的是同一批函式的原始碼(toString)與同一批資料表,算出來跟主執行緒一模一樣(測試有比對);
+   還是單檔:Worker 由 Blob 產生。建不起來(舊瀏覽器、被封鎖)就退回閒置時在主執行緒算。
+   快取只是「先算好」,沒有也照樣會當場算,所以 Worker 失敗、還沒算完都不影響結果 */
+let voicingWorker = null, warmQueue = [], warmBusy = false;
+function voicingWorkerSource(){
+  const data = { DEG_SEMI, CHORDS, GTR_OPEN, GTR_FRETS, GTR_MAX_SPAN, GTR_MAX_USE_FRET, GTR_LIST_MARGIN, GTR_ALGO_MARGIN,
+                 OPEN_CANON, OPEN_CANON_PC, GTR_REF, SLASH_CANON };
+  const fns = [parseToken, tokenSemi, toneWeight, gtrFingersNeeded, evalVoicing, shapeTemplates, matchesShape, gtrRef,
+               slashCanon, openCanon, voicingTones, chordSetPcs, chordBySet, slashPair, chordVoicingsFor, voicingsCore, gtrTabText];
+  return Object.entries(data).map(([k, v]) => "const " + k + " = " + JSON.stringify(v) + ";").join("\n") +
+    "\nconst pcOf = " + pcOf + ";\nconst TAB_COLLATOR = new Intl.Collator();\nconst VOICING_CACHE = new Map();\n" +
+    fns.map(String).join("\n") +
+    // 新的一批進來就取代還沒算的那些(使用者換了根音,舊的就不重要了);一次算一個,中間讓出來收訊息
+    "\nlet q = [], busy = false;" +
+    "\nfunction step(){ const j = q.shift(); if (!j) { busy = false; return; }" +
+    " const d = CHORDS.find(c => c.id === j[1]); if (d) postMessage([j[0] + '|' + j[1] + '|null', chordVoicingsFor(j[0], d)]); setTimeout(step, 0); }" +
+    "\nonmessage = e => { q = e.data; if (!busy) { busy = true; setTimeout(step, 0); } };";
+}
+function startVoicingWorker(){
+  try {
+    const url = URL.createObjectURL(new Blob([voicingWorkerSource()], { type: "text/javascript" }));
+    voicingWorker = new Worker(url);
+    voicingWorker.onmessage = e => { const [key, res] = e.data; if (!VOICING_CACHE.has(key)) VOICING_CACHE.set(key, res); };
+    voicingWorker.onerror = () => { voicingWorker = null; };
+  } catch (e) { voicingWorker = null; }
+}
+const idleCall = window.requestIdleCallback ? cb => requestIdleCallback(cb) : cb => setTimeout(cb, 200);
+function scheduleVoicingWarm(){
+  if (STATE.tab !== "chord") { warmQueue = []; return; }
+  const pads = PRACTICE.open ? PRACTICE.pad : { letter: STATE.letter, acc: STATE.acc };
+  const rp = ((LETTER_PC[pads.letter] + pads.acc) % 12 + 12) % 12;
+  const quick = QUICK_CHORDS.map(q => chordById(q[0])).filter(Boolean);
+  // 鋼琴模式只先算快速鍵那幾個:切到吉他的第一下就不用等
+  const list = (STATE.inst === "guitar" ? quick.concat(CHORDS.filter(d => !quick.includes(d))) : quick)
+    .filter(d => !VOICING_CACHE.has(rp + "|" + d.id + "|null"));
+  if (voicingWorker) { voicingWorker.postMessage(list.map(d => [rp, d.id])); return; }
+  warmQueue = list.map(d => [rp, d]);
+  if (!warmBusy) { warmBusy = true; idleCall(warmStep); }
+}
+function warmStep(){
+  const job = warmQueue.shift();
+  if (!job) { warmBusy = false; return; }
+  chordVoicingsFor(job[0], job[1]);
+  idleCall(warmStep);
+}
+startVoicingWorker();
 function currentVoicingSet(){
   const b = bassInfo();
   return chordVoicingsFor(rootPc(), chordById(STATE.chordId), b ? b.pc : null);
@@ -2661,7 +2736,10 @@ function ensureAudio(){
     reverbPreDelay = audioCtx.createDelay(0.2);
     reverbPreDelay.delayTime.value = 0.018;
     reverbConvolver = audioCtx.createConvolver();
-    reverbConvolver.buffer = buildImpulseResponse(2.1, 2.4);
+    // 殘響的脈衝響應要逐一算 20 萬個取樣,手機上超過 100ms,而且剛好卡在使用者第一次碰畫面的那一下。
+    // 閒下來再算:殘響晚零點幾秒接上,第一下點擊不會頓
+    (window.requestIdleCallback ? cb => requestIdleCallback(cb, { timeout: 300 }) : cb => setTimeout(cb, 50))(
+      () => { reverbConvolver.buffer = buildImpulseResponse(2.1, 2.4); });
     reverbWet = audioCtx.createGain();
     reverbWet.gain.value = 0.18;
     reverbBus.connect(reverbPreDelay);
@@ -3928,6 +4006,7 @@ function render(){
   $("gtrToneRow").style.display = gtr ? "" : "none";
   $("gtrToneSel").value = STATE.gtrTone;
   buildPlayModes();
+  scheduleVoicingWarm();
 
   if (!findMode) {
     buildRootPicker();
@@ -4266,12 +4345,17 @@ function renderPractice(){
 
   /* 上方釘住區:練習時用「現在 / 下一個」兩張和弦圖取代長長的指板/鍵盤(使用者要求),
      連同拍點與開始鈕一起釘在上面,手在琴上的時候眼睛只要看這一塊 */
+  const stageHTML = (a, b, ids) =>
+    '<div class="pr-now"><div class="now" role="button" tabindex="0"><small>' + t("practiceNow") + '</small><b' + (ids ? ' id="prNow"' : '') + '>C</b>' + stepDiagram(a) + '</div>' +
+      '<div class="next" role="button" tabindex="0"><small>' + t("practiceNext") + '</small><b' + (ids ? ' id="prNext"' : '') + '>C</b>' + stepDiagram(b) + '</div></div>' +
+    '<div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div>' +
+    '<button class="btn primary pr-go"' + (ids ? ' id="prGo"' : '') + ' title="' + t("practiceHint") + '">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>';
+  /* 空的時候照樣排一份看不見的「現在 / 下一個」撐住高度,提示疊在上面:
+     不然加進第一個和弦時釘住區一下長高一百多 px,整塊輸入板往下跳,下一下就點錯(模擬操作時抓到) */
   stage.innerHTML = P.steps.length
-    ? '<div class="pr-now"><div class="now" role="button" tabindex="0"><small>' + t("practiceNow") + '</small><b id="prNow"></b>' + stepDiagram(cur) + '</div>' +
-        '<div class="next" role="button" tabindex="0"><small>' + t("practiceNext") + '</small><b id="prNext"></b>' + stepDiagram(nxt) + '</div></div>' +
-      '<div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div>' +
-      '<button class="btn primary pr-go" id="prGo" title="' + t("practiceHint") + '">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>'
-    : '<div class="pr-empty">' + t("practiceEmpty") + '</div>';
+    ? stageHTML(cur, nxt, true)
+    : '<div class="pr-ghost" aria-hidden="true">' + stageHTML({ letter: 0, acc: 0, id: "maj", bass: null }, { letter: 0, acc: 0, id: "maj", bass: null }, false) + '</div>' +
+      '<div class="pr-empty">' + t("practiceEmpty") + '</div>';
   if (P.steps.length) {
     $("prNow").textContent = stepName(cur);
     $("prNext").textContent = stepName(nxt);
@@ -4288,7 +4372,9 @@ function renderPractice(){
     '<div class="pr-pad"><div class="root-line"><div class="root-row letters" id="prLetters"></div><div class="acc-row" id="prAcc"></div></div>' +
       '<div class="quick-grid" id="prQuick"></div></div>' +
     '<div class="pr-edit"><div class="pr-steps" id="prSteps"></div>' +
-      '<button class="btn small ghost" id="prUndo"' + (P.steps.length ? "" : " disabled") + '>' + t("practiceUndo") + '</button>' +
+      // 刪除最後一個:線稿倒退鍵圖示(跟 × 同一套規格),文字留在 aria-label / title。字太長會把進行擠到剩兩三個
+      '<button class="kb-gear" id="prUndo" aria-label="' + t("practiceUndo") + '" title="' + t("practiceUndo") + '"' + (P.steps.length ? "" : " disabled") + '>' +
+        svg("M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6") + '</button>' +
       '<button class="btn small ghost" id="prClearSteps"' + (P.steps.length ? "" : " disabled") + '>' + t("practiceClearSteps") + '</button></div>' +
     '<div class="pr-custom"><input id="prCustom" type="text" autocomplete="off" enterkeyhint="done" placeholder="' + t("practiceCustomPh") + '">' +
       // 儲存是開關:這一組已經存過就變成「取消儲存」,不用另外一顆刪除鈕
@@ -4324,6 +4410,9 @@ function renderPractice(){
     sp.className = (i === P.step ? "cur" : "") + (i === P.flash ? " new" : "");
     ss.appendChild(sp);
   });
+  // 一行放不下時捲到「剛加的那個」(編輯中)或「現在這個」(播放中)
+  const focus = ss.children[P.flash >= 0 ? P.flash : P.step];
+  if (focus && ss.scrollWidth > ss.clientWidth) ss.scrollLeft = Math.max(0, focus.offsetLeft - ss.offsetLeft - (ss.clientWidth - focus.offsetWidth) / 2);
   P.flash = -1;
   // 輸入板:按根音(與升降)再按和弦種類,就把這個和弦加到進行最後面、試聽一次,新加的那個閃一下
   // 按「/」之後,字母與升降改成設定最後一個和弦的低音;亮起來的是低音
@@ -4564,6 +4653,14 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
 
 $("practiceOpen").onclick = () => { PRACTICE.open = true; if (PRACTICE.steps.length) practiceApply(); render(); };
 // 換分頁、換樂器都取消還沒用掉的「/」,不然回來後下一個字母會悄悄變成低音
+/* 換分頁、換樂器後,剛按的那顆按鈕要留在手指底下:釘住區在 320×568 這種矮螢幕上會因為換分頁
+   而改成不釘(unstick),頁面若已經往下捲,分頁列會整排捲出畫面(模擬操作時抓到)。量按下前後的位置補回來 */
+function keepInPlace(el, fn){
+  const y0 = el.getBoundingClientRect().top;
+  fn();
+  const dy = el.getBoundingClientRect().top - y0;
+  if (Math.abs(dy) > 1) window.scrollBy(0, dy);
+}
 $("tabChord").onclick = () => { STATE.slash = null; STATE.tab = "chord"; STATE.search = ""; STATE.style = ""; STATE.level = 0; STATE.size = 0; $("typeSearch").value = ""; render(); };
 $("tabScale").onclick = () => { practiceStop(); STATE.slash = null; STATE.tab = "scale"; STATE.search = ""; $("typeSearch").value = ""; render(); };
 $("tabFind").onclick  = () => { practiceStop(); STATE.slash = null; STATE.tab = "find"; render(); };
@@ -4617,6 +4714,10 @@ $("gtrToneSel").addEventListener("change", e => {
 });
 $("instPiano").onclick = () => setInstrument("piano");
 $("instGuitar").onclick = () => setInstrument("guitar");
+["tabChord", "tabScale", "tabFind", "instPiano", "instGuitar"].forEach(id => {
+  const b = $(id), h = b.onclick;
+  b.onclick = ev => keepInPlace(b, () => h(ev));
+});
 $("kbSummary").onclick = () => playCurrent(); // 釘在上面的摘要點一下就重播
 
 /* 鍵盤快捷鍵:上下切換類型、左右移動根音、字母直接選根音,方便一路瀏覽完整個字典 */

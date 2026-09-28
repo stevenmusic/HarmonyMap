@@ -81,6 +81,21 @@ async function openPage(browser, opts = {}){
           }
         }
       }
+      // 建議音階(和弦音階理論):音階必須包含和弦的每一個組成音;每個和弦至少一個建議
+      for (const def of CHORDS) {
+        const ids = CHORD_SCALES[def.id] || [];
+        total++;
+        if (!ids.length) { fails.push(def.id + ": 沒有建議音階"); continue; }
+        const cp = def.t.map(tok => pcOf(tokenSemi(tok)));
+        for (const sid of ids) {
+          total++;
+          const sc = SCALES.find(x => x.id === sid);
+          if (!sc) { fails.push(def.id + " → " + sid + ": 沒有這個音階"); continue; }
+          const sp = new Set(sc.t.map(tok => pcOf(tokenSemi(tok))));
+          const miss = def.t.filter((tok, i) => !sp.has(cp[i]));
+          if (miss.length) fails.push(def.id + " → " + sid + ": 音階少了和弦音 " + miss.join(" "));
+        }
+      }
       return { total, fails };
     });
     report("字典 × 21 根音", r.total, r.fails);
@@ -746,6 +761,47 @@ async function openPage(browser, opts = {}){
         }
         total++; if (m.Piano !== m.Guitar) fails.push("切換樂器移位(" + w + "×" + h + " " + tab + "): 鋼琴 " + m.Piano + " 吉他 " + m.Guitar);
       }
+      await q.close();
+    }
+    // 模擬真人操作抓到的問題(每一項都是實際點下去會點錯/縮放/頓的情形)
+    {
+      const q = await openPage(browser, { viewport: { width: 320, height: 568 }, hasTouch: true, isMobile: true });
+      // iOS 點進字級 < 16px 的輸入框會自動放大整頁
+      const small = await q.evaluate(() => { PRACTICE.open = true; render(); const r = [...document.querySelectorAll("input,select,textarea")].filter(e => parseFloat(getComputedStyle(e).fontSize) < 16).map(e => e.id); PRACTICE.open = false; render(); return r; });
+      total++; if (small.length) fails.push("觸控裝置輸入框字級 < 16px(iOS 會自動放大): " + small.join(","));
+      // 練習:加第一個和弦、移調時,輸入板與設定列不能跳
+      await q.click("#practiceOpen");
+      const pos = () => q.evaluate(() => ["prLetters", "prUp"].map(id => Math.round($(id).getBoundingClientRect().top + scrollY)).join("/"));
+      const p0 = await pos();
+      await q.locator("#prLetters .key-btn", { hasText: /^C$/ }).click(); await q.locator("#prQuick .quick-btn", { hasText: /^maj$/ }).click();
+      const p1 = await pos();
+      total++; if (p0.split("/")[0] !== p1.split("/")[0]) fails.push("練習加第一個和弦時輸入板移位: " + p0 + " → " + p1);
+      for (const [r, k] of [["A", "min"], ["F", "maj"], ["G", "7"], ["E", "m7"]]) { await q.locator("#prLetters .key-btn", { hasText: new RegExp("^" + r + "$") }).click(); await q.locator("#prQuick .quick-btn", { hasText: new RegExp("^" + k + "$") }).click(); }
+      const p2 = await pos(); await q.click("#prUp"); await q.click("#prUp"); const p3 = await pos();
+      total++; if (p2 !== p3) fails.push("練習移調時設定列移位: " + p2 + " → " + p3);
+      await q.click("#prClose");
+      // 矮螢幕往下捲之後換分頁,分頁鈕要留在原地:吉他音階時釘住區是釘著的,換到辨識會改成不釘
+      await q.click("#instGuitar"); await q.click("#tabScale");
+      await q.evaluate(() => scrollTo(0, 300));
+      const y0 = await q.evaluate(() => Math.round($("tabFind").getBoundingClientRect().top));
+      await q.evaluate(() => $("tabFind").click());   // 不用 q.click:它會先把按鈕捲進畫面
+      const y1 = await q.evaluate(() => Math.round($("tabFind").getBoundingClientRect().top));
+      total++; if (Math.abs(y1 - y0) > 1) fails.push("換分頁時分頁鈕移位: " + y0 + " → " + y1);
+      // 背景執行緒算的指法要跟主執行緒一模一樣(兩個根音 × 全部和弦)
+      const wk = await q.evaluate(async () => {
+        if (!voicingWorker) return "Worker 沒有建起來";
+        const w = new Worker(URL.createObjectURL(new Blob([voicingWorkerSource()], { type: "text/javascript" })));
+        const jobs = []; for (const r of [1, 6]) for (const d of CHORDS) jobs.push([r, d.id]);
+        const got = new Map();
+        const err = await new Promise(res => { w.onmessage = e => { got.set(e.data[0], e.data[1]); if (got.size === jobs.length) res(""); }; w.onerror = e => res(e.message || "error"); w.postMessage(jobs); });
+        w.terminate();
+        if (err) return err;
+        VOICING_CACHE.clear();
+        const bad = jobs.filter(([r, id]) => JSON.stringify(chordVoicingsFor(r, chordById(id))) !== JSON.stringify(got.get(r + "|" + id + "|null")));
+        return bad.length ? "不同: " + bad.slice(0, 3).map(j => j.join(" ")).join(", ") : "";
+      });
+      total++; if (wk) fails.push("背景指法計算: " + wk);
+      if (q._errors.length) fails.push("模擬操作: 頁面錯誤 " + q._errors.join("; "));
       await q.close();
     }
     report("版面", total, fails);
