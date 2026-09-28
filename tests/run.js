@@ -270,6 +270,16 @@ async function openPage(browser, opts = {}){
       // 使用者的例子:Am7 不能再列 × 12 14 12 13 12(手貼到琴身)
       total++;
       if (chordVoicingsFor(9, chordById("m7")).list.some(v => Math.max(...v.frets) > 12)) fails.push("Am7 還列了第 12 格以上的指法");
+      // 定義和弦的音(三音、七音、變化音)都要彈到:同一個和弦只要有一個完整的按法,列出來的就要全部完整
+      // (原本 C13 會列出沒有 ♭7 的按法,那是 6/9)。整個和弦都沒有完整按法的(D7♭9♯9 等 3 組)才准退回
+      let incomplete = 0;
+      for (const d of CHORDS) for (let rp = 0; rp < 12; rp++) {
+        const L = chordVoicingsFor(rp, d).list, ok = L.map(v => voicingComplete(d, v.missing || []));
+        total++;
+        if (ok.some(Boolean) && !ok.every(Boolean)) fails.push(d.id + "@" + rp + ": 有完整的按法卻也列了缺音的 " + L.filter((v, i) => !ok[i]).map(v => gtrTabText(v.frets)).join(" / "));
+        if (!ok.some(Boolean)) incomplete++;
+      }
+      total++; if (incomplete > 3) fails.push("沒有完整按法的和弦 × 根音變多了:" + incomplete + "(原本 3)");
       return { total, fails };
     });
     report("指法挑選", r.total, r.fails);

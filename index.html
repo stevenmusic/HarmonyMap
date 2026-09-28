@@ -1876,6 +1876,21 @@ const pcOf = m => ((m % 12) + 12) % 12;
 
 /* 少了某個組成音的代價。五音最不影響和弦的身分,吉他上最常省略;
    六、七個音的延伸和弦六條弦塞不下(而且手指不夠),十一音與九音依序讓位 */
+/* 這個指法有沒有把「定義和弦的音」都彈到。可以省略的只有:完全五度;有 13 的和弦裡的 9 與 11
+   (吉他的 C13 標準按法就是 1 ♭7 3 13);7alt 的變化音取其中幾個就好(至少一個)。
+   三音、七音、♭5/♯5、♭9/♯9/♯11/♭13 這些決定名稱的音一個都不能少——原本 C13 會列出沒有 ♭7 的按法
+   (那是 6/9 和弦)、m11♭5 列出沒有 ♭5 的(全檢時發現)。
+   窮舉時不直接淘汰(評分照舊),挑指法時優先挑完整的;整個和弦都沒有完整按法時才退回原本的結果 */
+function voicingComplete(def, missing){
+  const has13 = def.t.includes("13");
+  for (const m of missing) {
+    if (m === "5") continue;
+    if ((m === "9" || m === "11") && has13) continue;
+    if (def.id === "7alt" && /^[♭♯](9|13)$/.test(m)) continue;
+    return false;
+  }
+  return !(def.id === "7alt" && ["♭9", "♯9", "♭13"].every(x => missing.includes(x)));
+}
 function toneWeight(tok, nTones){
   if (tok === "1") return 100;
   if (tok === "5") return 6;
@@ -2195,7 +2210,11 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
   if (bassPc != null) all.sort(cmpAll);
   const picked = [];
   // 沒有指定低音時,最低音不是根音的指法聽起來是轉位、不是這個和弦,有別的選擇就不列
-  const pool = bassPc == null && all.some(v => v.bassIsRoot) ? all.filter(v => v.bassIsRoot) : all;
+  // 先保住「最低音是根音」(不然就變成轉位、不是這個和弦),再從裡面優先用「定義和弦的音都有彈到」的
+  // (voicingComplete),一個都沒有才退回。順序反過來的話,D7♭9♯9 會為了完整而挑到低音是 C 的按法
+  const rootPool = bassPc == null && all.some(v => v.bassIsRoot) ? all.filter(v => v.bassIsRoot) : all;
+  const full = rootPool.filter(v => voicingComplete(def, v.missing));
+  const pool = full.length ? full : rootPool;
   /* 沒有指定低音:列出「最實用的 3 種」(使用者要求;試過 4 種,手機上每張圖太小,改回 3 種)。
      原本固定「開放 / 五弦封閉 / 六弦封閉」三格,會硬塞出 Am7 的 × 12 14 12 13 12 這種手已經貼到琴身的按法,
      又漏掉 × 0 5 5 5 5 這種實際會用的。現在所有按得到的指法一起比分數,挑最好的幾個、彼此不重複:
@@ -2318,7 +2337,7 @@ let voicingWorker = null, warmQueue = [], warmBusy = false;
 function voicingWorkerSource(){
   const data = { DEG_SEMI, CHORDS, GTR_OPEN, GTR_FRETS, GTR_MAX_SPAN, GTR_MAX_USE_FRET, GTR_LIST_MARGIN, GTR_ALGO_MARGIN,
                  OPEN_CANON, OPEN_CANON_PC, GTR_REF, SLASH_CANON };
-  const fns = [parseToken, tokenSemi, toneWeight, gtrFingersNeeded, evalVoicing, shapeTemplates, matchesShape, gtrRef,
+  const fns = [parseToken, tokenSemi, voicingComplete, toneWeight, gtrFingersNeeded, evalVoicing, shapeTemplates, matchesShape, gtrRef,
                slashCanon, openCanon, voicingTones, chordSetPcs, chordBySet, slashPair, chordVoicingsFor, voicingsCore, gtrTabText];
   return Object.entries(data).map(([k, v]) => "const " + k + " = " + JSON.stringify(v) + ";").join("\n") +
     "\nconst pcOf = " + pcOf + ";\nconst TAB_COLLATOR = new Intl.Collator();\nconst VOICING_CACHE = new Map();\n" +
