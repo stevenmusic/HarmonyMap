@@ -437,6 +437,14 @@ html[data-lang="en"] .chip i{white-space:normal}
           color:var(--gold-bright);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 「現在」與「下一個」字級一致(使用者要求);下一個只用顏色區分 */
 .pr-now .next b{color:var(--muted-bright)}
+/* 「現在」這張圖的外框也有光暈(使用者要求,跟進行列同一套):停止時靜態,進行中跟著拍子呼吸 */
+.pr-now .now{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 14px 2px rgba(242,185,75,.35)}
+.kb-stage.running .pr-now .now{animation:prGlowCard var(--beat,.86s) ease-out infinite}
+@keyframes prGlowCard{
+  0%{box-shadow:0 0 0 2px var(--gold),0 0 24px 6px rgba(242,185,75,.6)}
+  100%{box-shadow:0 0 0 1px var(--gold),0 0 8px 1px rgba(242,185,75,.2)}
+}
+@media (prefers-reduced-motion: reduce){ .kb-stage.running .pr-now .now{animation:none} }
 .pr-now .dg{display:block;height:auto;margin-top:6px;width:100%;max-width:150px}
 .pr-now .dg.kb{max-width:none}   /* 鋼琴小鍵盤撐滿格子,兩張一樣寬 */
 .pr-beats{display:flex;gap:8px;justify-content:center;margin:0 0 8px}
@@ -4145,6 +4153,8 @@ function renderPractice(){
   $("prCustom").value = P.custom;
   const ss = $("prSteps");
   ss.classList.toggle("running", P.running);
+  stage.classList.toggle("running", P.running);
+  stage.style.setProperty("--beat", (60 / P.bpm).toFixed(3) + "s");
   ss.style.setProperty("--beat", (60 / P.bpm).toFixed(3) + "s");
   if (!P.steps.length) ss.innerHTML = '<span class="pr-steps-empty">' + t("practiceStepsEmpty") + '</span>';
   P.steps.forEach((st, i) => {

@@ -592,6 +592,8 @@ async function openPage(browser, opts = {}){
     // 進行中:現在這個和弦的邊框跟著拍子發光(使用者要求)
     const glow = await q.evaluate(() => { const c = document.querySelector("#prSteps span.cur"); return c && getComputedStyle(c).animationName; });
     check(glow === "prGlow", "練習中現在的和弦沒有光暈動畫: " + glow);
+    const glowCard = await q.evaluate(() => getComputedStyle(document.querySelector("#practiceStage .now")).animationName);
+    check(glowCard === "prGlowCard", "練習中上方「現在」那張圖沒有光暈動畫: " + glowCard);
     const run = await q.evaluate(() => ({ plays: window._plays, now: $("prNow").textContent, step: PRACTICE.steps[PRACTICE.step], running: PRACTICE.running }));
     check(run.running && run.plays >= 2, "節拍器沒有在換和弦: 換了 " + run.plays + " 次");
     check(run.now === await q.evaluate(() => stepName(PRACTICE.steps[PRACTICE.step])), "「現在」不是目前這一步");
