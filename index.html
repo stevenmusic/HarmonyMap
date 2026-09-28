@@ -4106,6 +4106,9 @@ function renderSummary(){
       if (v) v.frets.forEach((f, si) => { if (str < 0 && f >= 0 && pcOf(GTR_OPEN[si] + f) === pcOf(n.midi)) { str = si; midi = GTR_OPEN[si] + f; } });
       return { text: STATE.label === "do" ? toSolfege(n.name) : n.name, midi, str };
     });
+    // 吉他照指法實際的音由低到高排(C/B 開放 = B E G C),不是照公式排:
+    // 名稱寫的低音一定排第一,後面是真的彈出來的順序。指法沒彈到的音(省略的五音)放最後
+    if (v) tones.sort((x, y) => (x.str < 0) - (y.str < 0) || x.midi - y.midi);
   }
   // 摘要列是 flex + gap,空的 .zh 會白白撐出一段間距(英文介面的音階就沒有對照名稱),
   // 所以沒有內容時連 span 都不要產生

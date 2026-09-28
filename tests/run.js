@@ -330,7 +330,14 @@ async function openPage(browser, opts = {}){
     // 吉他斜線和弦:摘要列要列出低音、排最前面(C/B 原本只寫 C E G)
     await q.evaluate(() => { STATE.chordId = "maj"; STATE.bassIv = 11; STATE.bassFor = "maj"; render(); });
     const gs = await q.evaluate(() => [...document.querySelectorAll("#kbSummary .tn")].map(x => x.textContent).join(" "));
-    total++; if (gs !== "B C E G") fails.push("吉他 C/B 摘要列: " + gs);
+    total++; if (gs !== "B E G C") fails.push("吉他 C/B 摘要列要照實際的音由低到高(× 2 2 0 1 0 = B E G C): " + gs);
+    // 每一個斜線和弦指法(不只第一個)最低的弦都要是名稱寫的低音
+    const lowBad = await q.evaluate(() => { const bad = [];
+      for (const def of CHORDS) for (let rp = 0; rp < 12; rp++) for (let iv = 1; iv < 12; iv++) {
+        const bpc = (rp + iv) % 12;
+        for (const v of chordVoicingsFor(rp, def, bpc).list) { const low = v.frets.findIndex(f => f >= 0); if (low < 0 || pcOf(GTR_OPEN[low] + v.frets[low]) !== bpc) bad.push(def.id + " " + rp + "/" + bpc); }
+      } return bad; });
+    total++; if (lowBad.length) fails.push("斜線和弦指法最低音不是低音: " + lowBad.slice(0, 5).join(", "));
     await q.evaluate(() => { STATE.bassIv = null; render(); }); await take();
     // 音階分頁仍然是長指板
     await q.click("#tabScale");
