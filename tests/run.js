@@ -379,6 +379,32 @@ async function openPage(browser, opts = {}){
     await q.fill("#prCustom", "C D/F# Em Xq"); await q.press("#prCustom", "Enter");
     check((await steps()) === "C D/F♯ Em", "文字框輸入: " + await steps());
     check(await q.locator(".pr-bad").count() === 1, "打錯的字要提示");
+    // 鋼琴的轉位照輸入的名稱:沒有斜線 = 原位,低音是和弦內音 = 真正的轉位(不在原位底下多加一個音),
+    // 和弦外的低音才是另外加在下面
+    const inv = await q.evaluate(() => [[0, "maj", null], [0, "maj", 4], [0, "maj", 7], [0, "7", 10], [0, "maj", 11]]
+      .map(([l, id, b]) => withStep({ letter: l, acc: 0, id, bass: b }, () => displayNotes().map(n => n.midi).join(","))));
+    check(inv.join(" | ") === "60,64,67 | 64,67,72 | 67,72,76 | 70,72,76,79 | 59,60,64,67", "鋼琴轉位不對: " + inv.join(" | "));
+    // 整組移調(斜線低音跟著走)、上次的進行存在裝置上、儲存/取消儲存/載入
+    await q.click("#prUp"); await q.click("#prUp");
+    check((await steps()) === "D E/G♯ F♯m", "移調 +2: " + await steps());
+    await q.click("#prDown"); await q.click("#prDown");
+    check((await steps()) === "C D/F♯ Em", "移調回來: " + await steps());
+    check((await q.evaluate(() => localStorage.getItem("harmonymap.practice"))) === "C D/F♯ Em", "目前的進行沒有存在裝置上");
+    await q.click("#prSave");
+    check((await q.getAttribute("#prSave", "aria-pressed")) === "true" && await q.locator("#prSaved option").count() === 2, "儲存後應該出現在已存清單");
+    await q.click("#prClearSteps");
+    await q.selectOption("#prSaved", "0");
+    check((await steps()) === "C D/F♯ Em", "載入已存的進行: " + await steps());
+    await q.click("#prSave");
+    check(await q.locator("#prSaved").count() === 0, "取消儲存後清單應該是空的");
+    // 快捷鍵:字母 = 輸入板根音、- = ♭、Backspace = 刪除最後一個
+    await q.locator("#practiceStage").click({ position: { x: 2, y: 2 } }).catch(() => {});
+    await q.evaluate(() => document.activeElement && document.activeElement.blur());
+    await q.keyboard.press("g"); await q.keyboard.press("-");
+    check(await q.evaluate(() => PRACTICE.pad.letter === 4 && PRACTICE.pad.acc === -1), "快捷鍵 g、- 沒有設定輸入板根音");
+    await q.keyboard.press("Backspace");
+    check((await steps()) === "C D/F♯", "Backspace 沒有刪除最後一個: " + await steps());
+    await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");
     // 吉他:下一個和弦的圖就是指板上會用的指法
     await q.click("#instGuitar"); await q.click("#practiceOpen").catch(() => {});
     const nt = await q.evaluate(() => { const lab = document.querySelectorAll("#practiceStage svg.dg")[1].getAttribute("aria-label");
