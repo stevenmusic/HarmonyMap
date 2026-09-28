@@ -189,8 +189,10 @@ main{
 /* ── 分頁(和弦 / 音階 / 辨識)── */
 .tabs{display:flex;gap:6px;background:var(--surface-inset);border:1px solid var(--line);
       border-radius:var(--radius-pill);padding:4px}
+/* 三個分頁等寬(flex-basis 0),樂器切換固定寬度:按鈕的位置與大小不隨文字長短改變,
+   換語言(和弦/Chord、辨識/Identify、吉他/Guitar)時整排不會移位(使用者要求) */
 .tabs button{
-  flex:1;border:none;background:transparent;color:var(--muted-bright);
+  flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:none;background:transparent;color:var(--muted-bright);
   font-family:inherit;font-size:var(--fs-md);font-weight:500;
   padding:9px 8px;border-radius:var(--radius-pill);cursor:pointer;transition:background .2s,color .2s;
 }
@@ -201,13 +203,14 @@ main{
 .inst-switch{display:flex;gap:2px;flex:none;background:var(--surface-inset);border:1px solid var(--line);
              border-radius:var(--radius-pill);padding:4px}
 .inst-switch button{
+  flex:0 0 auto;width:56px;white-space:nowrap;overflow:hidden;text-align:center;
   border:none;background:transparent;color:var(--muted-bright);font-family:inherit;
-  font-size:var(--fs-sm);padding:0 10px;border-radius:var(--radius-pill);cursor:pointer;
+  font-size:var(--fs-sm);padding:0;border-radius:var(--radius-pill);cursor:pointer;
   transition:background .2s,color .2s;
 }
 .inst-switch button[aria-pressed="true"]{background:var(--teal);color:var(--bg);font-weight:700}
 @media (max-width:380px){
-  .inst-switch button{padding:0 7px} .tabs button{padding:9px 4px}
+  .inst-switch button{width:48px} .tabs button{padding:9px 2px}
 }
 
 /* ── 根音:字母列 + 升降記號 ── */

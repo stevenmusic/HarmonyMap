@@ -689,6 +689,15 @@ async function openPage(browser, opts = {}){
       const m = document.body.innerText.replace(/中/g, "").match(/[\u3400-\u9fff]+/g); PRACTICE.open = false; render(); return m ? m.slice(0, 3).join(",") : ""; });
     if (pr) fails.push("練習卡片: " + pr);
     total++;
+    // 換語言時上方分頁與樂器按鈕不能移位、文字不能被切掉(使用者要求)
+    for (const w of [320, 390, 1280]) {
+      const z = await openPage(browser, { viewport: { width: w, height: 700 } });
+      const pos = () => z.evaluate(() => ["tabChord", "tabScale", "tabFind", "instPiano", "instGuitar"].map(id => { const e = document.getElementById(id), r = e.getBoundingClientRect();
+        return [Math.round(r.left), Math.round(r.width), e.scrollWidth > e.clientWidth + 1 ? "cut" : ""].join("/"); }).join(" "));
+      const a1 = await pos(); await z.click("#langToggle"); const a2 = await pos();
+      total++; if (a1 !== a2 || /cut/.test(a1 + a2)) fails.push("換語言分頁移位或文字被切(" + w + "px): " + a1 + " → " + a2);
+      await z.close();
+    }
     const hp = await q.evaluate(() => { toggleHelp(true); const m = $("helpPop").innerText.match(/[\u3400-\u9fff]+/g); toggleHelp(false); return m ? m.slice(0, 3).join(",") : ""; });
     if (hp) fails.push("使用說明: " + hp);
     report("英文介面無中文", total, fails);
