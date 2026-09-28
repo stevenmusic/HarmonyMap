@@ -3684,8 +3684,11 @@ function voicingSVG(v, rp){
   const { x0, gap, y0, rowH, rows, W, H } = VSVG;
   const xs = s => x0 + s * gap, yOf = f => y0 + (f - base + 0.5) * rowH;
   let g = '<rect x="' + x0 + '" y="' + y0 + '" width="' + gap * 5 + '" height="' + rowH * rows + '" fill="var(--surface-inset)"/>';
-  for (let r = 0; r <= rows; r++) g += '<line x1="' + x0 + '" x2="' + (x0 + gap * 5) + '" y1="' + (y0 + r * rowH) + '" y2="' + (y0 + r * rowH) + '" stroke="var(--muted)" stroke-width="' + (r === 0 && base === 1 ? 4 : 1.2) + '"/>';
+  // 琴格橫線跟最左邊那條弦(6 弦)同色同粗;最上面那條稍粗(開放和弦是上弦枕 3.5、封閉和弦 2.6),
+  // 最後才畫、方頭收邊,才不會被弦蓋住而看起來粗細不一(使用者回報過)
+  for (let r = 1; r <= rows; r++) g += '<line x1="' + x0 + '" x2="' + (x0 + gap * 5) + '" y1="' + (y0 + r * rowH) + '" y2="' + (y0 + r * rowH) + '" stroke="var(--muted-bright)" stroke-width="1.8"/>';
   for (let s = 0; s < 6; s++) g += '<line class="str" data-s="' + s + '" x1="' + xs(s) + '" x2="' + xs(s) + '" y1="' + y0 + '" y2="' + (y0 + rowH * rows) + '" stroke="var(--muted-bright)" stroke-width="' + (1.8 - s * 0.2) + '"/>';
+  g += '<line x1="' + (x0 - 0.9) + '" x2="' + (x0 + gap * 5 + 0.9) + '" y1="' + y0 + '" y2="' + y0 + '" stroke="var(--muted-bright)" stroke-width="' + (base === 1 ? 3.5 : 2.6) + '" stroke-linecap="square"/>';
   // 格數標在 1 弦右邊、避開 1 弦上的音點(半徑 7)
   if (base > 1) g += '<text x="' + (x0 + gap * 5 + 10) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="11" fill="var(--muted)">' + base + 'fr</text>';
   if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
