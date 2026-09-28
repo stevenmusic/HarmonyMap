@@ -253,6 +253,18 @@ async function openPage(browser, opts = {}){
       }
       const has = (rp, id, b, tab) => chordVoicingsFor(rp, chordById(id), b).list.some(v => gtrTabText(v.frets) === tab);
       if (has(0, "maj7", 11, "7 7 5 5 5 7")) fails.push("Cmaj7/B 不該有 7 7 5 5 5 7(使用者回報按不到)");
+      // 同一組音的兩種名稱(C/B = Cmaj7/B、D/C = D7/C、Am/G = Am7/G…)指法清單要完全一樣(使用者回報 C/B 與 Cmaj7/B 不同)
+      const L = (rp, d, b) => chordVoicingsFor(rp, d, b).list.map(v => gtrTabText(v.frets)).join(" / ");
+      let pairs = 0;
+      for (const def of CHORDS) for (let rp = 0; rp < 12; rp++) for (let iv = 1; iv < 12; iv++) {
+        if (chordSetPcs(def).has(iv)) continue;
+        const pair = slashPair(def, iv); if (!pair) continue;
+        const full = pair.full;
+        pairs++;
+        const b = (rp + iv) % 12;
+        if (L(rp, def, b) !== L(rp, full, b)) fails.push("同一組音指法不同: " + def.id + "/" + iv + " vs " + full.id + " (根音 " + rp + ")");
+      }
+      if (pairs < 1000) fails.push("同音異名的配對太少: " + pairs);
       if (has(0, "maj", 5, "× 8 5 5 5 8")) fails.push("C/F 不該有 × 8 5 5 5 8");
       if (!has(0, "69", null, "× 3 2 2 3 3")) fails.push("C6/9 的 × 3 2 2 3 3 是常見按法,不該被刪");
       if (!has(0, "9s5", null, "8 7 8 7 9 ×")) fails.push("C9♯5 的 8 7 8 7 9 × 按得到,不該被刪");

@@ -1921,7 +1921,51 @@ function voicingCost(rPc, def, bassPc, frets){
   const v = evalVoicing(frets, tones, rPc, bassPc, extraPc, true);
   return v ? v.cost : 999;
 }
+/* 同一組音的兩種名稱(C/B = Cmaj7/B = B C E G、D/C = D7/C、Am/G = Am7/G)一定給同一份指法清單。
+   原本 C/B 把 B 當外加的低音(只准在最低的弦、上面不能再出現),Cmaj7/B 的 B 是七音、可以重複,
+   同一組音兩個名稱給出不同指法(使用者回報)。
+   做法:找出「和弦 + 外加低音」與「把低音算進和弦」這一對,兩邊各自算,再合併成同一份:
+   低音只出現一次的寫法(斜線和弦的慣例,Am/G = 3 0 2 2 1 0)排前面,另一邊多出來的接在後面 */
+function chordSetPcs(d){ return new Set(d.t.map(tk => pcOf(tokenSemi(tk)))); }
+function chordBySet(set){
+  return CHORDS.filter(d => { const s = chordSetPcs(d); return s.size === set.size && [...s].every(x => set.has(x)); })
+               .sort((a, b) => (b.lv || 0) - (a.lv || 0) || a.t.length - b.t.length)[0] || null;
+}
+/* 這個斜線和弦的「同音另一種名稱」:plain = 低音是外加音的那個和弦,full = 把低音算進去的那個和弦。
+   只在低音是「加上去的音」(6、7、9、11…)時成立:C/E 的 E 是三音,那是 C 的轉位,不是「C5 加一個 E」;
+   plain 也要有三度(不然會把 Csus4/F 讀成強力和弦加 F) */
+function slashPair(def, iv){
+  if (iv === 0) return null;
+  const own = chordSetPcs(def);
+  let plain, full;
+  if (!own.has(iv)) { plain = def; own.add(iv); full = chordBySet(own); }
+  else { full = def; own.delete(iv); plain = chordBySet(own); }
+  if (!plain || !full) return null;
+  const tok = full.t.find(tk => pcOf(tokenSemi(tk)) === iv);
+  const ps = chordSetPcs(plain);
+  if (/^[♭♯]?[35]$/.test(tok) || !(ps.has(3) || ps.has(4))) return null;
+  return { plain, full };
+}
 function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
+  if (bassPc == null) return voicingsCore(rPc, def, null, noShapes);
+  const key = "pair|" + rPc + "|" + def.id + "|" + bassPc + (noShapes ? "|raw" : "");
+  if (VOICING_CACHE.has(key)) return VOICING_CACHE.get(key);
+  const pair = slashPair(def, pcOf(bassPc - rPc));
+  const plain = pair && pair.plain, full = pair && pair.full;
+  let res;
+  if (!pair) res = voicingsCore(rPc, def, bassPc, noShapes);
+  else {
+    // 各自的最佳指法(`best`,不一定是清單第一個)先排前面再合併
+    const bestFirst = r => r.best > 0 ? [r.list[r.best]].concat(r.list.filter((_, i) => i !== r.best)) : r.list;
+    const a = bestFirst(voicingsCore(rPc, plain, bassPc, noShapes)), b = bestFirst(voicingsCore(rPc, full, bassPc, noShapes));
+    const seen = new Set(), list = [];
+    for (const v of a.concat(b)) { const k = v.frets.join(","); if (!seen.has(k)) { seen.add(k); list.push(v); } }
+    res = { list: list.slice(0, Math.max(a.length, b.length)), best: 0 };
+  }
+  VOICING_CACHE.set(key, res);
+  return res;
+}
+function voicingsCore(rPc, def, bassPc = null, noShapes = false){
   const key = rPc + "|" + def.id + "|" + bassPc + (noShapes ? "|raw" : "");
   if (VOICING_CACHE.has(key)) return VOICING_CACHE.get(key);
   const { byPc, tones } = voicingTones(rPc, def);
