@@ -96,6 +96,23 @@ async function openPage(browser, opts = {}){
           if (miss.length) fails.push(def.id + " → " + sid + ": 音階少了和弦音 " + miss.join(" "));
         }
       }
+      // 說明裡「X 的第 N 級」要跟實際的音對得上(大洛克里安曾經寫成「和聲大調的第五級」,其實是拿坡里大調的第五級)
+      {
+        const PAR = { "和聲小調": "harmMinor", "旋律小調": "melMinor", "和聲大調": "harmMajor", "雙和聲大調": "dblHarm", "拿坡里大調": "neapMajor", "拿坡里小調": "neapMinor" };
+        const NUM = { "一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7 };
+        const pcsOf = t => t.map(x => pcOf(tokenSemi(x)));
+        for (const item of SCALES.concat(CHORDS)) {
+          const re = /(雙和聲大調|和聲小調|旋律小調|和聲大調|拿坡里大調|拿坡里小調)(?:的)?第([一二三四五六七])級/g;
+          let m;
+          while ((m = re.exec(item.d))) {
+            total++;
+            const parP = pcsOf(SCALES.find(x => x.id === PAR[m[1]]).t), r = parP[NUM[m[2]] - 1];
+            const mode = new Set(parP.map(x => pcOf(x - r))), mine = new Set(pcsOf(item.t));
+            const ok = SCALES.includes(item) ? mine.size === mode.size && [...mine].every(x => mode.has(x)) : [...mine].every(x => mode.has(x));
+            if (!ok) fails.push(item.id + " 的說明寫「" + m[0] + "」,但音對不上");
+          }
+        }
+      }
       // 順階和弦表:名稱的拼法跟表上的組成音不同(等音)就一定要標 ≅;點下去要能跳(根音不能是 null)
       for (const sc of SCALES.filter(x => x.t.length === 7)) for (let L = 0; L < 7; L++) for (const a of [-1, 0, 1]) {
         STATE.letter = L; STATE.acc = a;
