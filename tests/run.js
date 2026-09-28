@@ -231,6 +231,36 @@ async function openPage(browser, opts = {}){
     report("指法只有三種", r.total, r.fails);
   }
 
+  /* ── 3c. 每一個列出來的指法都要按得到(80 種 × 12 根音 × 原位與 11 種低音,清單裡的每一個,不只第一個) ── */
+  {
+    const r = await p.evaluate(() => {
+      const fails = []; let total = 0;
+      for (const def of CHORDS) for (let rp = 0; rp < 12; rp++) for (let iv = 0; iv < 12; iv++) {
+        const bpc = iv ? (rp + iv) % 12 : null;
+        for (const v of chordVoicingsFor(rp, def, bpc).list) {
+          total++;
+          const fr = v.frets, tag = def.id + " " + rp + (iv ? "/" + bpc : "") + " " + gtrTabText(fr);
+          const f = fr.filter(x => x > 0);
+          if (f.length && Math.max(...f) - Math.min(...f) > 3) fails.push(tag + ": 撐超過 3 格");
+          // 五根手指:只有拇指勾 6 弦才可能
+          if (gtrFingersNeeded(fr) > 4 && fr[0] <= 0) fails.push(tag + ": 要五根手指");
+          // 食指橫按中間幾條弦,低音側兩根手指 + 高音側一根(7 7 5 5 5 7)
+          if (v.barre) {
+            const lo = fr.map((x, s) => s).filter(s => s < v.barreLo && fr[s] > v.minF), hi = fr.map((x, s) => s).filter(s => s > v.barreHi && fr[s] > v.minF);
+            if (lo.length >= 2 && hi.length) fails.push(tag + ": 手指要跨過橫按");
+          }
+        }
+      }
+      const has = (rp, id, b, tab) => chordVoicingsFor(rp, chordById(id), b).list.some(v => gtrTabText(v.frets) === tab);
+      if (has(0, "maj7", 11, "7 7 5 5 5 7")) fails.push("Cmaj7/B 不該有 7 7 5 5 5 7(使用者回報按不到)");
+      if (has(0, "maj", 5, "× 8 5 5 5 8")) fails.push("C/F 不該有 × 8 5 5 5 8");
+      if (!has(0, "69", null, "× 3 2 2 3 3")) fails.push("C6/9 的 × 3 2 2 3 3 是常見按法,不該被刪");
+      if (!has(0, "9s5", null, "8 7 8 7 9 ×")) fails.push("C9♯5 的 8 7 8 7 9 × 按得到,不該被刪");
+      return { total: total + 4, fails };
+    });
+    report("指法都按得到", r.total, r.fails);
+  }
+
   /* ── 4. 搜尋框的和弦名稱解析 ── */
   {
     const r = await p.evaluate(() => {

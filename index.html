@@ -1756,6 +1756,20 @@ function gtrMarkers(frets){
 function gtrTabText(frets){ return frets.map(f => f < 0 ? "×" : String(f)).join(" "); }
 
 /* 評估一組指法(frets[s]:-1 = 不彈、0 = 空弦、n = 第 n 格),不能彈就回傳 null */
+/* 實際最少要幾根手指:食指可以橫按最低那格(中間不能有空弦或不彈的弦),其他手指可以一指壓相鄰、同一格的弦 */
+function gtrFingersNeeded(fr){
+  const fretted = [];
+  fr.forEach((f, s) => { if (f > 0) fretted.push([s, f]); });
+  if (!fretted.length) return 0;
+  const minF = Math.min(...fretted.map(x => x[1]));
+  const atMin = fretted.filter(x => x[1] === minF).map(x => x[0]);
+  let barre = atMin.length >= 2;
+  for (let s = atMin[0]; barre && s <= atMin[atMin.length - 1]; s++) if (fr[s] < minF) barre = false;
+  const rest = fretted.filter(([, f]) => !(barre && f === minF));
+  let runs = 0;
+  rest.forEach(([s, f], i) => { if (!(i && rest[i - 1][0] === s - 1 && rest[i - 1][1] === f)) runs++; });
+  return runs + (barre ? 1 : 0);
+}
 function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
   const played = [];
   for (let s = 0; s < 6; s++) if (frets[s] >= 0) played.push(s);
@@ -1785,7 +1799,20 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
       for (let s = atMin[0]; s <= atMin[atMin.length - 1]; s++) if (frets[s] < minF) ok = false;
       if (ok) { fingers = fretted.length - atMin.length + 1; barre = true; barreLo = atMin[0]; barreHi = atMin[atMin.length - 1]; }
     }
-    if (fingers > 4 && !trusted) return null; // 資料庫的指法是實際有人這樣彈的,不套用手指數的估算
+    /* 食指只橫按中間幾條弦、其他手指卻同時落在橫按的兩側(低音那側和高音那側都有比橫按高的格):
+       7 7 5 5 5 7(Cmaj7/B)要無名指壓 5 弦、小指跨過整個橫按去壓 1 弦,手指會交叉,沒有人按得到(使用者回報)。
+       兩側都有手指時:低音側兩根以上,或兩側各有一根落在同一格、比橫按高兩格以上、中間隔四條弦以上
+       (× 8 5 5 5 8:無名指 5 弦、小指 1 弦,撐三格又橫跨整個橫按),手都張不開。
+       還按得到的例子:C6/9 的 × 3 2 2 3 3、8 7 7 7 8 8(只高一格)、C9♯5 的 8 7 8 7 9 ×(兩側不同格) */
+    if (barre) {
+      const lowSide = fretted.filter(s => s < barreLo && frets[s] > minF), highSide = fretted.filter(s => s > barreHi && frets[s] > minF);
+      if (lowSide.length && highSide.length &&
+          (lowSide.length >= 2 || lowSide.some(a => frets[a] >= minF + 2 && highSide.some(b => frets[a] === frets[b] && b - a >= 4)))) return null;
+    }
+    // 資料庫的指法是實際有人這樣彈的,不套用這個粗估(它不算無名指一次壓相鄰同格的弦),
+    // 但還是要按得到:照實際手指算(食指橫按、一指壓相鄰同格)超過 4 根,又沒辦法用拇指勾 6 弦的,一樣不收
+    // (F/E♭ 的 × 6 3 5 6 5 要五根手指,是全部 35934 個指法裡唯一的一個)
+    if (fingers > 4 && (!trusted || (frets[0] <= 0 && gtrFingersNeeded(frets) > 4))) return null;
     cost += minF * 1.2 + (maxF - minF) * 1.5 + fingers + (barre ? 2 : 0);
     if (maxF - minF === GTR_MAX_SPAN) cost += 2; // 撐滿四格很吃力,同樣彈得到的話選不用撐的
     // 四根手指全用上、最低格又落在不相鄰的幾條弦、中間夾著空弦所以不能橫按
