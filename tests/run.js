@@ -823,6 +823,15 @@ async function openPage(browser, opts = {}){
       await q.evaluate(() => $("tabFind").click());   // 不用 q.click:它會先把按鈕捲進畫面
       const y1 = await q.evaluate(() => Math.round($("tabFind").getBoundingClientRect().top));
       total++; if (Math.abs(y1 - y0) > 1) fails.push("換分頁時分頁鈕移位: " + y0 + " → " + y1);
+      // 320px:順階和弦表不能要橫滑才看得到組成音;摘要列放不下時先縮副標,音名至少看得到大半
+      const nar = await q.evaluate(() => {
+        STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; STATE.acc = 0; render();
+        const tb = document.querySelector("table.dia"), tn = $("kbSummary").querySelector(".tones");
+        const r = { over: tb.scrollWidth - tb.parentElement.clientWidth, tones: tn.getBoundingClientRect().width / tn.scrollWidth };
+        STATE.tab = "chord"; render(); return r;
+      });
+      total++; if (nar.over > 1) fails.push("320px 順階和弦表超出 " + nar.over + "px");
+      total++; if (nar.tones < 0.6) fails.push("320px 摘要列音名只剩 " + Math.round(nar.tones * 100) + "%(副標應該先縮)");
       // 背景執行緒算的指法要跟主執行緒一模一樣(兩個根音 × 全部和弦)
       const wk = await q.evaluate(async () => {
         if (!voicingWorker) return "Worker 沒有建起來";

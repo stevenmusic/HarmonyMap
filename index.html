@@ -557,12 +557,14 @@ html[data-lang="en"] .chip i{white-space:normal}
   font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:700;
   color:var(--gold-bright);flex:none;
 }
-.kb-summary .zh{font-size:var(--fs-xs);color:var(--muted);flex:none}
+/* 放不下時先縮副標(英文原名/中文名稱),組成音最後才縮:320px 上原本「C 大調(愛奧尼安) Ionian / Major」
+   把音名擠到只剩一個「C」。flex-shrink 100 : 1,副標幾乎全部讓完,音名才開始讓 */
+.kb-summary .zh{font-size:var(--fs-xs);color:var(--muted);flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .kb-summary .tn{cursor:pointer;border-radius:4px;padding:2px 1px}
 .kb-summary .tn:hover{color:var(--gold-bright)}
 .kb-summary .tones{
   font-size:var(--fs-sm);color:var(--ivory);letter-spacing:.06em;
-  flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;
+  flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:right;
 }
 /* 鍵盤設定的浮動面板。蓋在琴鍵上方(.kb-wrap 是 overflow:hidden,所以尺寸要放得進去),
    關掉之後完全不佔版面高度——原本這三個選單常駐一整排,吃掉釘住區約 50px */
@@ -645,7 +647,9 @@ select.mini:focus{outline:none;border-color:var(--gold)}
 
 /* 順階和弦表 */
 .table-scroll{overflow-x:auto}
-table.dia{width:100%;border-collapse:collapse;font-size:var(--fs-sm);min-width:420px}
+/* 不設最小寬度:手機上四欄本來就放得下(約 280px),設 420px 會讓「組成音」那欄被切掉、要橫滑才看得到;
+   真的放不下(三重升降的理論調)才由外層 .table-scroll 橫向捲動 */
+table.dia{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
 table.dia th,table.dia td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
 table.dia sup.enh{color:var(--gold);font-size:.8em;margin-left:2px}
 table.dia th{font-size:var(--fs-2xs);letter-spacing:.08em;color:var(--muted);font-weight:700;text-transform:uppercase}
