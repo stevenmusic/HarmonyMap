@@ -211,6 +211,8 @@ main{
   transition:background .15s,color .15s,border-color .15s;
 }
 .key-btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.key-btn.bass{border-color:var(--teal);color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal)}
+.key-btn.bass[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--bg)}
 .root-line{display:flex;gap:6px}
 .root-line .letters{flex:7 1 0;flex-wrap:nowrap;min-width:0}
 .root-line .letters .key-btn{min-width:0}
@@ -2803,14 +2805,16 @@ function rootLetter(i){
   const sl = rootSlashState();
   // 「/」之後的第一個字母是低音;選好之後再按字母就是換根音(離開斜線模式)
   if (sl && sl.letter < 0) { STATE.slash = Object.assign({}, sl, { letter: i, acc: 0 }); rootSetBass(); }
-  else { STATE.slash = null; STATE.letter = i; STATE.acc = 0; render(); }
+  // 換根音 = 換一個和弦,低音回到原位。原本低音「跟著根音走」(C/E 按 G 變 G/B),
+  // 跟用 / 自己打低音互相矛盾:想從 C/E 換到 G 卻得到 G/B(使用者回報切換變不方便)
+  else { STATE.slash = null; STATE.letter = i; STATE.acc = 0; STATE.bassIv = null; render(); }
 }
 function rootAcc(v){
   const sl = rootSlashState();
   if (sl) {
     if (sl.letter < 0) return;
     STATE.slash = Object.assign({}, sl, { acc: sl.acc === v ? 0 : v }); rootSetBass();
-  } else { STATE.acc = STATE.acc === v ? 0 : v; render(); }
+  } else { STATE.acc = STATE.acc === v ? 0 : v; STATE.bassIv = null; render(); }
 }
 function rootSlash(){
   const sl = rootSlashState();
@@ -2823,14 +2827,17 @@ function rootSetBass(){
   setBass(iv === 0 ? null : iv);   // 低音 = 根音就是原位
 }
 function buildRootPicker(){
-  const sl = rootSlashState();
+  const sl = rootSlashState(), bi = bassInfo();
+  const bassLetter = bi ? LETTERS.indexOf(bi.name[0]) : -1;
   const lr = $("letterRow");
   lr.innerHTML = "";
   LETTERS.forEach((L, i) => {
     const b = document.createElement("button");
     b.className = "key-btn";
     b.textContent = L;
-    b.setAttribute("aria-pressed", String(sl ? sl.letter === i : i === STATE.letter));
+    // 根音一直是金色;低音(斜線和弦)另外用青色框標出來,不搶根音的位置
+    b.setAttribute("aria-pressed", String(i === STATE.letter));
+    if (bi && bassLetter === i) b.classList.add("bass");
     b.onclick = () => rootLetter(i);   // 按字母 = 還原成本位音,不用另外按 ♮
     lr.appendChild(b);
   });
@@ -2845,7 +2852,10 @@ function buildRootPicker(){
     b.textContent = sym;
     b.setAttribute("aria-label", t(key));
     b.title = t(key);
-    b.setAttribute("aria-pressed", String(v === (sl ? sl.acc : STATE.acc)));
+    // 剛用 / 選好低音時,♭ ♯ 改的是低音,亮的也是低音的記號(青色)
+    const bassMode = sl && sl.letter >= 0;
+    b.setAttribute("aria-pressed", String(v === (bassMode ? sl.acc : STATE.acc)));
+    if (bassMode) b.classList.add("bass");
     b.onclick = () => rootAcc(v);
     ar.appendChild(b);
   });
@@ -4220,9 +4230,10 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
 });
 
 $("practiceOpen").onclick = () => { PRACTICE.open = true; if (PRACTICE.steps.length) practiceApply(); render(); };
-$("tabChord").onclick = () => { STATE.tab = "chord"; STATE.search = ""; STATE.style = ""; STATE.level = 0; STATE.size = 0; $("typeSearch").value = ""; render(); };
-$("tabScale").onclick = () => { practiceStop(); STATE.tab = "scale"; STATE.search = ""; $("typeSearch").value = ""; render(); };
-$("tabFind").onclick  = () => { practiceStop(); STATE.tab = "find"; render(); };
+// 換分頁、換樂器都取消還沒用掉的「/」,不然回來後下一個字母會悄悄變成低音
+$("tabChord").onclick = () => { STATE.slash = null; STATE.tab = "chord"; STATE.search = ""; STATE.style = ""; STATE.level = 0; STATE.size = 0; $("typeSearch").value = ""; render(); };
+$("tabScale").onclick = () => { practiceStop(); STATE.slash = null; STATE.tab = "scale"; STATE.search = ""; $("typeSearch").value = ""; render(); };
+$("tabFind").onclick  = () => { practiceStop(); STATE.slash = null; STATE.tab = "find"; render(); };
 // 搜尋只重畫清單與分類列,不跑整個 render()——每打一個字就重算音域、重畫鍵盤太浪費
 $("typeSearch").addEventListener("input", e => { STATE.search = e.target.value.trim(); buildGroupTabs(); buildTypeList(); });
 $("typeSearch").addEventListener("keydown", e => {
@@ -4257,6 +4268,7 @@ function syncFindFromFrets(){
 function setInstrument(inst){
   if (STATE.inst === inst) return;
   STATE.inst = inst;
+  STATE.slash = null;
   try { localStorage.setItem(INST_KEY, inst); } catch (e) {}
   // 反查:吉他的選音是「每條弦按哪一格」,鋼琴的選音換不回指板位置,換到吉他時清空重來;
   // 從吉他換回鋼琴則保留那幾個音(鋼琴畫得出任何一組音)
@@ -4323,6 +4335,7 @@ document.addEventListener("keydown", ev => {
   } else if (ev.key === "ArrowRight" || ev.key === "ArrowLeft") {
     ev.preventDefault();
     STATE.letter = (STATE.letter + (ev.key === "ArrowRight" ? 1 : 6)) % 7;
+    STATE.bassIv = null; STATE.slash = null;
     render();
   }
 });

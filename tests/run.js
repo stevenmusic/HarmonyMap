@@ -290,14 +290,20 @@ async function openPage(browser, opts = {}){
     await q.locator("#accRow .key-btn").nth(0).click();
     total++; if ((await title()) !== "C/E♭") fails.push("根音卡片 / + E + ♭: " + await title());
     await L("G").click();
-    total++; if ((await title()) !== "G/B♭" || await q.evaluate(() => !!rootSlashState())) fails.push("選好低音後按字母應該換根音: " + await title());
+    // 換根音 = 換和弦,低音回到原位(不是跟著走變 G/B♭——那樣從 C/E 換到 G 會得到 G/B,使用者回報不方便)
+    total++; if ((await title()) !== "G" || await q.evaluate(() => !!rootSlashState())) fails.push("選好低音後按字母應該換根音、回到原位: " + await title());
     await q.click("#rootSlash"); await L("G").click();
     total++; if ((await title()) !== "G") fails.push("低音 = 根音應該回到原位: " + await title());
     await q.click("#rootSlash"); await q.locator("#quickGrid .quick-btn", { hasText: /^m7$/ }).click(); await L("A").click();
     total++; if ((await title()) !== "Am7") fails.push("換和弦後 / 應該失效: " + await title());
+    // 根音一直是金色,低音用青色框另外標
+    await q.click("#rootSlash"); await L("E").click();
+    total++; if (!(await q.evaluate(() => { const bs = [...document.querySelectorAll("#letterRow .key-btn")]; return bs.find(b => b.textContent === "A").getAttribute("aria-pressed") === "true" && bs.find(b => b.textContent === "E").classList.contains("bass"); }))) fails.push("根音要維持金色、低音另外標");
+    await q.click("#rootSlash");
     await q.click("#tabScale");
     total++; if (await q.locator("#accRow .key-btn").count() !== 2) fails.push("音階分頁不該有 /");
     await q.click("#tabChord");
+    total++; if (await q.evaluate(() => !!rootSlashState())) fails.push("換分頁回來 / 應該取消");
     await q.evaluate(() => { STATE.letter = 0; STATE.acc = 0; STATE.chordId = "maj7"; STATE.bassIv = null; render(); }); await take();
 
     await q.click("#instGuitar");
