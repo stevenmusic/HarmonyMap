@@ -217,6 +217,8 @@ main{
 /* 升降記號跟字母同一列,中間多留一點空隔開 */
 .acc-row{display:flex;gap:6px;flex:3 1 0;margin-left:6px;min-width:0}
 .acc-row .key-btn{flex:1;min-width:0;height:44px;font-size:var(--fs-lg)}
+/* 根音卡片只有 ♭ ♯ 兩顆(沒有 ♮),練習輸入板是 ♭ ♯ / 三顆:每顆一樣寬,字母才不會被擠窄 */
+#rootCard .acc-row{flex:2 1 0}
 .quick-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px;
             padding-top:10px;border-top:1px solid var(--line)}
 .quick-grid[hidden]{display:none}
@@ -244,7 +246,7 @@ main{
 @media (max-width:380px){
   .root-line{flex-wrap:wrap;gap:5px}
   .root-line .letters{flex:1 1 100%}
-  .acc-row{flex:1 1 100%;margin-left:0}
+  .acc-row,#rootCard .acc-row{flex:1 1 100%;margin-left:0}
   .root-row.letters .key-btn{height:36px}
   .acc-row .key-btn{height:30px;font-size:var(--fs-md)}
   .quick-btn{font-size:11px;letter-spacing:-.02em;padding:0}
@@ -850,7 +852,7 @@ const I18N = {
     spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
     searchPlaceholder: "搜尋(如:C/B)",
     filterToggleText: "篩選",
-    accFlat: "♭ 降", accNatural: "♮ 原", accSharp: "♯ 升",
+    accFlat: "♭ 降(再按一次取消)", accSharp: "♯ 升(再按一次取消)",
     filterStyle: "風格", filterLevel: "程度", filterSize: "編制", filterEnharmonic: "同音",
     hideDupBadge: "隱藏重複",
     hideDupTooltip: "阿拉伯與印度有不少音階與西方音階是同一組音高,打開這個開關只留代表條目(搜尋時仍然找得到全部)",
@@ -898,7 +900,7 @@ const I18N = {
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
-    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", practiceSlash: "轉位/斜線和弦:按 / 再按低音(例如 C maj / E = C/E)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
     practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
@@ -932,7 +934,7 @@ const I18N = {
     spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
     searchPlaceholder: "Search (e.g. C/B)",
     filterToggleText: "Filter",
-    accFlat: "♭ Flat", accNatural: "♮ Natural", accSharp: "♯ Sharp",
+    accFlat: "♭ Flat (tap again to cancel)", accSharp: "♯ Sharp (tap again to cancel)",
     filterStyle: "Style", filterLevel: "Level", filterSize: "Size", filterEnharmonic: "Enh.",
     hideDupBadge: "Hiding dups",
     hideDupTooltip: "Many Arabic and Indian scales share pitches with Western scales. Turning this on keeps only one representative entry (search still finds all of them).",
@@ -980,7 +982,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", practiceSlash: "Inversion / slash chord: tap / then the bass note (C maj / E = C/E)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
@@ -2791,6 +2793,7 @@ function keyLabelText(name, tok){
 /* ══════════════════════════════════════════════════════════════
    9. 介面渲染
    ══════════════════════════════════════════════════════════════ */
+const ACC_BTNS = [[-1, "accFlat", "♭"], [1, "accSharp", "♯"]];
 function buildRootPicker(){
   const lr = $("letterRow");
   lr.innerHTML = "";
@@ -2799,20 +2802,21 @@ function buildRootPicker(){
     b.className = "key-btn";
     b.textContent = L;
     b.setAttribute("aria-pressed", String(i === STATE.letter));
-    b.onclick = () => { STATE.letter = i; render(); };
+    b.onclick = () => { STATE.letter = i; STATE.acc = 0; render(); };   // 按字母 = 還原成本位音,不用另外按 ♮
     lr.appendChild(b);
   });
   const ar = $("accRow");
   ar.innerHTML = "";
-  // 跟字母排在同一列,只放記號本身;「降/原/升」的字放進 aria-label 與 title
-  [[-1, "accFlat", "♭"], [0, "accNatural", "♮"], [1, "accSharp", "♯"]].forEach(([v, key, sym]) => {
+  // 跟字母排在同一列,只放記號本身;「降/升」的字放進 aria-label 與 title。
+  // 沒有 ♮:按字母就是本位音,♭ ♯ 是開關(再按一次取消),還原記號只是多一顆要按的鈕
+  ACC_BTNS.forEach(([v, key, sym]) => {
     const b = document.createElement("button");
     b.className = "key-btn acc";
     b.textContent = sym;
     b.setAttribute("aria-label", t(key));
     b.title = t(key);
     b.setAttribute("aria-pressed", String(v === STATE.acc));
-    b.onclick = () => { STATE.acc = v; render(); };
+    b.onclick = () => { STATE.acc = STATE.acc === v ? 0 : v; render(); };
     ar.appendChild(b);
   });
 }
@@ -3594,7 +3598,7 @@ function render(){
    節拍用 Web Audio 的時鐘排程(提前 0.1 秒排好點擊聲),畫面在那一刻用 setTimeout 跟上
    ══════════════════════════════════════════════════════════════ */
 const PRACTICE = { pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
-                   steps: [], step: 0, beat: -1, running: false, timer: 0, nextTime: 0, count: 0, flash: -1 };
+                   steps: [], step: 0, beat: -1, slash: null, running: false, timer: 0, nextTime: 0, count: 0, flash: -1 };
 function practiceParseCustom(text){
   const bad = [], steps = [];
   for (const w of text.split(/[\s,|]+/).filter(Boolean)) {
@@ -3618,6 +3622,54 @@ function practiceTranspose(d){
     const [letter, acc] = PC_SPELL[pcOf(LETTER_PC[st.letter] + st.acc + d)];
     return Object.assign({}, st, { letter, acc });
   });
+}
+/* 輸入板:根音一下 + 和弦一下就加進去;要轉位(斜線和弦)再按「/」+ 低音字母(+ ♭ ♯)。
+   按字母一律是本位音,♭ ♯ 是開關,所以不需要 ♮ */
+function padChord(id){
+  const P = PRACTICE;
+  P.slash = null;
+  const st = { letter: P.pad.letter, acc: P.pad.acc, id, bass: null };
+  P.steps.push(st);
+  practiceEdited(P.steps.length - 1);
+  withStep(st, () => playCurrent());
+}
+function padLetter(i){
+  const P = PRACTICE;
+  // 「/」之後的第一個字母是低音(接著的 ♭ ♯ 也還是改低音);再按字母就是下一個和弦的根音,
+  // 不然打完 C/E 接著按 G 會把它改成 C/G
+  if (P.slash && P.slash.letter < 0) { P.slash = { letter: i, acc: 0 }; padSetBass(); }
+  else { P.slash = null; P.pad = { letter: i, acc: 0 }; renderPractice(); }
+}
+function padAcc(v){
+  const P = PRACTICE;
+  if (P.slash) {
+    if (P.slash.letter < 0) return;
+    P.slash.acc = P.slash.acc === v ? 0 : v; padSetBass();
+  } else { P.pad.acc = P.pad.acc === v ? 0 : v; renderPractice(); }
+}
+function padSlash(){
+  const P = PRACTICE;
+  if (!P.steps.length) return;
+  // 還沒選低音時再按一次 = 取消;已經選過低音再按 = 重選低音
+  P.slash = P.slash && P.slash.letter < 0 ? null : { letter: -1, acc: 0 };
+  renderPractice();
+}
+/* 低音存成「離根音幾個半音」(跟 STATE.bassIv 同一套),拼法由和弦自己的級數決定;低音 = 根音就是原位 */
+function padSetBass(){
+  const P = PRACTICE, i = P.steps.length - 1, st = P.steps[i];
+  const iv = pcOf(LETTER_PC[P.slash.letter] + P.slash.acc - LETTER_PC[st.letter] - st.acc);
+  P.steps[i] = Object.assign({}, st, { bass: iv === 0 ? null : iv });
+  practiceEdited(i);
+  withStep(P.steps[i], () => playCurrent());
+}
+function practiceEdited(flash){
+  const P = PRACTICE;
+  P.flash = flash;
+  P.bad = [];
+  P.custom = P.steps.map(stepName).join(" ");
+  if (!P.steps.length) { practiceStop(); P.step = 0; P.slash = null; }
+  else { if (P.step >= P.steps.length) P.step = 0; practiceApply(); }
+  render();
 }
 const stepName = st => {
   const saved = { letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, bassIv: STATE.bassIv, bassFor: STATE.bassFor };
@@ -3901,43 +3953,37 @@ function renderPractice(){
   });
   P.flash = -1;
   // 輸入板:按根音(與升降)再按和弦種類,就把這個和弦加到進行最後面、試聽一次,新加的那個閃一下
+  // 按「/」之後,字母與升降改成設定最後一個和弦的低音;亮起來的是低音
+  const sl = P.slash;
   LETTERS.forEach((L, i) => {
     const b = document.createElement("button");
     b.className = "key-btn"; b.textContent = L;
-    b.setAttribute("aria-pressed", String(P.pad.letter === i));
-    b.onclick = () => { P.pad.letter = i; renderPractice(); };
+    b.setAttribute("aria-pressed", String(sl ? sl.letter === i : P.pad.letter === i));
+    b.onclick = () => padLetter(i);
     $("prLetters").appendChild(b);
   });
-  [[-1, "accFlat", "♭"], [0, "accNatural", "♮"], [1, "accSharp", "♯"]].forEach(([v, key, sym]) => {
+  ACC_BTNS.forEach(([v, key, sym]) => {
     const b = document.createElement("button");
     b.className = "key-btn acc"; b.textContent = sym;
     b.setAttribute("aria-label", t(key)); b.title = t(key);
-    b.setAttribute("aria-pressed", String(P.pad.acc === v));
-    b.onclick = () => { P.pad.acc = v; renderPractice(); };
+    b.setAttribute("aria-pressed", String((sl ? sl.acc : P.pad.acc) === v));
+    b.onclick = () => padAcc(v);
     $("prAcc").appendChild(b);
   });
+  const sb = document.createElement("button");
+  sb.className = "key-btn acc slash"; sb.id = "prSlash"; sb.textContent = "/";
+  sb.setAttribute("aria-label", t("practiceSlash")); sb.title = t("practiceSlash");
+  sb.setAttribute("aria-pressed", String(!!sl));
+  sb.disabled = !P.steps.length;
+  sb.onclick = padSlash;
+  $("prAcc").appendChild(sb);
   for (const [id, label] of QUICK_CHORDS) {
     const b = document.createElement("button");
     b.className = "quick-btn"; b.textContent = label;
-    b.onclick = () => {
-      const st = { letter: P.pad.letter, acc: P.pad.acc, id, bass: null };
-      P.steps.push(st);
-      P.flash = P.steps.length - 1;
-      P.bad = [];
-      P.custom = P.steps.map(stepName).join(" ");
-      if (P.steps.length === 1) { P.step = 0; practiceApply(); }
-      render();
-      withStep(st, () => playCurrent());
-    };
+    b.onclick = () => padChord(id);
     $("prQuick").appendChild(b);
   }
-  const afterEdit = () => {
-    P.bad = [];
-    P.custom = P.steps.map(stepName).join(" ");
-    if (!P.steps.length) { practiceStop(); P.step = 0; }
-    else { if (P.step >= P.steps.length) P.step = 0; practiceApply(); }
-    render();
-  };
+  const afterEdit = () => { P.slash = null; practiceEdited(-1); };
   $("prUndo").onclick = () => { P.steps.pop(); afterEdit(); };
   $("prDown").onclick = () => { practiceTranspose(-1); afterEdit(); withStep(P.steps[P.step], () => playCurrent()); };
   $("prUp").onclick = () => { practiceTranspose(1); afterEdit(); withStep(P.steps[P.step], () => playCurrent()); };
@@ -3962,7 +4008,7 @@ function renderPractice(){
   const applyCustom = () => {
     const text = $("prCustom").value.trim();
     const r = practiceParseCustom(text);
-    P.custom = text; P.bad = r.bad;
+    P.custom = text; P.bad = r.bad; P.slash = null;
     if (r.steps.length) { P.steps = r.steps; P.step = 0; practiceApply(); }
     render();
   };
@@ -4192,22 +4238,26 @@ document.addEventListener("keydown", ev => {
   if (ev.ctrlKey || ev.metaKey || ev.altKey) return;
   const P = PRACTICE;
   /* 字母 C~G、A、B = 根音(練習中是輸入板的根音),- = ♭、= = ♮、+ 或 # = ♯。
-     練習中另外:空白鍵 = 開始/停止,Backspace = 刪除最後一個。不用 b 當降記號,會跟 B 撞 */
+     練習中另外:空白鍵 = 開始/停止,Backspace = 刪除最後一個,/ = 斜線低音。不用 b 當降記號,會跟 B 撞 */
   if (P.open && STATE.tab === "chord") {
     if (ev.key === " ") { ev.preventDefault(); if (P.running) { practiceStop(); render(); } else practiceStart(); return; }
     if (ev.key === "Backspace" && P.steps.length) { ev.preventDefault(); $("prUndo").click(); return; }
+    if (ev.key === "/") { ev.preventDefault(); padSlash(); return; }
   }
   const li = "CDEFGAB".indexOf(ev.key.toUpperCase());
   if (li >= 0 && ev.key.length === 1 && STATE.tab !== "find") {
     ev.preventDefault();
-    if (P.open && STATE.tab === "chord") { P.pad = { letter: li, acc: 0 }; renderPractice(); }
+    if (P.open && STATE.tab === "chord") padLetter(li);
     else { STATE.letter = li; STATE.acc = 0; render(); }
     return;
   }
   const acc = { "-": -1, "=": 0, "+": 1, "#": 1 }[ev.key];
   if (acc !== undefined && STATE.tab !== "find") {
     ev.preventDefault();
-    if (P.open && STATE.tab === "chord") { P.pad.acc = acc; renderPractice(); }
+    if (P.open && STATE.tab === "chord") {
+      const cur = P.slash ? P.slash.acc : P.pad.acc;
+      if (acc !== cur) padAcc(acc || cur);   // = 是還原:對目前的記號再按一次就是取消
+    }
     else { STATE.acc = acc; render(); }
     return;
   }
