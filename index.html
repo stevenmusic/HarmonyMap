@@ -489,6 +489,12 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-edit .pr-steps{flex:1;min-width:0;margin:0}
 .gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;padding:8px 8px 0}
 .gtr-dgs[hidden]{display:none}
+.pos-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px 10px 0}
+.pos-row[hidden]{display:none}
+.pos-row .pos-lab{font-size:var(--fs-2xs);color:var(--muted);margin-right:2px}
+.pos-row .filter-chip{min-width:30px;padding:3px 8px;justify-content:center}
+.pos-row small{font-size:.7em;margin-left:2px;color:var(--gold)}
+.pos-row .filter-chip[aria-pressed="true"] small{color:inherit}
 .gtr-dgs .gd{border:1px solid var(--line);border-radius:var(--radius-md);padding:4px 3px 2px;cursor:pointer;
              touch-action:none;background:var(--surface-inset);min-width:0}
 .gtr-dgs .gd.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
@@ -772,6 +778,8 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 
     <div class="kb-wrap">
       <canvas id="keyboardCanvas"></canvas>
+      <!-- 吉他音階的把位選擇(全部 / 1~7):一次看一個把位,不是整個指板混在一起 -->
+      <div class="pos-row" id="scalePosRow" hidden></div>
       <span id="audioStatus" class="audio-status" hidden></span>
       <!-- 吉他和弦分頁:這個和弦的每一種指法排在一起,取代長指板(renderGuitarGallery 填) -->
       <div class="gtr-dgs" id="gtrDiagrams" hidden></div>
@@ -961,7 +969,7 @@ const I18N = {
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
-    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
     practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
@@ -1051,7 +1059,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
@@ -2257,6 +2265,54 @@ function voicingMidis(v){
 function gtrFindFrets(){ return STATE.findFrets.map(f => f == null ? -1 : f); }
 
 /* 交給 drawFretboard 的資料:指板上的點、琴頸左邊那一欄的 ○/×、淡淡的其他位置 */
+/* 吉他音階的把位。規則對每一種音階都一樣(不另外存每個音階的指型表):
+   從 6 弦上某一個音階音開始,沿著音階往上,每條弦放固定幾個音再換下一條弦——
+   七聲音階每弦 3 音(3NPS,7 個把位)、五聲/六聲每弦 2 音(五聲就是標準的 5 個 box)、
+   八聲以上每弦 3~4 音。六聲以下再把「把位範圍內的其他音階音」補進來(藍調音階的 ♭5)。
+   從 6 弦的哪個音開始 = 哪個把位;把位照在指板上的高低排序,編號 1、2、3… */
+function scalePositions(){
+  const notes = currentNotes();
+  const pcs = [...new Set(notes.map(n => pcOf(n.midi)))];
+  const n = pcs.length, set = new Set(pcs);
+  if (n < 2) return [];
+  const per = n >= 10 ? 4 : n >= 7 ? 3 : 2;
+  const nextUp = m => { do m++; while (!set.has(pcOf(m))); return m; };
+  const out = [];
+  pcs.forEach((pc, k) => {
+    let f0 = pcOf(pc - GTR_OPEN[0]);          // 6 弦上 0~11 格
+    let m = GTR_OPEN[0] + f0, pat = [];
+    for (let s = 0; s < 6; s++) for (let i = 0; i < per; i++) {
+      if (s || i) m = nextUp(m);
+      pat.push({ s, f: m - GTR_OPEN[s], midi: m });
+    }
+    if (pat.some(x => x.f < 0)) pat = pat.map(x => ({ s: x.s, f: x.f + 12, midi: x.midi + 12 }));
+    let lo = Math.min(...pat.map(x => x.f)), hi = Math.max(...pat.map(x => x.f));
+    if (n < 7) {   // 五聲、六聲:範圍內其他的音階音也算(藍調的 ♭5 夾在 box 裡)
+      for (let s = 0; s < 6; s++) for (let f = lo; f <= hi; f++)
+        if (set.has(pcOf(GTR_OPEN[s] + f)) && !pat.some(x => x.s === s && x.f === f)) pat.push({ s, f, midi: GTR_OPEN[s] + f });
+    }
+    out.push({ k, start: f0, notes: pat, lo, hi });
+  });
+  return out.sort((a, b) => a.start - b.start);
+}
+/* 目前選的把位:STATE.scalePos 存「從第幾個音階音開始」(換根音、換音階時意思不變);-1 = 全部 */
+function currentScalePos(){
+  if (STATE.inst !== "guitar" || STATE.tab !== "scale" || STATE.scalePos < 0) return null;
+  const all = scalePositions();
+  return all.find(p => p.k === STATE.scalePos) || all.find(p => p.k === 0) || null;
+}
+function renderScalePosRow(){
+  const row = $("scalePosRow");
+  const show = STATE.inst === "guitar" && STATE.tab === "scale";
+  row.hidden = !show;
+  if (!show) return;
+  const all = scalePositions(), cur = currentScalePos();
+  row.innerHTML = '<span class="pos-lab">' + t("scalePosLabel") + '</span>' +
+    '<button class="filter-chip" data-pos="-1" aria-pressed="' + !cur + '">' + t("scalePosAll") + '</button>' +
+    all.map((p, i) => '<button class="filter-chip" data-pos="' + p.k + '" aria-pressed="' + (cur === p || (cur && cur.k === p.k)) + '" title="' +
+      t("scalePosTitle", { f: p.lo }) + '">' + (i + 1) + (p.k === 0 ? '<small>★</small>' : '') + '</button>').join("");
+  row.querySelectorAll("[data-pos]").forEach(b => b.onclick = () => { STATE.scalePos = +b.dataset.pos; render(); });
+}
 function guitarView(){
   const dots = [], ghosts = [];
   const markers = [null, null, null, null, null, null];
@@ -2275,14 +2331,20 @@ function guitarView(){
   }
   for (const n of currentNotes()) info.set(pcOf(n.midi), { name: n.name, tok: n.tok, root: n.deg === 1 });
   if (STATE.tab === "scale") {
+    /* 一次看一個把位(使用者要求:整個指板全部畫出來太亂)。選了把位時,這個把位的音照常畫,
+       其他位置的音階音縮成淡淡的小點,看得到跟旁邊的把位怎麼接;「全部」才整個指板都畫 */
+    const pos = currentScalePos();
+    const inPos = new Set(pos ? pos.notes.map(n => n.s + ":" + n.f) : []);
+    if (pos) frets = Math.max(12, pos.hi);
     for (let s = 0; s < 6; s++) for (let f = 0; f <= frets; f++) {
       const midi = GTR_OPEN[s] + f, x = info.get(pcOf(midi));
       if (!x) continue;
+      if (pos && !inPos.has(s + ":" + f)) { if (f > 0) ghosts.push({ s, f, root: x.root }); continue; }
       // 音階沒有「不彈」這回事:空弦不在音階裡就什麼都不標,在的話畫成 ○
       if (f === 0) markers[s] = { type: "open", midi, root: x.root, text: lab(x) };
       else dots.push({ s, f, midi, root: x.root, text: lab(x) });
     }
-    return { frets, dots, ghosts, markers, barre: null };
+    return { frets, dots, ghosts, markers, barre: null, window: pos ? { lo: pos.lo, hi: pos.hi } : null };
   }
   const b = bassInfo();
   if (b && !info.has(b.pc)) info.set(b.pc, { name: b.name, tok: b.tok, root: false });
@@ -2334,6 +2396,12 @@ function drawFretboard(ctx, w, h, gv){
   wood.addColorStop(0, "#3A2717"); wood.addColorStop(1, "#24170C");
   ctx.fillStyle = wood;
   ctx.fillRect(nutX, top, right - nutX, bottom - top);
+  // 音階選了把位:把位範圍打一層亮一點的底,一眼看出手放在哪幾格
+  if (gv.window) {
+    const x1 = gv.window.lo <= 0 ? nutX : nutX + (gv.window.lo - 1) * L.fretW, x2 = nutX + gv.window.hi * L.fretW;
+    ctx.fillStyle = "rgba(242,185,75,0.13)";
+    ctx.fillRect(x1, top, x2 - x1, bottom - top);
+  }
   const dot = (x, y, r) => { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); };
 
   // 把位記號(3/5/7/9/15 單點、12 雙點)
@@ -2860,6 +2928,7 @@ const STATE = {
   acc: 0,         // -1 / 0 / 1
   chordId: "maj7",
   scaleId: "ionian",
+  scalePos: 0,    // 吉他音階的把位:從第幾個音階音開始(0 = 6 弦上的根音);-1 = 整個指板
   octave: 4,      // 根音所在八度(C4 = MIDI 60)
   label: "en",
   playMode: "block",
@@ -2932,19 +3001,24 @@ function displayNotes(){
   }
   return notes;
 }
-/* 這一份是畫在鍵盤上的音。和弦畫的是一個具體的排列(延伸音本來就該疊在上面),
-   音階則是一組「音級」,本來每個八度都會重複出現,所以整片鍵盤都畫出來,
-   一眼就看得到這個音階在鋼琴上的形狀 */
+/* 鋼琴音階只顯示一個八度(使用者要求)。照抄自 ScrollScore 的 rebuildKeyboardRange 規定至少兩個八度,
+   那段不能改,所以在它後面再疊一層:把音域收成「主音下方最近的 C 或 F」到「高八度主音」
+   (從 C 或 F 開始,黑鍵分組才完整,跟練習的小鍵盤同一條規則);最後一個音是黑鍵就多補到下一個白鍵 */
+function scaleOctaveRange(midis){
+  if (!midis.length) return;
+  let lo = Math.min(...midis), hi = Math.max(...midis);
+  while (![0, 5].includes(pcOf(lo))) lo--;
+  while (isBlackKey(hi)) hi++;
+  KB_LOW = lo; KB_HIGH = hi;
+  KB_WHITE_KEYS = [];
+  for (let m = KB_LOW; m <= KB_HIGH; m++) if (!isBlackKey(m)) KB_WHITE_KEYS.push(m);
+  KB_WHITE_IDX = {};
+  KB_WHITE_KEYS.forEach((m, i) => KB_WHITE_IDX[m] = i);
+}
+/* 這一份是畫在鍵盤上的音。和弦畫的是一個具體的排列;音階只畫**一個八度**(主音到高八度的主音),
+   跟課本一樣(使用者要求:原本畫兩個八度,重複一次反而亂、鍵也變小) */
 function keyboardNotes(){
-  const notes = displayNotes();
-  if (STATE.tab !== "scale" || !notes.length) return notes;
-  const out = [];
-  const base = currentNotes();
-  for (let oct = 0; oct <= 1; oct++) {
-    for (const n of base) out.push(Object.assign({}, n, { midi: n.midi + 12 * oct }));
-  }
-  out.push(Object.assign({}, base[0], { midi: base[0].midi + 24, octaveTop: true }));
-  return out;
+  return displayNotes();
 }
 /* 交給 drawKeyboard 的 activeMap,以及標籤用的 labelMap */
 function currentView(){
@@ -3841,7 +3915,9 @@ function render(){
     rebuildKeyboardRange([base, base + 24]);
   } else {
     rebuildKeyboardRange(keyboardNotes().map(n => n.midi));
+    if (STATE.tab === "scale" && STATE.inst === "piano") scaleOctaveRange(keyboardNotes().map(n => n.midi));
   }
+  renderScalePosRow();
   resizeKeyboardCanvas();
   drawKeyboardLive();
   renderSummary();

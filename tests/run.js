@@ -428,6 +428,24 @@ async function openPage(browser, opts = {}){
       } return bad; });
     total++; if (lowBad.length) fails.push("斜線和弦指法最低音不是低音: " + lowBad.slice(0, 5).join(", "));
     await q.evaluate(() => { STATE.bassIv = null; render(); }); await take();
+    // 吉他音階分把位:大調 7 個(每弦 3 音)、五聲 5 個(每弦 2 音,A 小調五聲 box 1 在 5~8 格);
+    // 預設是 6 弦根音那個把位,選了把位時其他位置的音只畫淡淡的小點;「全部」才整個指板都畫
+    const sp = await q.evaluate(() => {
+      STATE.tab = "scale"; STATE.letter = 0; STATE.acc = 0; STATE.scaleId = "ionian"; STATE.scalePos = 0; render();
+      const maj = scalePositions().length, rows = document.querySelectorAll("#scalePosRow [data-pos]").length;
+      const gv = guitarView();
+      STATE.letter = 5; STATE.scaleId = SCALES.find(x => /pent/i.test(x.id) && x.t.length === 5 && x.t.includes("♭3")).id; render();
+      const pent = scalePositions(), box1 = pent.find(p => p.k === 0);
+      STATE.scalePos = -1; render(); const allDots = guitarView().dots.length;
+      STATE.scalePos = 0; STATE.tab = "chord"; STATE.letter = 0; render();
+      return { maj, rows, dots: gv.dots.length, ghosts: gv.ghosts.length, pent: pent.length, box1: box1.lo + "-" + box1.hi, allDots };
+    });
+    total++; if (sp.maj !== 7 || sp.rows !== 8 || sp.pent !== 5 || sp.box1 !== "5-8" || !sp.ghosts || sp.allDots <= sp.dots) fails.push("吉他音階把位: " + JSON.stringify(sp));
+    // 鋼琴音階只顯示一個八度(從 C 或 F 開始)
+    await q.click("#instPiano");
+    const po = await q.evaluate(() => { STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; render(); const c = KB_WHITE_KEYS.length; STATE.letter = 4; render(); const g = [KB_LOW % 12, KB_WHITE_KEYS.length]; STATE.tab = "chord"; STATE.letter = 0; render(); return [c, g]; });
+    total++; if (po[0] !== 8 || po[1][0] !== 5 || po[1][1] !== 9) fails.push("鋼琴音階一個八度: " + JSON.stringify(po));
+    await q.click("#instGuitar");
     // 音階分頁仍然是長指板
     await q.click("#tabScale");
     total++; if (await q.evaluate(() => $("keyboardCanvas").getBoundingClientRect().height === 0 || !$("gtrDiagrams").hidden)) fails.push("音階分頁應該用長指板");
