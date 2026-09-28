@@ -445,7 +445,16 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-beats i.on.one{background:var(--gold)}
 .pr-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .pr-steps span{border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px 10px;font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
-.pr-steps span.cur{border-color:var(--gold);color:var(--gold);font-weight:700}
+.pr-steps span.cur{border-color:var(--gold);color:var(--gold);font-weight:700;
+  box-shadow:0 0 0 1px var(--gold),0 0 10px 1px rgba(242,185,75,.45)}
+/* 練習進行中:現在這個和弦的邊框跟著拍子呼吸發光(一拍一次,--beat 由 renderPractice 依 BPM 設定),
+   一眼就知道進行到哪裡(使用者要求);停下來時維持靜態光暈 */
+.pr-steps.running span.cur{animation:prGlow var(--beat,.86s) ease-out infinite}
+@keyframes prGlow{
+  0%{box-shadow:0 0 0 2px var(--gold),0 0 16px 4px rgba(242,185,75,.75)}
+  100%{box-shadow:0 0 0 1px var(--gold),0 0 6px 0 rgba(242,185,75,.25)}
+}
+@media (prefers-reduced-motion: reduce){ .pr-steps.running span.cur{animation:none} }
 /* 練習卡片裡的和弦輸入:跟根音卡片同一套按鈕(根音一下 + 和弦一下 = 把這個和弦加到進行最後面) */
 .pr-pad{margin-bottom:10px}
 .pr-pad .quick-grid{margin-top:8px;padding-top:8px}
@@ -4135,6 +4144,8 @@ function renderPractice(){
   if ($("prSaved")) [...$("prSaved").options].slice(1).forEach((o, i) => { o.textContent = saved[i]; });
   $("prCustom").value = P.custom;
   const ss = $("prSteps");
+  ss.classList.toggle("running", P.running);
+  ss.style.setProperty("--beat", (60 / P.bpm).toFixed(3) + "s");
   if (!P.steps.length) ss.innerHTML = '<span class="pr-steps-empty">' + t("practiceStepsEmpty") + '</span>';
   P.steps.forEach((st, i) => {
     const sp = document.createElement("span");
