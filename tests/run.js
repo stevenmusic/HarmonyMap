@@ -276,7 +276,9 @@ async function openPage(browser, opts = {}){
         const b = (rp + iv) % 12;
         if (L(rp, def, b) !== L(rp, full, b)) fails.push("同一組音指法不同: " + def.id + "/" + iv + " vs " + full.id + " (根音 " + rp + ")");
       }
-      if (pairs < 1000) fails.push("同音異名的配對太少: " + pairs);
+      if (pairs < 700) fails.push("同音異名的配對太少: " + pairs);
+      // 只有等音相同的不配對(德國增六 ♯6 ≠ C9 的 ♭7);拼寫要是同一組
+      for (const d of CHORDS) if (/\+6/.test(d.sym)) for (let iv = 1; iv < 12; iv++) { const pr = slashPair(d, iv); if (pr) fails.push("增六和弦不該配對: " + d.id + "/" + iv + " = " + pr.full.id); }
       if (has(0, "maj", 5, "× 8 5 5 5 8")) fails.push("C/F 不該有 × 8 5 5 5 8");
       // 斜線和弦的低音可以在上面的弦重複(使用者確認過),和弦外的低音也一樣:D/C♯ 的 × 4 0 2 2 2(C♯ 在 5 弦與 2 弦)
       { const { tones } = voicingTones(2, chordById("maj"));
@@ -384,6 +386,19 @@ async function openPage(browser, opts = {}){
     // 點另一張圖 = 選它並刷一次
     await q.locator("#gtrDiagrams .gd").nth(1).click();
     total++; if ((await q.evaluate(() => STATE.vIdx)) !== 1 || !(await take()).startsWith("n")) fails.push("點另一張指法圖沒有選它並發聲");
+    // 同一組音的另一種寫法:兩個方向都能一鍵切換(Cmaj7/B ↔ C/B),兩種都正確,不是更正
+    await q.evaluate(() => { STATE.chordId = "maj7"; STATE.bassIv = 11; STATE.bassFor = "maj7"; render(); });
+    await q.click("#slashAlt");
+    total++; if ((await q.evaluate(() => chordTitle(chordById(STATE.chordId)))) !== "C/B") fails.push("Cmaj7/B 改用 → 應該是 C/B");
+    await q.click("#slashAlt");
+    total++; if ((await q.evaluate(() => chordTitle(chordById(STATE.chordId)))) !== "Cmaj7/B") fails.push("C/B 改用 → 應該是 Cmaj7/B");
+    await q.evaluate(() => { STATE.chordId = "maj"; STATE.bassIv = 4; STATE.bassFor = "maj"; render(); });
+    total++; if (await q.locator("#slashAlt").count()) fails.push("C/E 是轉位,不該出現另一種寫法");
+    // 和弦名稱不寫重升重降:Cdim7 的七音當低音寫 Cdim7/A(組成音拼寫仍是 B♭♭);反查的名稱也一樣
+    await q.evaluate(() => { STATE.chordId = "dim7"; STATE.bassIv = 9; STATE.bassFor = "dim7"; render(); });
+    const dn = await q.evaluate(() => [chordTitle(chordById("dim7")), findChordName(0, chordById("dim7"), 9, "sharp"), currentNotes().map(n => n.name).join(" ")]);
+    total++; if (dn[0] !== "Cdim7/A" || dn[1] !== "Cdim7/A" || dn[2] !== "C E♭ G♭ B♭♭") fails.push("重降:" + dn.join(" | "));
+    await take();
     // 吉他斜線和弦:摘要列要列出低音、排最前面(C/B 原本只寫 C E G)
     await q.evaluate(() => { STATE.chordId = "maj"; STATE.bassIv = 11; STATE.bassFor = "maj"; render(); });
     const gs = await q.evaluate(() => [...document.querySelectorAll("#kbSummary .tn")].map(x => x.textContent).join(" "));

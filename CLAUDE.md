@@ -299,7 +299,15 @@ prefers-reduced-motion:reduce
   另一個同根音的和弦時(C/B = Cmaj7/B、D/C = D7/C、Am/G = Am7/G、C/A = C6/A,約 1548 對),`chordVoicingsFor`
   兩邊各算一次(`voicingsCore`)再合併:「和弦 + 外加低音」那邊(各自的 best 先)排前面,另一邊多的接後面。
   只在低音是**加上去的音**(6、7、9、11…,`slashPair`)時配對:C/E 的 E 是三音,那是 C 的轉位,
-  不能讀成「C5 加 E」;plain 也要有三度(Csus4/F 不配)
+  不能讀成「C5 加 E」;plain 也要有三度(Csus4/F 不配);**拼寫也要是同一組**(plain 的級數原樣出現在 full 裡、
+  full 只多一個音)——只有等音相同的不配(德國增六的 ♯6 不是 C9 的 ♭7,功能不同)。共 72 種 × 12 根音
+- **Cmaj7/B 與 C/B 兩種寫法都正確**(查過樂理資料:howmusicworks.org、guitar-chord-finder.com 都說兩種出現頻率差不多,
+  看上下文:低音往下走、上面和弦不動寫 C/B;要看出和弦性質在變(maj7 → 7)寫 Cmaj7/B)。
+  所以不做「更正」,結果面板的低音列下方寫「同一組音也可以寫成 X」+ 一鍵切換(`#slashAlt`),兩個方向都有
+- **和弦名稱不寫重升重降,組成音的拼寫照寫**(使用者要求照樂理判斷,查過資料):組成音照級數拼(Cdim7 = C E♭ G♭ B♭♭,
+  五線譜上要看得出是減七度,Wikipedia/Diminished seventh chord);但和弦符號(lead sheet)的斜線低音寫字母名,
+  實務上把重升重降改寫成等音(Cdim7/A,不是 Cdim7/B♭♭)。`hasDoubleAcc()` 擋 `bassInfo` / `findChordName` /
+  另一種寫法的提示;根音本來就只有 21 個單升降,不會出現重升重降
 - 摘要列的音名**照實際的音由低到高**:鋼琴照 displayNotes(C/E = E G C),吉他照目前指法的弦
   (C/B × 2 2 0 1 0 = B E G C),不是照公式排。斜線和弦的每一個指法(34400 個)最低音都必須是名稱寫的低音,有測試
   低音拼寫:和弦內音照該和弦的級數(C7/B♭),和弦外的音照音程級數推(D/C)。

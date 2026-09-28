@@ -902,7 +902,7 @@ const I18N = {
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
-    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
     practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
@@ -984,7 +984,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
@@ -1963,7 +1963,14 @@ function slashPair(def, iv){
   const tok = full.t.find(tk => pcOf(tokenSemi(tk)) === iv);
   const ps = chordSetPcs(plain);
   if (/^[♭♯]?[35]$/.test(tok) || !(ps.has(3) || ps.has(4))) return null;
-  return { plain, full };
+  // 拼寫也要是同一組:plain 的每個級數都原樣出現在 full 裡、full 只多那一個音。
+  // 只有等音相同的不算——德國增六的 ♯6(A♯)不是 C9 的 ♭7(B♭),功能完全不同
+  if (full.t.length !== plain.t.length + 1 || !plain.t.every(tk => full.t.includes(tk))) return null;
+  // 兩邊都要是「這組音的代表名稱」(chordBySet 挑出來的那個),從哪一邊查都得到同一對:
+  // 德國增六 + 大三和弦(C/A♯)那組音的代表是 C7,不是 CGr+6;7♯9♭13 與 7♯5♯9 同音,只取一個
+  const up = chordSetPcs(plain); up.add(iv);
+  if (chordBySet(up) !== full || chordBySet(chordSetPcs(plain)) !== plain) return null;
+  return { plain, full, tok };
 }
 function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
   if (bassPc == null) return voicingsCore(rPc, def, null, noShapes);
@@ -2122,12 +2129,16 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
    換和弦就回到根音——D/F♯ 換成 Dm 時 F♯ 已經不是和弦內音,留著只會變成奇怪的 Dm/F♯。
    拼寫:和弦內音照這個和弦自己的級數(C7/B♭ 不是 C7/A♯),和弦外的音照音程級數推(D/C) */
 const BASS_TOKS = ["1","♭2","2","♭3","3","4","♯4","5","♭6","6","♭7","7"];
+const hasDoubleAcc = name => /♭♭|♯♯|𝄫|𝄪/.test(name);
 function bassInfo(){
   if (STATE.tab !== "chord" || STATE.bassIv == null || STATE.bassFor !== STATE.chordId) return null;
   const def = chordById(STATE.chordId);
   const own = def.t.find(tok => pcOf(tokenSemi(tok)) === STATE.bassIv);
-  const tok = own || BASS_TOKS[STATE.bassIv];
-  const sp = spell(STATE.letter, STATE.acc, tok);
+  let tok = own || BASS_TOKS[STATE.bassIv];
+  let sp = spell(STATE.letter, STATE.acc, tok);
+  // 和弦名稱不寫重升重降(使用者指出):Cdim7 的七音照級數是 B♭♭,但名稱寫 Cdim7/A。
+  // 只有斜線後面的低音這樣退回單一升降;和弦本身的組成音拼寫照舊(Cdim7 = C E♭ G♭ B♭♭)
+  if (hasDoubleAcc(sp.name)) { tok = BASS_TOKS[STATE.bassIv]; sp = spell(STATE.letter, STATE.acc, tok); }
   return { iv: STATE.bassIv, tok, name: sp.name, pc: pcOf(rootPc() + STATE.bassIv), chordTone: !!own };
 }
 function chordTitle(def){
@@ -3373,6 +3384,18 @@ function bassPickerHtml(def){
   let note = "";
   if (b) note = '<div class="desc" style="margin-top:6px">' +
     (b.chordTone ? inversionLabel(rootPc(), def, b.pc, "sharp") : t("bassNonChord")) + '</div>';
+  /* 同一組音的另一種寫法(Cmaj7/B ↔ C/B、C7/B♭ ↔ C/B♭、C6/A ↔ C/A):兩種都正確,歌譜上出現的頻率差不多。
+     低音線條往下走、上面和弦不動時寫 C/B 較清楚;要看出和弦性質在變(maj7 → 7)時寫 Cmaj7/B。
+     所以不是「更正」,是兩個方向都能一鍵切換;兩個名稱的指法清單也一樣 */
+  const pair = b ? slashPair(def, b.iv) : null;
+  if (pair) {
+    const other = pair.full === def ? pair.plain : pair.full;
+    let otherBass = spell(STATE.letter, STATE.acc, other === pair.full ? pair.tok : BASS_TOKS[b.iv]).name;
+    if (hasDoubleAcc(otherBass)) otherBass = spell(STATE.letter, STATE.acc, BASS_TOKS[b.iv]).name;
+    const alt = rootName() + other.sym + "/" + otherBass;
+    note += '<div class="desc slash-alt" style="margin-top:6px">' + t("slashAltNote", { x: alt }) +
+      ' <button class="filter-chip" id="slashAlt" data-id="' + other.id + '">' + t("slashAltBtn", { x: alt }) + '</button></div>';
+  }
   return '<div class="bass-row"><span class="filter-label">' + t("bassLabel") + '</span>' + chips + sel + '</div>' + note;
 }
 function setBass(iv){
@@ -3440,6 +3463,12 @@ function renderReadout(){
   ro.querySelectorAll("[data-bass]").forEach(el => {
     el.onclick = () => { setBass(el.dataset.bass === "" ? null : +el.dataset.bass); };
   });
+  const ss = ro.querySelector("#slashAlt");
+  if (ss) ss.onclick = () => {
+    const iv = STATE.bassIv;
+    STATE.chordId = ss.dataset.id; STATE.bassIv = iv; STATE.bassFor = STATE.chordId;
+    render(); playCurrent();
+  };
   const bo = ro.querySelector("#bassOther");
   if (bo) bo.onchange = () => { setBass(bo.value === "" ? null : +bo.value); };
   ro.querySelectorAll(".note-cell").forEach(el => {
@@ -3534,7 +3563,8 @@ function findChordName(rootPc, chord, bassPc, spellPref){
   const name = simpleName(rootPc, spellPref) + chord.sym;
   if (bassPc === null || bassPc === rootPc) return name;
   const sp = chordSpelling(rootPc, chord, spellPref).get(bassPc);
-  return name + "/" + (sp ? sp.name : simpleName(bassPc, spellPref));
+  // 名稱裡不寫重升重降(Cdim7/A,不是 Cdim7/B♭♭)
+  return name + "/" + (sp && !hasDoubleAcc(sp.name) ? sp.name : simpleName(bassPc, spellPref));
 }
 /* 轉位編號看的是「低音是第幾級」:三音 = 第一轉位、五音 = 第二轉位、七音 = 第三轉位。
    升降不影響編號(♭3 一樣是第一轉位)。
