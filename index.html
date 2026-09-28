@@ -575,16 +575,21 @@ html[data-lang="en"] .chip i{white-space:normal}
 }
 /* 鍵盤設定的浮動面板。蓋在琴鍵上方(.kb-wrap 是 overflow:hidden,所以尺寸要放得進去),
    關掉之後完全不佔版面高度——原本這三個選單常駐一整排,吃掉釘住區約 50px */
+/* 右邊讓出齒輪那一欄(44px):原本蓋在齒輪上,想再點齒輪關掉時點到的是面板裡的下拉選單(模擬操作時抓到) */
 .kb-popover{
-  position:absolute;right:8px;bottom:8px;z-index:5;
-  display:flex;flex-direction:column;gap:6px;
+  position:absolute;right:44px;bottom:8px;z-index:5;
+  display:flex;flex-direction:column;gap:4px;
   background:var(--surface-glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid var(--gold);border-radius:var(--radius-md);
-  padding:10px 12px;box-shadow:var(--shadow-md);
+  padding:6px 10px;box-shadow:var(--shadow-md);
 }
 .kb-popover[hidden]{display:none}
 .kb-popover label{display:flex;align-items:center;gap:8px;font-size:var(--fs-2xs);color:var(--muted)}
-.kb-popover select{flex:1;min-width:118px}
+/* 面板要整個放得進鍵盤區(.kb-wrap 是 overflow:hidden),320×568 的鍵盤區只有 145px:
+   三列 × 34px 剛好放得下。選擇器寫兩個 class 才蓋得過觸控裝置的 select.mini{min-height:38px} */
+.kb-popover select.mini{flex:1;min-width:118px;min-height:34px}
+/* 手機橫向的鍵盤區只有 130px,放不下三列:改排兩欄 */
+@media (max-height:420px){ .kb-popover:not([hidden]){display:grid;grid-template-columns:auto auto;column-gap:12px} }
 .kb-gear{
   flex:none;background:transparent;border:1px solid var(--line);color:var(--muted-bright);
   border-radius:var(--radius-pill);width:26px;height:26px;line-height:1;
@@ -3536,6 +3541,9 @@ function buildTypeList(){
     grp.items.push(it);
   }
   const selId = isChord ? STATE.chordId : STATE.scaleId;
+  // 選擇有沒有變:選中的項目在收起來的那一層時,只在「選擇剛變過來」那一次把那層打開
+  const selKey = STATE.tab + "|" + selId, selChanged = STATE.tierSel !== selKey;
+  STATE.tierSel = selKey;
   for (const g of groups) {
     const wrap = document.createElement("div");
     wrap.className = "type-group";
@@ -3593,10 +3601,11 @@ function buildTypeList(){
     } else {
       tiers.forEach((tier, i) => {
         const k = g.name + "|" + tier.lv;
-        // 每一層預設全部攤開(沒有選程度時就是要一次看到所有和弦);
-        // 使用者可以自己收合某一層,選中的項目在哪一層就強制展開哪一層,
-        // 否則會「選好了卻在清單上看不到它」
-        const open = !STATE.tierClosed.has(k) || tier.items.some(it => it.id === selId);
+        // 每一層預設全部攤開(沒有選程度時就是要一次看到所有和弦);使用者可以自己收合某一層。
+        // 選中的項目跳進收起來的那一層(順階和弦表、上下鍵)時把那層打開,否則會「選好了卻在清單上看不到它」。
+        // 只在選擇剛變的那一次打開:原本每次都強制打開,選中的那一層按收合完全沒反應,看起來像壞掉(模擬操作時抓到)
+        if (selChanged && tier.items.some(it => it.id === selId)) STATE.tierClosed.delete(k);
+        const open = !STATE.tierClosed.has(k);
         const tg = document.createElement("button");
         tg.className = "tier-toggle";
         tg.setAttribute("aria-expanded", String(open));
@@ -4905,7 +4914,8 @@ function toggleKbPopover(force){
 }
 document.addEventListener("pointerdown", ev => {
   const pop = $("kbPopover");
-  if (!pop.hidden && !pop.contains(ev.target) && ev.target.id !== "kbGear") toggleKbPopover(false);
+  // 點在齒輪上(包括裡面的 svg)交給齒輪自己切換;原本只比對 id,點到圖示本身會先關掉、click 又打開,等於關不掉
+  if (!pop.hidden && !pop.contains(ev.target) && !$("kbGear").contains(ev.target)) toggleKbPopover(false);
 });
 document.addEventListener("keydown", ev => { if (ev.key === "Escape") toggleKbPopover(false); });
 

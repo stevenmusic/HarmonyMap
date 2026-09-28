@@ -805,6 +805,20 @@ async function openPage(browser, opts = {}){
       }
       await q.close();
     }
+    // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
+    for (const [w, h] of [[320, 568], [844, 390], [390, 844], [1280, 860]]) for (const inst of ["Piano", "Guitar"]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      await q.click("#inst" + inst);
+      await q.click("#kbGear svg");
+      const r = await q.evaluate(() => { const g = $("kbGear").getBoundingClientRect(), pp = $("kbPopover").getBoundingClientRect(), wr = document.querySelector(".kb-wrap").getBoundingClientRect();
+        return { open: !$("kbPopover").hidden, overlap: !(pp.right <= g.left || pp.left >= g.right || pp.bottom <= g.top || pp.top >= g.bottom),
+                 inside: pp.left >= wr.left - 0.5 && pp.top >= wr.top - 0.5 && pp.bottom <= wr.bottom + 0.5 && pp.right <= wr.right + 0.5 }; });
+      await q.click("#kbGear svg");
+      const closed = await q.evaluate(() => $("kbPopover").hidden);
+      total++;
+      if (!r.open || r.overlap || !r.inside || !closed) fails.push("鍵盤設定面板(" + w + "×" + h + " " + inst + "): " + JSON.stringify(r) + " 再點齒輪關掉=" + closed);
+      await q.close();
+    }
     // 模擬真人操作抓到的問題(每一項都是實際點下去會點錯/縮放/頓的情形)
     {
       const q = await openPage(browser, { viewport: { width: 320, height: 568 }, hasTouch: true, isMobile: true });
@@ -837,6 +851,16 @@ async function openPage(browser, opts = {}){
       await q.evaluate(() => $("tabFind").click());   // 不用 q.click:它會先把按鈕捲進畫面
       const y1 = await q.evaluate(() => Math.round($("tabFind").getBoundingClientRect().top));
       total++; if (Math.abs(y1 - y0) > 1) fails.push("換分頁時分頁鈕移位: " + y0 + " → " + y1);
+      // 程度收合:選中的那一層也要收得起來;選擇跳進收起來的那一層時要自動打開
+      const tier = await q.evaluate(() => {
+        STATE.tab = "chord"; STATE.search = ""; STATE.level = 0; STATE.chordId = "maj7"; STATE.tierClosed.clear(); render();
+        const first = () => document.querySelector(".tier-toggle");
+        first().click(); const closed = first().getAttribute("aria-expanded") === "false";
+        STATE.chordId = "maj"; render(); STATE.chordId = "maj7"; render();
+        const reopened = first().getAttribute("aria-expanded") === "true";
+        return { closed, reopened };
+      });
+      total++; if (!tier.closed || !tier.reopened) fails.push("程度收合: 選中那層收得起來=" + tier.closed + " 跳進收起來的那層會打開=" + tier.reopened);
       // 320px:順階和弦表不能要橫滑才看得到組成音;摘要列放不下時先縮副標,音名至少看得到大半
       const nar = await q.evaluate(() => {
         STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; STATE.acc = 0; render();
