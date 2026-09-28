@@ -78,6 +78,10 @@ body.light{
    跟直接鎖 viewport 的 user-scalable=no 不一樣,那個連縮放需求的使用者也會一起擋掉。
    #keyboardCanvas 自己的 touch-action:manipulation 已經是同一個值,不衝突 */
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+/* 會被按住、連點、滑過的地方不能選取文字:手機上長按琴鍵/和弦圖/按鈕會跳出選取框與放大鏡(iOS 的 callout),
+   練習時一直按住輸入板就會一直冒出來。說明文字不在這裡面,照樣可以選取複製 */
+button,[role="button"],canvas,.kb-wrap,.kb-summary,.gtr-dgs,.kb-stage,.chip,.tabs,.inst-switch,.pr-steps{
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 html{height:100%}
 body{
   min-height:100%;
@@ -2874,6 +2878,7 @@ function playSampledGuitar(midi, when, dur){
   connectOut(g, midi);
   src.start(when, best.offset);
   src.stop(when + sustain + tail + 0.1);
+  src._g = g;
   scheduledNodes.push(src);
   return true;
 }
@@ -2929,6 +2934,7 @@ function playSampledPiano(midi, when, dur, chordAnchors){
   connectOut(g, midi);
   src.start(when);
   src.stop(when + sustain + tail + 0.1);
+  src._g = g;
   scheduledNodes.push(src);
   return true;
 }
@@ -2982,10 +2988,26 @@ function schedulePiano(midi, when, dur){
   osc.start(when); osc2.start(when);
   const stopAt = when + sustain + releaseTail + 0.05;
   osc.stop(stopAt); osc2.stop(stopAt);
+  osc._g = osc2._g = g;
   scheduledNodes.push(osc, osc2);
 }
+/* 停掉一個音:不要直接 stop()——正在響的波形瞬間被切斷會「喀」一聲,連續點和弦時很明顯。
+   先用 12ms 的時間常數把音量收掉,再停。t 是音訊時鐘上的時間(練習的換和弦排在下一拍) */
+function fadeStop(n, t){
+  const g = n._g;
+  try {
+    if (g) {
+      const p = g.gain;
+      if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
+      else if (t <= audioCtx.currentTime + 0.005) { p.cancelScheduledValues(t); p.setValueAtTime(p.value, t); }
+      else { n.stop(t); return; }        // 舊瀏覽器沒辦法在未來的時間點保住包絡,照舊在那一刻停
+      p.setTargetAtTime(0, t, 0.012);
+      n.stop(t + 0.1);
+    } else n.stop(t);
+  } catch (e) {}
+}
 function stopAllSound(){
-  for (const n of scheduledNodes) { try { n.stop(); } catch (e) {} }
+  if (audioCtx) { const t = audioCtx.currentTime; for (const n of scheduledNodes) fadeStop(n, t); }
   scheduledNodes = [];
   soundingWindows = [];
 }
@@ -3012,7 +3034,7 @@ function isSounding(midi){
 function playNotes(midis, mode, at){
   ensureAudio();
   if (at == null) stopAllSound();
-  else { for (const n of scheduledNodes) { try { n.stop(at); } catch (e) {} } scheduledNodes = []; }
+  else { for (const n of scheduledNodes) fadeStop(n, at); scheduledNodes = []; }
   const t0 = at != null ? at : audioCtx.currentTime + 0.06;
   let seq;
   if (mode === "block") {

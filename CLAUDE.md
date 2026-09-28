@@ -81,6 +81,11 @@ prefers-reduced-motion:reduce
     「刪除最後一個」是線稿倒退鍵圖示(文字在 aria-label/title),字太長會把進行擠到剩兩三個
   - 換分頁/樂器用 `keepInPlace()` 量按下前後的位置補回捲動:矮螢幕上換分頁可能從釘住變成不釘(unstick),
     分頁列會整排捲出畫面
+- **長按不能跳出選取框/放大鏡**:按鈕、畫布、和弦圖、摘要列、練習區都是 `user-select:none` + `-webkit-touch-callout:none`;
+  說明文字不在內,照樣可以選取
+- **換和弦不能「喀」一聲**:停掉正在響的音一律走 `fadeStop()`(12ms 淡出再停),不要直接 `stop()`。
+  每個音的 source 上掛 `_g`(它的 gain 節點);練習排在下一拍停的用 `cancelAndHoldAtTime`,沒有這個 API 的舊瀏覽器照舊在那一刻停。
+  實測(OfflineAudioContext):直接切斷時的取樣跳動 0.028,比正常播放的最大值 0.019 還大,淡出後 0.016
 - **不能不小心縮放**:觸控裝置上 input/select/textarea 一律 16px(iOS 點進 < 16px 的欄位會自動放大整頁);
   雙擊放大由全域 `touch-action:manipulation` 關掉,雙指縮放不受影響
 - **不能卡頓**(用 Event Timing 量每一下點擊,CPU 降速 2~4 倍模擬手機):
