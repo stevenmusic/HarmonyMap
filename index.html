@@ -6,6 +6,15 @@
 <!-- 手機瀏覽器的網址列/狀態列會吃這個顏色。切換淺色主題時 applyTheme() 會一起改,
      不然頁面變白了、上面那條還是黑的,看起來像沒對齊 -->
 <meta name="theme-color" content="#0C0A07">
+<!-- 加到主畫面(iPhone Safari「分享 → 加入主畫面」):有自己的圖示、打開時全螢幕沒有網址列,像 App 一樣。
+     圖示直接內嵌(單檔、沒有相依檔案):深色底上一小段鍵盤,C E G 亮起(根音金色、其他青色) -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="HarmonyMap">
+<meta name="application-name" content="HarmonyMap">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAADn0lEQVR4AbxWy29MURz+ZhIkJe01U9PqdNANVlRiSYSdRkS8GkFsaDU2bFiwJsLCH0AfYSFtE+k/QLQ2tRALmyIh+pgWkb6mNX0Y3+/8zpm5c9umUzFzcu75vc93znfOvbnheKwiU1vlZeIxz0pr06d+axcpHgZCyGQyIijBZm1q4kaR4+EMCO5AAFqltckAQXWrZEDAaXMZXEvOLmI8bOgnmpEhggsY15FnFzGuDJgd+86+hDYZ4Payd0AWUVpbGRDaiSu0v3q0HwPPDuBSwzZUeB6etLbhdV8vIpVbsHHvHuzqasfOzjbcunMbI6NJvOjpQfnmCLxDB41/U/1ebI5WovdNHx4/aYUXieJyUzOSY6Pof9tPFHvM1ASPDGSo+pzGAiZSi5hOzWJmdgbzc/OYnJzCIh8bzl7QdDqN1HQKC1NTJiQ5kis1UjvN2Pj4hInJIKB+6WNA6NfFSMLqD2/s6kl5GW52XYTikQHNUafqhY1uusKyXZY97SyDlgENu6BaRRpJnMMRSQZ0J/pFLBxUqwrPd5mZP1rp8MJ8A7N0rP0Y3LRrkIYBuwhSQAZYbJyUJejEhG4apoVlNE4qjhaqRe1+PDKQowOyNBTW/vW4XJ3KECwD/kXAtO2xDaiKVSIaiaCsrAy1iVqsT8RNzD9UlJcjVl2N9TVbjXtdbQ0SiYSpkdqq6irU1W03MTcouH78AgwwRdeCayfiaDx5FIePHMaOuh1oab6CWNNFJuT3+n31OH3uLLZcajQByWlpaTI1Utt45jRu3LhuYjL4wcUmA/pFAul3QdiWfyd4U60/KPLzGHWHTBWcF66ZzeXjWQZyTperMge6FEQzdMzlBe1gnW4yh0cG9CykUIOi6RO01bvMmLdjzmf+J5bJsy43r0j7T8iiwCQ2d0UR3NmKiYGAqxNwCZEBSwdZdE4JrOUxR1twQT6evQPCgMwQQvJXWhSkfi/gy7cRo8swNDSC9NgPUbHA/4LBr4NGl2F0cBgLU9OiYu77TySTo0aX4eOnz0ilUqJiaHjY99mnKxRy3wGYJvScvPMOiVMvsftCL5539sDzovAqonjw4CEGrt3E++Pn8eH8VXS0t2uM8adtHfQ1m5jk3Lt7Pxvr7upGvGabsRsajimOpUwYVwZ89ItT3hwjmW5kEeO8A0K/LsmAOdASSTJAJHb3EpRaBhjgSthzTNBgL6ZNBoR++2pkwUpnBxiQxfzfO8E9+V69pfP/BQAA//9n7885AAAABklEQVQDACj2uO4JAwgSAAAAAElFTkSuQmCC">
 <title id="pageTitle">HarmonyMap — 和弦與音階地圖</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -419,6 +428,16 @@ html[data-lang="en"] .chip i{white-space:normal}
 .go-chip{width:100%;margin-bottom:12px;border-color:var(--gold)}
 #practiceOpen{border-color:var(--teal);color:var(--teal)}
 #practiceOpen[hidden]{display:none}
+#practiceOpen .badge{background:var(--teal)}
+/* 使用說明卡片:從頂欄右上角掉下來,點外面或按 Esc 關掉 */
+.help-pop{position:fixed;z-index:60;top:calc(var(--header-h, 56px) + 6px);right:12px;width:min(360px, calc(100vw - 24px));
+  max-height:calc(100vh - var(--header-h, 56px) - 24px);overflow:auto;
+  background:var(--panel);border:1px solid var(--gold);border-radius:var(--radius-md);
+  box-shadow:var(--shadow-lg);padding:14px 16px}
+.help-pop[hidden]{display:none}
+.help-pop h3{margin:0 0 8px;font-size:var(--fs-md);color:var(--gold)}
+.help-pop ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;font-size:var(--fs-sm);color:var(--ivory);line-height:1.5}
+.help-pop b{color:var(--gold)}
 .pr-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .pr-head .card-title{margin:0;white-space:nowrap}
 .pr-head select{flex:1;min-width:0;margin-left:auto;max-width:260px}
@@ -581,19 +600,22 @@ select.mini:focus{outline:none;border-color:var(--gold)}
 
 /* ── 結果面板 ── */
 .rt-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.rt-head .rt-add{margin-left:auto;align-self:center;border-color:var(--teal);color:var(--teal)}
+.rt-head .rt-add.done{background:var(--teal);color:var(--bg)}
 .rt-name{font-family:"Noto Serif TC",serif;font-size:var(--fs-2xl);font-weight:700;color:var(--gold-bright);line-height:1.1}
 .rt-sub{font-size:var(--fs-sm);color:var(--muted-bright)}
 /* align-items:stretch(預設值,寫出來提醒別動它):有的音要標八度、有的不用,
    同一列的格子必須等高,不然高低參差 */
-.note-strip{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch}
+/* 組成音:一列小晶片(級數 + 音名)。原本是一排大方格,內容跟鍵盤下那行摘要重複,
+   手機上白白佔掉約 75px(音階兩列約 150px),改小但一樣可以點來聽單音 */
+.note-strip{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
 .note-cell{
-  min-width:64px;flex:0 0 auto;text-align:center;
+  flex:0 0 auto;display:inline-flex;align-items:baseline;gap:5px;
   border:1px solid var(--line);border-radius:var(--radius-sm);
-  padding:8px 10px;background:var(--surface-inset);
+  padding:4px 10px;background:var(--surface-inset);
 }
-.note-cell .deg{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.06em}
-.note-cell .nm{font-family:"Noto Serif TC",serif;font-size:var(--fs-xl);font-weight:700;color:var(--ivory);line-height:1.25}
-.note-cell .oct{font-size:var(--fs-2xs);color:var(--muted);opacity:.75}
+.note-cell .deg{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em}
+.note-cell .nm{font-family:"Noto Serif TC",serif;font-size:var(--fs-md);font-weight:700;color:var(--ivory);line-height:1.3}
 .note-cell.is-root{border-color:var(--gold);background:rgba(201,162,75,.12)}
 .note-cell.is-root .nm{color:var(--gold-bright)}
 .meta-row{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px;font-size:var(--fs-sm);color:var(--muted-bright)}
@@ -710,6 +732,15 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
   <div class="header-right">
     <!-- 主題在前、語言在後,跟 ScrollScore / LoudMaster 的 header-right 同一個順序。
          這裡原本是反過來的,四個工具並排時只有這一頁的兩顆鈕位置對調 -->
+    <!-- 使用說明:很多好用的操作(點音名只播單音、滑過和弦圖撥弦、快捷鍵…)第一次來看不出來,收在這顆 ? 裡。
+         圖示照 ScrollScore 那套線稿(24 格、stroke 2、圓端點) -->
+    <button class="btn" id="helpToggle" aria-expanded="false" data-i18n-attr="aria-label:helpLabel,title:helpLabel" aria-label="使用說明" title="使用說明">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="9"/>
+        <path d="M9.6 9.3a2.5 2.5 0 014.9.7c0 1.7-2.5 2.1-2.5 3.7"/>
+        <path d="M12 17h.01"/>
+      </svg>
+    </button>
     <button class="btn" id="themeToggle" aria-label="淺色模式" aria-pressed="false" data-i18n-attr="aria-label:themeToggleLabel,title:themeToggleTitle" title="切換淺色/深色主題">
       <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="9"/>
@@ -719,6 +750,8 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
     <button class="btn" id="langToggle" aria-pressed="false" data-i18n-attr="aria-label:langToggleLabel,title:langToggleTitle" data-i18n="langToggleText">EN</button>
   </div>
 </header>
+
+<div class="help-pop" id="helpPop" hidden role="dialog" aria-modal="false"></div>
 
 <main>
   <!-- ══ 釘在上方的區塊:分頁 / 鍵盤 / 根音,捲動時不會離開畫面 ══ -->
@@ -808,7 +841,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
         <button class="filter-summary" id="filterToggle" aria-expanded="false">
           <span class="chev">›</span><span data-i18n="filterToggleText">篩選</span><span class="badge" id="filterBadge"></span>
         </button>
-        <button class="filter-summary" id="practiceOpen" data-i18n="practiceBtn">練習</button>
+        <button class="filter-summary" id="practiceOpen"><span data-i18n="practiceBtn">練習</span><span class="badge" id="practiceCount"></span></button>
       </div>
       <div class="filter-rows" id="filterRows" hidden>
         <div class="filter-row" id="styleRow"></div>
@@ -861,6 +894,14 @@ const I18N = {
     homeAria: "回首頁", homeText: "首頁", contactLabel: "問題回報：", tagline: "和弦與音階地圖",
     langToggleText: "EN", langToggleLabel: "切換為英文", langToggleTitle: "切換語言",
     themeToggleLabel: "淺色模式", themeToggleTitle: "切換淺色/深色主題",
+    helpLabel: "使用說明", helpTitle: "小技巧",
+    help1: "<b>根音 + 和弦種類</b>兩下就選好;要斜線和弦再按 <b>/</b> 和低音(C / E = C/E)",
+    help2: "點鍵盤下方那行的<b>和弦名稱</b>重播整個和弦;點其中<b>一個音名</b>只播那個音",
+    help3: "吉他和弦圖:<b>點一下</b>刷整個和弦,手指<b>左右滑過</b>弦就一條一條撥",
+    help4: "搜尋框可以直接打<b>和弦名稱</b>:Bbmaj7、D/F#、Am/G,按 Enter 就跳過去",
+    help5: "<b>練習</b>:排一組和弦跟著節拍器換;結果面板的「+ 加入練習」把查到的和弦直接排進去",
+    help6: "桌機快捷鍵:<b>空白鍵</b>播放、<b>↑↓</b>換和弦、<b>←→</b>換根音、<b>字母鍵</b>選根音、<b>/</b>斜線和弦",
+    help7: "iPhone:Safari 的<b>分享 → 加入主畫面</b>,之後就像 App 一樣從主畫面打開",
     tabChord: "和弦", tabScale: "音階", tabFind: "反查",
     octaveLabel: "起始八度", keyLabelLabel: "琴鍵標示",
     labelOptEn: "音名 C D E", labelOptDo: "唱名 Do Re Mi", labelOptDeg: "數字 1 ♭3 5", labelOptOff: "不標字",
@@ -920,7 +961,7 @@ const I18N = {
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
-    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
     practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
@@ -943,6 +984,14 @@ const I18N = {
     homeAria: "Back to home", homeText: "Home", contactLabel: "Feedback: ", tagline: "Chord & Scale Map",
     langToggleText: "中", langToggleLabel: "Switch to Chinese", langToggleTitle: "Switch language",
     themeToggleLabel: "Light mode", themeToggleTitle: "Switch light/dark theme",
+    helpLabel: "How to use", helpTitle: "Tips",
+    help1: "<b>Root + chord type</b> — two taps. For a slash chord add <b>/</b> and the bass note (C / E = C/E)",
+    help2: "Tap the <b>chord name</b> under the keyboard to replay the chord; tap a <b>single note name</b> to hear just that note",
+    help3: "Guitar diagrams: <b>tap</b> to strum the whole chord, <b>swipe across</b> the strings to pluck them one by one",
+    help4: "Type a <b>chord name</b> in the search box — Bbmaj7, D/F#, Am/G — and press Enter to jump to it",
+    help5: "<b>Practice</b>: build a progression and change chords with the metronome; \"+ Add to practice\" in the result panel adds the chord you are viewing",
+    help6: "Desktop keys: <b>Space</b> play, <b>↑↓</b> chord, <b>←→</b> root, <b>letter keys</b> pick the root, <b>/</b> slash chord",
+    help7: "iPhone: in Safari tap <b>Share → Add to Home Screen</b> to open it like an app",
     tabChord: "Chord", tabScale: "Scale", tabFind: "Find",
     octaveLabel: "Start octave", keyLabelLabel: "Key labels",
     labelOptEn: "Note names C D E", labelOptDo: "Solfège Do Re Mi", labelOptDeg: "Degrees 1 ♭3 5", labelOptOff: "No labels",
@@ -1002,7 +1051,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
@@ -3400,13 +3449,10 @@ function bassPickerHtml(def){
     const nm = spell(STATE.letter, STATE.acc, tok).name;
     chips += '<button class="filter-chip" data-bass="' + iv + '" aria-pressed="' + (!!b && b.iv === iv) + '">' + nm + ' <small>' + tok + '</small></button>';
   }
-  let sel = '<select class="mini" id="bassOther"><option value="">' + t("bassOther") + '</option>';
-  for (let iv = 1; iv < 12; iv++) {
-    if (seen.has(iv)) continue;
-    const nm = spell(STATE.letter, STATE.acc, BASS_TOKS[iv]).name;
-    sel += '<option value="' + iv + '"' + (b && b.iv === iv ? " selected" : "") + '>' + nm + ' (' + BASS_TOKS[iv] + ')</option>';
-  }
-  sel += '</select>';
+  // 和弦外的低音不在這裡另外放下拉選單:根音卡片的「/」就能打任何低音(同一件事只留一個入口)。
+  // 目前是和弦外的低音時,多一顆亮著的晶片標出來
+  let sel = "";
+  if (b && !seen.has(b.iv)) sel = '<button class="filter-chip" data-bass="' + b.iv + '" aria-pressed="true">' + b.name + ' <small>' + b.tok + '</small></button>';
   let note = "";
   if (b) note = '<div class="desc" style="margin-top:6px">' +
     (b.chordTone ? inversionLabel(rootPc(), def, b.pc, "sharp") : t("bassNonChord")) + '</div>';
@@ -3446,19 +3492,16 @@ function renderReadout(){
   const sub = subParts.filter(Boolean).join(" · ");
 
   // 英文介面的音階沒有副標(不附中文名),空的 .rt-sub 就不要產生
-  let html = '<div class="rt-head"><div class="rt-name"></div>' + (sub ? '<div class="rt-sub"></div>' : '') + '</div>';
+  let html = '<div class="rt-head"><div class="rt-name"></div>' + (sub ? '<div class="rt-sub"></div>' : '') +
+    // 查到的和弦一鍵排進練習的進行(不用打開練習再輸入一次)
+    (isChord ? '<button class="filter-chip rt-add" id="addToPractice">' + t("addToPractice") + '</button>' : '') + '</div>';
   html += '<div class="note-strip">';
   const shown = displayNotes();
-  let prevOct = null;
   for (const n of shown) {
-    const oct = Math.floor(n.midi / 12) - 1;
-    // 八度數字只在「換八度」的那顆音標出來,不然每一格都寫一次很吵
-    const octLabel = oct === prevOct ? "" : t("octaveNth", { n: oct });
-    prevOct = oct;
+    // 八度不再標在這裡(鍵盤上看得到),每格只寫級數 + 音名
     html += '<div class="note-cell' + (n.deg === 1 && !n.octaveTop ? " is-root" : "") + '" data-midi="' + n.midi + '">' +
-              '<div class="deg">' + (n.deg === 1 && !n.octaveTop ? t("rootDegree") : n.tok) + '</div>' +
-              '<div class="nm">' + (STATE.label === "do" ? toSolfege(n.name) : n.name) + '</div>' +
-              (octLabel ? '<div class="oct">' + octLabel + '</div>' : "") +
+              '<span class="deg">' + (n.deg === 1 && !n.octaveTop ? t("rootDegree") : n.tok) + '</span>' +
+              '<span class="nm">' + (STATE.label === "do" ? toSolfege(n.name) : n.name) + '</span>' +
             '</div>';
   }
   html += '</div>';
@@ -3472,13 +3515,12 @@ function renderReadout(){
           '</div>';
   if (isChord && STATE.inst === "guitar") {
     const v = currentVoicing();
+    // 指法本身與「開放 / 五弦…」上面的和弦圖已經畫出來了,這裡只補圖上看不出來的:省略了哪個音、最低音不是根音
     if (!v) html += '<div class="meta-row"><span>' + t("guitarTabTitle") + ' <b>' + t("guitarNoVoicing") + '</b></span></div>';
-    else {
-      html += '<div class="meta-row"><span>' + t("guitarTabTitle") + ' <b>' + gtrTabText(v.frets) + '</b></span>' +
-              '<span><b>' + voicingLabel(v) + '</b></span>' +
-              (v.missing.length ? '<span>' + t("guitarOmit") + ' <b>' + v.missing.join(" ") + '</b></span>' : '') + '</div>';
-      html += '<div class="desc" style="margin-top:4px">' + t("guitarTabNote") +
-              (v.bassIsRoot || bassInfo() ? '' : (LANG === "en" ? ". " : "。") + t("guitarBassNote")) + '</div>';
+    else if (v.missing.length || !(v.bassIsRoot || bassInfo())) {
+      html += '<div class="meta-row">' +
+              (v.missing.length ? '<span>' + t("guitarOmit") + ' <b>' + v.missing.join(" ") + '</b></span>' : '') +
+              (v.bassIsRoot || bassInfo() ? '' : '<span>' + t("guitarBassNote") + '</span>') + '</div>';
     }
   }
   if (isChord) html += bassPickerHtml(def);
@@ -3489,14 +3531,23 @@ function renderReadout(){
   ro.querySelectorAll("[data-bass]").forEach(el => {
     el.onclick = () => { setBass(el.dataset.bass === "" ? null : +el.dataset.bass); };
   });
+  const ap = ro.querySelector("#addToPractice");
+  if (ap) ap.onclick = () => {
+    const b = bassInfo();
+    PRACTICE.steps.push({ letter: STATE.letter, acc: STATE.acc, id: STATE.chordId, bass: b ? b.iv : null });
+    PRACTICE.custom = PRACTICE.steps.map(stepName).join(" ");
+    try { localStorage.setItem(PRCUR_KEY, PRACTICE.custom); } catch (e) {}
+    $("practiceCount").textContent = String(PRACTICE.steps.length);
+    ap.textContent = t("addedToPractice", { n: PRACTICE.steps.length });
+    ap.classList.add("done");
+    clearTimeout(ap._t); ap._t = setTimeout(() => { ap.textContent = t("addToPractice"); ap.classList.remove("done"); }, 1600);
+  };
   const ss = ro.querySelector("#slashAlt");
   if (ss) ss.onclick = () => {
     const iv = STATE.bassIv;
     STATE.chordId = ss.dataset.id; STATE.bassIv = iv; STATE.bassFor = STATE.chordId;
     render(); playCurrent();
   };
-  const bo = ro.querySelector("#bassOther");
-  if (bo) bo.onchange = () => { setBass(bo.value === "" ? null : +bo.value); };
   ro.querySelectorAll(".note-cell").forEach(el => {
     el.style.cursor = "pointer";
     el.onclick = () => playSingle(+el.dataset.midi);
@@ -3756,6 +3807,8 @@ function render(){
   document.querySelector(".info").hidden = practicing;
   document.querySelector(".lower").classList.toggle("practicing", practicing);
   $("practiceOpen").hidden = STATE.tab !== "chord";
+  // 練習按鈕上標出進行裡已經排了幾個和弦(從結果面板「加入練習」時看得到有加進去)
+  $("practiceCount").textContent = PRACTICE.steps.length ? String(PRACTICE.steps.length) : "";
   if (practicing) renderPractice();
   $("findCard").hidden = !findMode;
   const gtr = STATE.inst === "guitar";
@@ -4517,6 +4570,21 @@ document.addEventListener("keydown", ev => {
    等真的按下播放,真實鋼琴取樣多半已經就緒。沒有互動就不下載,不會白白吃流量 */
 ["pointerdown", "keydown"].forEach(ev =>
   window.addEventListener(ev, () => ensureAudio(), { once: true, capture: true }));
+
+/* 使用說明卡片:內容照目前語言即時產生(換語言不用另外同步) */
+function toggleHelp(force){
+  const pop = $("helpPop"), btn = $("helpToggle");
+  const open = force !== undefined ? force : pop.hidden;
+  if (open) pop.innerHTML = '<h3>' + t("helpTitle") + '</h3><ul>' + [1, 2, 3, 4, 5, 6, 7].map(i => '<li>' + t("help" + i) + '</li>').join("") + '</ul>';
+  pop.hidden = !open;
+  btn.setAttribute("aria-expanded", String(open));
+}
+$("helpToggle").onclick = ev => { ev.stopPropagation(); toggleHelp(); };
+document.addEventListener("pointerdown", ev => {
+  const pop = $("helpPop");
+  if (!pop.hidden && !pop.contains(ev.target) && !$("helpToggle").contains(ev.target)) toggleHelp(false);
+});
+document.addEventListener("keydown", ev => { if (ev.key === "Escape") toggleHelp(false); });
 
 /* 鍵盤設定面板的開關。點面板外面或按 Esc 就關掉 */
 function toggleKbPopover(force){

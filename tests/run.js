@@ -390,6 +390,19 @@ async function openPage(browser, opts = {}){
     // 點另一張圖 = 選它並刷一次
     await q.locator("#gtrDiagrams .gd").nth(1).click();
     total++; if ((await q.evaluate(() => STATE.vIdx)) !== 1 || !(await take()).startsWith("n")) fails.push("點另一張指法圖沒有選它並發聲");
+    // 結果面板:「+ 加入練習」把目前的和弦(含斜線低音)排進練習,練習按鈕上的數字跟著加
+    await q.evaluate(() => { PRACTICE.steps = []; STATE.chordId = "maj"; STATE.bassIv = 4; STATE.bassFor = "maj"; render(); });
+    await q.click("#addToPractice");
+    const ap = await q.evaluate(() => [PRACTICE.steps.map(stepName).join(" "), $("practiceCount").textContent]);
+    total++; if (ap[0] !== "C/E" || ap[1] !== "1") fails.push("加入練習: " + ap.join(" / "));
+    // 低音列不再有「其他音…」下拉(交給根音卡片的 /);組成音是一列小晶片
+    total++; if (await q.locator("#bassOther").count()) fails.push("低音列還有「其他音」下拉");
+    // 使用說明:點 ? 打開、點外面關掉
+    await q.click("#helpToggle");
+    total++; if (await q.evaluate(() => $("helpPop").hidden || $("helpPop").querySelectorAll("li").length < 5)) fails.push("使用說明沒有打開");
+    await q.mouse.click(5, 800);
+    total++; if (!(await q.evaluate(() => $("helpPop").hidden))) fails.push("點外面沒有關掉使用說明");
+    await q.evaluate(() => { PRACTICE.steps = []; STATE.bassIv = null; render(); }); await take();
     // 同一組音的另一種寫法:兩個方向都能一鍵切換(Cmaj7/B ↔ C/B),兩種都正確,不是更正
     await q.evaluate(() => { STATE.chordId = "maj7"; STATE.bassIv = 11; STATE.bassFor = "maj7"; render(); });
     await q.click("#slashAlt");
@@ -635,6 +648,9 @@ async function openPage(browser, opts = {}){
     const pr = await q.evaluate(() => { STATE.inst = "piano"; STATE.tab = "chord"; PRACTICE.open = true; PRACTICE.steps = [{ letter: 0, acc: 0, id: "maj", bass: null }, { letter: 4, acc: 0, id: "7", bass: null }]; PRACTICE.step = 0; render();
       const m = document.body.innerText.replace(/中/g, "").match(/[\u3400-\u9fff]+/g); PRACTICE.open = false; render(); return m ? m.slice(0, 3).join(",") : ""; });
     if (pr) fails.push("練習卡片: " + pr);
+    total++;
+    const hp = await q.evaluate(() => { toggleHelp(true); const m = $("helpPop").innerText.match(/[\u3400-\u9fff]+/g); toggleHelp(false); return m ? m.slice(0, 3).join(",") : ""; });
+    if (hp) fails.push("使用說明: " + hp);
     report("英文介面無中文", total, fails);
     await q.close();
   }
