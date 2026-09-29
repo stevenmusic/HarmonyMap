@@ -82,3 +82,8 @@
   - 殘響的脈衝響應(20 萬個取樣)在閒置時才算,不要放回第一次碰畫面的那一下
 - iOS Safari 在辨識模式一直點指板格子會放大整頁(`touch-action:manipulation` 擋不住):鍵盤/指板/和弦圖區(`.kb-wrap`,含 4 個分頁 × 2 種樂器)與練習卡片上,兩下之間 < 350ms 的 `touchend`
   用 `preventDefault` 擋掉(摘要列、設定面板、按鈕排除,它們靠 click)。不要對整份文件這樣做,按鈕連點會掉第二下
+- 音訊生命週期:iOS 被電話/Siri/鬧鐘打斷後 AudioContext 是非標準的 `"interrupted"`,`ensureAudio` 只要不是 running 就 resume;
+  `wakeAudio` 在 visibilitychange / pageshow / 每次 pointerdown 叫醒已建立的 context(練習才不會無聲卡住)
+- `localStorage` 每一次讀寫都要 try/catch:儲存空間被停用時沒包的那一行會讓整份程式停住、畫面全空(測試有模擬)
+- `playSingle` 不會清掉 `scheduledNodes` / `soundingWindows`(只有 playNotes 會),所以它自己把早就結束的丟掉(節點記 `_end`),
+  連點辨識、滑和弦圖時陣列才不會一直長大

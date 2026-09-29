@@ -1206,6 +1206,82 @@ async function openPage(browser, opts = {}){
     report("版面", total, fails);
   }
 
+  /* ── 7. 音訊生命週期與穩定性:儲存空間被停用、iOS 打斷後叫醒、節拍器補拍與停止、單音不累積 ── */
+  {
+    const fails = []; let total = 0;
+    // 儲存空間被停用(getItem/setItem 丟例外)時,畫面照樣出來
+    {
+      const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+      const q = await ctx.newPage(); const errs = [];
+      q.on("pageerror", e => errs.push(e.message));
+      await q.addInitScript(() => { Storage.prototype.getItem = () => { throw new Error("denied"); }; Storage.prototype.setItem = () => { throw new Error("denied"); }; });
+      await q.route(/^https?:\/\//, r => r.abort());
+      await q.goto(PAGE);
+      await q.click("#langToggle").catch(() => {});
+      const ok = await q.evaluate(() => typeof CHORDS !== "undefined" && $("typeList").children.length > 0 && LANG === "en");
+      total++; if (!ok || errs.length) fails.push("儲存空間停用時畫面沒出來或換不了語言: " + errs.join("; "));
+      await ctx.close();
+    }
+    const q = await openPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    await q.locator("#kbSummary b").click();
+    // iOS 打斷(這裡用 suspend 模擬)之後,回到前景或碰一下畫面就叫醒
+    const woke = await q.evaluate(async () => {
+      await audioCtx.suspend();
+      Object.defineProperty(document, "hidden", { configurable: true, get: () => false });
+      document.dispatchEvent(new Event("visibilitychange"));
+      await new Promise(r => setTimeout(r, 200));
+      return audioCtx.state;
+    });
+    total++; if (woke !== "running") fails.push("音訊被暫停後回到前景沒有叫醒: " + woke);
+    // 節拍器:計時器卡住 2 秒回來,錯過的拍子不能一口氣補(會聽到一串點擊)
+    const burst = await q.evaluate(async () => {
+      PRACTICE.steps = [{ letter: 0, acc: 0, id: "maj", bass: null }, { letter: 4, acc: 0, id: "maj", bass: null }];
+      const clicks = [], orig = practiceClick;
+      practiceClick = (t, a) => clicks.push(t);
+      practiceStart(); await new Promise(r => setTimeout(r, 60));
+      clicks.length = 0; PRACTICE.nextTime -= 2;
+      await new Promise(r => setTimeout(r, 80));
+      const n = clicks.length; practiceStop(); practiceClick = orig; return n;
+    });
+    total++; if (burst > 2) fails.push("節拍器卡住回來一次補了 " + burst + " 拍");
+    // 在拍子前一刻按停止:已經排好、還沒響的下一個和弦要取消
+    const cancelled = await q.evaluate(async () => {
+      const orig = fadeStop, hit = [];
+      PRACTICE.bpm = 240; practiceStart();
+      // 等到下一小節的和弦已經排好、還沒響的那一刻(節拍器提前 0.1 秒排)
+      let pending = 0;
+      for (let i = 0; i < 400 && !pending; i++) {
+        await new Promise(r => setTimeout(r, 5));
+        pending = scheduledNodes.filter(n => n._at > audioCtx.currentTime + 0.01).length;
+      }
+      fadeStop = (n, t) => { hit.push(n); orig(n, t); };
+      practiceStop(); fadeStop = orig;
+      return { pending, hit: hit.length };
+    });
+    total++; if (!cancelled.pending || cancelled.hit < cancelled.pending) fails.push("停止後還沒響的和弦沒有取消: " + JSON.stringify(cancelled));
+    // 播放中換小節只更新「現在 / 下一個」:文字框不能失去焦點、開始/停止鈕不能被換掉(換小節那一刻按停止會點空)
+    const tick = await q.evaluate(async () => {
+      PRACTICE.open = true; STATE.tab = "chord"; PRACTICE.step = 0; render();
+      const go = $("prGo"), inp = $("prCustom"); inp.focus();
+      PRACTICE.step = 1; practiceApply(); practiceTick();
+      const r = { sameGo: $("prGo") === go, focus: document.activeElement && document.activeElement.id, now: $("prNow").textContent === stepName(PRACTICE.steps[1]) ? "E" : $("prNow").textContent,
+                  cur: [...$("prSteps").children].findIndex(x => x.classList.contains("cur")) };
+      PRACTICE.open = false; render(); return r;
+    });
+    total++; if (!tick.sameGo || tick.focus !== "prCustom" || tick.now !== "E" || tick.cur !== 1) fails.push("練習換小節時重建了整張卡片: " + JSON.stringify(tick));
+    // 連點單音:紀錄不能一直累積
+    const grow = await q.evaluate(async () => {
+      for (let i = 0; i < 300; i++) playSingle(60 + (i % 12));
+      await new Promise(r => setTimeout(r, 2600));
+      playSingle(60);
+      return { w: soundingWindows.length, n: scheduledNodes.length };
+    });
+    total++; if (grow.w > 10 || grow.n > 20) fails.push("連點單音後紀錄一直累積: " + JSON.stringify(grow));
+    if (q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
+    await q.close();
+    report("音訊與穩定性", total, fails);
+  }
+
   await browser.close();
 
   let failed = 0;

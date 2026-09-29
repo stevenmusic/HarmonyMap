@@ -993,7 +993,9 @@ const $ = id => document.getElementById(id);
    那些是樂理名詞、不是介面文字,不進這份字典,用 localName()/subName() 挑欄位。
    ══════════════════════════════════════════════════════════════ */
 const LANG_KEY = "sm_lang"; // 與 ScrollScore / SightScore / LoudMaster / Hub 共用同一把 key
-let LANG = localStorage.getItem(LANG_KEY) === "en" ? "en" : "zh"; // 沒存過或存的不是 en,一律回中文
+let LANG = "zh"; // 沒存過或存的不是 en,一律回中文
+// 儲存空間被停用(隱私模式、WebView 設定)時 getItem 會丟例外,沒包起來的話整份程式停在這裡、畫面全空
+try { if (localStorage.getItem(LANG_KEY) === "en") LANG = "en"; } catch (e) {}
 
 const I18N = {
   zh: {
@@ -1261,7 +1263,7 @@ function groupNoteText(g){ return LANG === "en" ? (GROUP_NOTE_EN[g] || "") : (GR
    同一份元素、同一份 DOM 結構,只換文字內容——不是中英文各刻一份畫面 */
 function applyLanguage(lang){
   LANG = (lang === "en") ? "en" : "zh";
-  localStorage.setItem(LANG_KEY, LANG);
+  try { localStorage.setItem(LANG_KEY, LANG); } catch (e) {}
   document.documentElement.lang = LANG === "en" ? "en" : "zh-Hant";
   document.documentElement.setAttribute("data-lang", LANG);
   document.title = t("pageTitle");
@@ -2960,7 +2962,8 @@ function ensureAudio(){
     reverbConvolver.connect(reverbWet);
     reverbWet.connect(masterGain);
   }
-  if (audioCtx.state === "suspended") audioCtx.resume();
+  // iOS 被電話、Siri、鬧鐘打斷後狀態是非標準的 "interrupted",不只 "suspended":不是 running 就叫醒
+  if (audioCtx.state !== "running") { const r = audioCtx.resume(); if (r && r.catch) r.catch(() => {}); }
   loadPianoSamples();
   if (STATE.inst === "guitar") loadGuitarSamples(STATE.gtrTone);
 }
@@ -3076,7 +3079,7 @@ function playSampledGuitar(midi, when, dur){
   connectOut(g, midi);
   src.start(when, best.offset);
   src.stop(when + sustain + tail + 0.1);
-  src._g = g;
+  src._g = g; src._end = when + sustain + tail + 0.1;
   scheduledNodes.push(src);
   return true;
 }
@@ -3132,7 +3135,7 @@ function playSampledPiano(midi, when, dur, chordAnchors){
   connectOut(g, midi);
   src.start(when, best.offset || 0);
   src.stop(when + sustain + tail + 0.1);
-  src._g = g;
+  src._g = g; src._end = when + sustain + tail + 0.1;
   scheduledNodes.push(src);
   return true;
 }
@@ -3186,7 +3189,7 @@ function schedulePiano(midi, when, dur){
   osc.start(when); osc2.start(when);
   const stopAt = when + sustain + releaseTail + 0.05;
   osc.stop(stopAt); osc2.stop(stopAt);
-  osc._g = osc2._g = g;
+  osc._g = osc2._g = g; osc._end = osc2._end = stopAt;
   scheduledNodes.push(osc, osc2);
 }
 /* 停掉一個音:不要直接 stop()——正在響的波形瞬間被切斷會「喀」一聲,連續點和弦時很明顯。
@@ -3259,7 +3262,9 @@ function playNotes(midis, mode, at, downMidis){
   let end = t0;
   const chordAnchors = {}; // 同一次播放裡,同音名的音共用同一份錄音,八度關係才精確
   for (const n of seq) {
+    const k = scheduledNodes.length;
     scheduleNote(n.midi, n.at, n.dur, chordAnchors);
+    for (let i = k; i < scheduledNodes.length; i++) scheduledNodes[i]._at = n.at;
     soundingWindows.push({ midi: n.midi, from: n.at, to: n.at + Math.min(n.dur, 0.55) });
     end = Math.max(end, n.at + n.dur);
   }
@@ -3268,6 +3273,9 @@ function playNotes(midis, mode, at, downMidis){
 function playSingle(midi){
   ensureAudio();
   const at = audioCtx.currentTime + 0.02;
+  // 單音不會清掉之前的紀錄(playNotes 才會),連點辨識、滑過和弦圖時兩個陣列會一直長大:把早就結束的丟掉
+  soundingWindows = soundingWindows.filter(w => w.to > at - 1);
+  scheduledNodes = scheduledNodes.filter(n => !(n._end < at - 0.5));
   scheduleNote(midi, at, 1.4, null);
   soundingWindows.push({ midi, from: at, to: at + 0.4 });
   startHighlightLoop(at + 0.7);
@@ -4317,7 +4325,7 @@ function render(){
   buildPlayModes();
   scheduleVoicingWarm();
 
-  if (!findMode) {
+  if (!findMode && !practicing) {   // 練習時根音列、和弦清單都收起來了,不必每次重建
     buildRootPicker();
     buildQuickGrid();
     buildFilterRows();
@@ -4349,7 +4357,7 @@ function render(){
    沒有內建範例進行(使用者要求拿掉,省版面)。
    節拍用 Web Audio 的時鐘排程(提前 0.1 秒排好點擊聲),畫面在那一刻用 setTimeout 跟上
    ══════════════════════════════════════════════════════════════ */
-const PRACTICE = { pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
+const PRACTICE = { runId: 0, pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
                    steps: [], step: 0, beat: -1, slash: null, padFresh: false, running: false, timer: 0, nextTime: 0, count: 0, flash: -1 };
 function practiceParseCustom(text){
   const bad = [], steps = [];
@@ -4455,7 +4463,12 @@ function practiceStart(){
   PRACTICE.count = 0;
   PRACTICE.step = 0;
   PRACTICE.nextTime = audioCtx.currentTime + 0.12;
+  const run = ++PRACTICE.runId;   // 停了又馬上開始時,上一輪還沒觸發的 setTimeout 認得出自己過期了
   const schedule = () => {
+    /* 計時器被節流(切到背景、主執行緒卡住)回來時,錯過的拍子不要一口氣全補(會聽到一串點擊和和弦疊在一起),
+       直接跳過、留在原本的小節格線上 */
+    const spb = 60 / PRACTICE.bpm, lag = audioCtx.currentTime - 0.05 - PRACTICE.nextTime;
+    if (lag > 0) { const missed = Math.ceil(lag / spb); PRACTICE.count += missed; PRACTICE.nextTime += missed * spb; }
     while (PRACTICE.nextTime < audioCtx.currentTime + 0.1) {
       const n = PRACTICE.count++, beat = n % PRACTICE.beats, step = Math.floor(n / PRACTICE.beats) % PRACTICE.steps.length;
       practiceClick(PRACTICE.nextTime, beat === 0);
@@ -4465,14 +4478,15 @@ function practiceStart(){
         const at = PRACTICE.nextTime;
         withStep(PRACTICE.steps[step], () => playCurrent(at));
       }
-      const delay = Math.max(0, (PRACTICE.nextTime - audioCtx.currentTime) * 1000);
+      // 畫面跟著「聽到」的時刻走(扣掉輸出延遲),不是排程時鐘,跟鍵盤發亮同一個規則
+      const delay = Math.max(0, (PRACTICE.nextTime - heardTime()) * 1000);
       setTimeout(() => {
-        if (!PRACTICE.running) return;
+        if (!PRACTICE.running || PRACTICE.runId !== run) return;
         PRACTICE.beat = beat;
         if (beat === 0) {
           PRACTICE.step = step;
           practiceApply();
-          render();   // 聲音已經在上面照節拍器的時鐘排好了,這裡只更新畫面
+          practiceTick();   // 聲音已經在上面照節拍器的時鐘排好了,這裡只更新會變的那幾塊畫面
         } else renderPracticeBeat();
       }, delay);
       PRACTICE.nextTime += 60 / PRACTICE.bpm;
@@ -4487,6 +4501,8 @@ function practiceStop(){
   clearInterval(PRACTICE.timer);
   PRACTICE.running = false;
   PRACTICE.beat = -1;
+  // 節拍器提前 0.1 秒排好下一拍的和弦:在拍子前一刻按停止,那個和弦不該還響出來。還沒開始的音取消,正在響的不動
+  if (audioCtx) { const now = audioCtx.currentTime; for (const n of scheduledNodes) if (n._at > now + 0.001) fadeStop(n, now); }
 }
 function renderPracticeBeat(){
   const el = document.querySelector("#practiceStage .pr-beats");
@@ -4779,6 +4795,40 @@ function fitStageNames(){
     els.forEach(e => { e.style.fontSize = px + "px"; });
   }
 }
+/* 「現在 / 下一個」兩張圖。renderPractice 與每小節的 practiceTick 共用 */
+function practiceNowHTML(a, b, ids){
+  return '<div class="pr-now"><div class="now" role="button" tabindex="0"><small>' + t("practiceNow") + '</small><b' + (ids ? ' id="prNow"' : '') + '>C</b>' + stepDiagram(a) + '</div>' +
+    '<div class="next" role="button" tabindex="0"><small>' + t("practiceNext") + '</small><b' + (ids ? ' id="prNext"' : '') + '>C</b>' + stepDiagram(b) + '</div></div>';
+}
+function bindPracticeNow(cur, nxt){
+  const stage = $("practiceStage");
+  $("prNow").textContent = stepName(cur);
+  $("prNext").textContent = stepName(nxt);
+  fitStageNames();
+  // 點圖就聽那個和弦;鍵盤操作時 Enter 也一樣(空白鍵已經是練習的開始/停止)
+  for (const [sel, st] of [[".now", cur], [".next", nxt]]) {
+    const el = stage.querySelector(sel);
+    el.onclick = () => withStep(st, () => playCurrent());
+    el.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); el.click(); } };
+  }
+}
+/* 播放中每小節換和弦:只換「現在 / 下一個」、進行裡亮的那格與拍點。
+   原本整個 render():開始/停止鈕、文字框、輸入板每小節都被重建——剛好在換小節時按停止會點空,
+   iPhone 上正在打字的文字框每小節被收掉鍵盤(規劃審查時抓到) */
+function practiceTick(){
+  const P = PRACTICE, stage = $("practiceStage"), now = stage.querySelector(".pr-now");
+  if (!now || !P.steps.length || !P.open) { render(); return; }
+  const cur = P.steps[P.step], nxt = P.steps.length > 1 ? P.steps[(P.step + 1) % P.steps.length] : cur;
+  now.outerHTML = practiceNowHTML(cur, nxt, true);
+  bindPracticeNow(cur, nxt);
+  const ss = $("prSteps");
+  if (ss) {
+    [...ss.children].forEach((sp, i) => sp.classList.toggle("cur", i === P.step));
+    const focus = ss.children[P.step];
+    if (focus && ss.scrollWidth > ss.clientWidth) ss.scrollLeft = Math.max(0, focus.offsetLeft - ss.offsetLeft - (ss.clientWidth - focus.offsetWidth) / 2);
+  }
+  renderPracticeBeat();
+}
 function renderPractice(){
   const c = $("practiceCard"), stage = $("practiceStage");
   const P = PRACTICE, cur = P.steps[P.step], nxt = P.steps.length > 1 ? P.steps[(P.step + 1) % P.steps.length] : cur;
@@ -4790,8 +4840,7 @@ function renderPractice(){
   /* 上方釘住區:練習時用「現在 / 下一個」兩張和弦圖取代長長的指板/鍵盤(使用者要求),
      連同拍點與開始鈕一起釘在上面,手在琴上的時候眼睛只要看這一塊 */
   const stageHTML = (a, b, ids) =>
-    '<div class="pr-now"><div class="now" role="button" tabindex="0"><small>' + t("practiceNow") + '</small><b' + (ids ? ' id="prNow"' : '') + '>C</b>' + stepDiagram(a) + '</div>' +
-      '<div class="next" role="button" tabindex="0"><small>' + t("practiceNext") + '</small><b' + (ids ? ' id="prNext"' : '') + '>C</b>' + stepDiagram(b) + '</div></div>' +
+    practiceNowHTML(a, b, ids) +
     (STATE.inst === "guitar" ? '<div class="gd-legend">' + t("fingerLegend") + '</div>' : '') +
     '<div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div>' +
     '<button class="btn primary pr-go"' + (ids ? ' id="prGo"' : '') + ' title="' + t("practiceHint") + '">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>';
@@ -4802,12 +4851,7 @@ function renderPractice(){
     : '<div class="pr-ghost" aria-hidden="true">' + stageHTML({ letter: 0, acc: 0, id: "maj", bass: null }, { letter: 0, acc: 0, id: "maj", bass: null }, false) + '</div>' +
       '<div class="pr-empty">' + t("practiceEmpty") + '</div>';
   if (P.steps.length) {
-    $("prNow").textContent = stepName(cur);
-    $("prNext").textContent = stepName(nxt);
-    fitStageNames();
-    // 點圖就聽那個和弦
-    stage.querySelector(".now").onclick = () => withStep(cur, () => playCurrent());
-    stage.querySelector(".next").onclick = () => withStep(nxt, () => playCurrent());
+    bindPracticeNow(cur, nxt);
     $("prGo").onclick = () => { if (P.running) { practiceStop(); render(); } else practiceStart(); };
   }
 
@@ -5330,6 +5374,15 @@ document.addEventListener("keydown", ev => {
    等真的按下播放,真實鋼琴取樣多半已經就緒。沒有互動就不下載,不會白白吃流量 */
 ["pointerdown", "keydown"].forEach(ev =>
   window.addEventListener(ev, () => ensureAudio(), { once: true, capture: true }));
+/* 切到別的 App、接電話回來之後,音訊時鐘可能停著(練習會無聲卡住,畫面卻還在跑):
+   回到前景或下一次碰畫面時,已經建立過的 AudioContext 不是 running 就叫醒 */
+function wakeAudio(){
+  if (!audioCtx || audioCtx.state === "running" || document.hidden) return;
+  const r = audioCtx.resume(); if (r && r.catch) r.catch(() => {});
+}
+document.addEventListener("visibilitychange", wakeAudio);
+window.addEventListener("pageshow", wakeAudio);
+window.addEventListener("pointerdown", wakeAudio, { capture: true });
 
 /* 使用說明卡片:內容照目前語言即時產生(換語言不用另外同步) */
 function toggleHelp(force){
