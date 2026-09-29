@@ -1801,6 +1801,28 @@ function drawKeyboard(ctx, x, y, w, h, activeMap){
 /* ── 音名標籤:ScrollScore 的鍵盤不需要標音名(那邊看的是樂譜),
    這裡是「知道這是什麼音」的工具,所以在上面照同一套幾何再疊一層文字,
    不動到照抄過來的 drawKeyboard 本身 ── */
+/* 黑鍵描一圈深色邊(使用者要求):亮起來的黑鍵(青/金)旁邊的白鍵也亮成同色時,兩者幾乎分不開。
+   照抄的 drawKeyboard 不能改,所以跟 drawKeyLabels 一樣在上面再疊一層,形狀與位置照它的算法
+   (寬 = 白鍵 0.62、高 = 0.6、圓角 2/2/4/4) */
+function drawBlackKeyEdges(ctx, x, y, w, h){
+  const whiteW = w / KB_WHITE_KEYS.length, blackH = h * 0.6, blackW = whiteW * 0.62;
+  ctx.save();
+  ctx.strokeStyle = "rgba(8,6,4,0.9)";
+  ctx.lineWidth = Math.max(1, Math.min(1.6, whiteW * 0.05));
+  for (let m = KB_LOW; m <= KB_HIGH; m++) {
+    if (!isBlackKey(m)) continue;
+    let leftWhite = m - 1;
+    while (isBlackKey(leftWhite)) leftWhite--;
+    const li = KB_WHITE_IDX[leftWhite];
+    if (li === undefined) continue;
+    const kx = x + (li + 1) * whiteW - blackW / 2, lw = ctx.lineWidth / 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(kx + lw, y + lw, blackW - 2 * lw, blackH - 2 * lw, [2, 2, 4, 4]);
+    else ctx.rect(kx + lw, y + lw, blackW - 2 * lw, blackH - 2 * lw);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 function drawKeyLabels(ctx, x, y, w, h, labelMap){
   if (!labelMap.size) return;
   const whiteW = w / KB_WHITE_KEYS.length;
@@ -1915,6 +1937,7 @@ function drawKeyboardLive(){
   if (STATE.inst === "guitar") { cv._fb = drawFretboard(ctx, cv._cssW, cv._cssH, guitarView()); return; }
   const view = currentView();
   drawKeyboard(ctx, 0, 0, cv._cssW, cv._cssH, view.activeMap);
+  drawBlackKeyEdges(ctx, 0, 0, cv._cssW, cv._cssH);
   if (STATE.label !== "off") drawKeyLabels(ctx, 0, 0, cv._cssW, cv._cssH, view.labelMap);
 }
 /* 把頂欄與釘住區塊的實際高度餵給 CSS。兩個高度都是會變的:頂欄隨字級與換行改變,
@@ -4939,6 +4962,7 @@ $("keyboardCanvas").addEventListener("pointermove", ev => {
 $("keyboardCanvas").addEventListener("pointerdown", ev => {
   const cv = $("keyboardCanvas");
   const rect = cv.getBoundingClientRect();
+  if (STATE.tab === "scale") return;   // 音階分頁(鋼琴與吉他):整個方框都是「播上行音階」,交給 .kb-wrap 的處理
   if (STATE.inst === "guitar") {
     const hit = fretAt(ev.clientX - rect.left, ev.clientY - rect.top);
     if (!hit) return;
@@ -4955,13 +4979,9 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
       pluckString(hit.s);
       cv._strum = hit.s;
       try { cv.setPointerCapture(ev.pointerId); } catch (e) {}
-    } else {
-      vibrateString(hit.s, hit.f);
-      playSingle(midi);
     }
     return;
   }
-  if (STATE.tab === "scale") return;   // 音階分頁:整個鍵盤方框都是「播上行音階」,交給 .kb-wrap 的處理
   const m = keyAt(ev.clientX - rect.left, ev.clientY - rect.top);
   if (m === undefined) return;
   if (STATE.tab === "find") {
@@ -4984,7 +5004,7 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
 });
 
 document.querySelector(".kb-wrap").addEventListener("pointerdown", ev => {
-  if (STATE.tab !== "scale" || STATE.inst !== "piano") return;
+  if (STATE.tab !== "scale") return;
   // 摘要列(整條重播、音名單音)、齒輪與設定面板照原本的功能
   if (ev.target.closest(".kb-summary, .kb-popover, .pos-row")) return;
   playScaleUp();
@@ -5037,11 +5057,21 @@ function playCurrent(at){
   if (!midis.length) return;
   playNotes(midis, mode, at, down);
 }
-/* 音階分頁的鋼琴:點鍵盤方框內任何地方(琴鍵或旁邊的空白)= 從主音彈上行音階到高八度主音(使用者要求)。
-   單音改從摘要列的音名點 */
+/* 音階分頁:點鍵盤/指板方框內任何地方(琴鍵、格子或旁邊的空白)= 從主音彈上行音階到高八度主音(使用者要求,
+   鋼琴與吉他一樣)。單音改從摘要列的音名點 */
 function playScaleUp(){
-  const ms = displayNotes().map(n => n.midi).sort((a, b) => a - b);
+  const ms = STATE.inst === "guitar" ? guitarScaleUpMidis() : displayNotes().map(n => n.midi).sort((a, b) => a - b);
   if (ms.length) playNotes(ms, "arp");
+}
+/* 吉他:彈「指板上現在畫出來的那一組」裡面最低、而且整個八度都在畫面上的那一圈(選了把位就是那個把位裡的),
+   播放時亮起來的正好是看得到的那些音點。找不到完整的一圈才退回固定八度 */
+function guitarScaleUpMidis(){
+  const gv = guitarView();
+  const avail = new Set(gv.dots.map(d => d.midi).concat(gv.markers.filter(m => m && m.type === "open").map(m => m.midi)));
+  const semis = [...new Set(currentNotes().map(n => ((n.semi % 12) + 12) % 12))].sort((a, b) => a - b).concat(12);
+  const tonics = [...avail].filter(m => pcOf(m) === rootPc()).sort((a, b) => a - b);
+  for (const t of tonics) { const seq = semis.map(x => t + x); if (seq.every(m => avail.has(m))) return seq; }
+  return displayNotes().map(n => n.midi).sort((a, b) => a - b);
 }
 function syncFindFromFrets(){
   STATE.findSel = new Set(gtrFindFrets().map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null));

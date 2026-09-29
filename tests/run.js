@@ -465,6 +465,22 @@ async function openPage(browser, opts = {}){
       STATE.playMode = "updown"; calls.length = 0; playCurrent(); total++;
       if (!calls[0] || (calls[0].down || []).join(",") !== "79,77,76,74,72,71,69") fails.push("古典旋律小調下行應該是 G F E D C B A,實際 " + JSON.stringify(calls[0]));
       total++; if (SAME_PITCH.has("melMinorCl") || SAME_PITCH.has("melMinor")) fails.push("古典旋律小調下行不同,不能算同音重複");
+      // 吉他也一樣(使用者要求):點指板任何地方 = 目前把位裡的上行音階;點把位鈕不發聲
+      STATE.inst = "guitar"; STATE.playMode = "arp";
+      for (const [id, L, steps] of [["ionian", 0, "2,2,1,2,2,2,1"], ["minPent", 5, "3,2,2,3,2"], ["melMinorCl", 5, "2,1,2,2,2,2,1"]]) {
+        STATE.scaleId = id; STATE.letter = L; STATE.acc = 0; render();
+        const nPos = document.querySelectorAll("#scalePosRow button").length;
+        for (let i = 0; i < nPos; i++) {
+          calls.length = 0; document.querySelectorAll("#scalePosRow button")[i].click(); total++;
+          if (calls.length) { fails.push("吉他 " + id + " 點把位 " + i + " 不應該發聲: " + JSON.stringify(calls)); continue; }
+          const g = $("keyboardCanvas").getBoundingClientRect();
+          for (const [fx, fy] of [[0.5, 0.5], [0.1, 0.2], [0.9, 0.8]]) {
+            calls.length = 0; fire($("keyboardCanvas"), g.left + g.width * fx, g.top + g.height * fy); total++;
+            const c = calls[0], m = c && c.m, d = m ? m.slice(1).map((x, k) => x - m[k]).join(",") : "";
+            if (!c || c.mode !== "arp" || calls.length !== 1 || pcOf(m[0]) !== rootPc() || d !== steps) { fails.push("吉他 " + id + " 把位 " + i + " 點指板應該播上行音階,實際 " + JSON.stringify(calls)); break; }
+          }
+        }
+      }
       window.playNotes = pn; window.playSingle = ps;
       [STATE.tab, STATE.inst, STATE.scaleId, STATE.letter, STATE.acc, STATE.playMode] = keep; render();
       return { total, fails };
