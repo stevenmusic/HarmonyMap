@@ -1136,7 +1136,7 @@ const I18N = {
     voicingPrev: "Previous voicing", voicingNext: "Next voicing",
     guitarTabTitle: "Guitar voicing", guitarTabNote: "Low string (6th) to high string (1st) · × = muted · 0 = open · number = fret",
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
-    strThick: "low", strThin: "high",
+    strThick: "L", strThin: "H",
     fingerLegend: "T thumb · 1 index · 2 middle · 3 ring · 4 pinky",
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
@@ -4484,12 +4484,12 @@ function guitarDiagramSVG(){
 }
 /* 直式和弦圖:左邊 6 弦、右邊 1 弦。練習卡片與吉他和弦分頁共用。
    弦的 x 座標(VSVG.x0 + 弦 × VSVG.gap,viewBox 座標)也拿來反推點到哪一條弦 */
-/* 粗/細(low/high)的位置:貼在指板兩側、最下面兩格的高度,中英文同一個位置(英文轉 ∓90° 直排,中文一個字直立)。
+/* 粗/細(L/H)的位置:貼在指板兩側、最下面兩格的高度,中英文同一個位置,都是直立的一個字。
    橫排的話英文 low/high 比空白寬,會伸出圖外被卡片切掉(low 只剩 ow);直排只佔一個字高 */
 function slabPos(fs, pad, i){
   const half = fs * 0.5, cy = VSVG.y0 + VSVG.rowH * (VSVG.rows - 1);
   const cx = i === 0 ? VSVG.x0 - pad * 0.5 - half : VSVG.x0 + VSVG.gap * 5 + pad * 0.5 + half;
-  return { x: cx.toFixed(2), y: cy.toFixed(2), transform: LANG === "en" ? "rotate(" + (i === 0 ? -90 : 90) + " " + cx.toFixed(2) + " " + cy.toFixed(2) + ")" : "" };   // 中文一個字直立,位置與英文相同
+  return { x: cx.toFixed(2), y: cy.toFixed(2), transform: "" };
 }
 const VSVG = { x0: 20, gap: 18, y0: 26, rowH: 20, rows: 4 };
 // 右邊只留格數標示(「12fr」)需要的寬度,不要多留白
