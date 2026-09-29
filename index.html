@@ -517,7 +517,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 .gtr-dgs .gd{border:1px solid var(--line);border-radius:var(--radius-md);padding:4px 3px 2px;cursor:pointer;
              touch-action:none;background:var(--surface-inset);min-width:0}
 .gtr-dgs .gd.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
-.gtr-dgs .gd-lab{font-size:var(--fs-2xs);color:var(--muted-bright);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 標籤(開放和弦、五弦 · 第 3 格)隨寬度連續放大:320px 12px → 手機 13~15px → 平板桌機 15px(使用者嫌原本 11px 太小) */
+.gtr-dgs .gd-lab{font-size:clamp(12px,3.4vw,15px);color:var(--muted-bright);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gtr-dgs .gd.on .gd-lab{color:var(--gold)}
 /* 和弦圖儘量大、少留白(使用者要求):撐滿格子,只在很寬的桌機擋一個上限,免得釘住區太高 */
 /* 和弦圖跟著格子縮放,但最多放大到 1.4 倍(185×160px):圖裡的字(×、○、3fr)是 10~12 個單位,
