@@ -3292,8 +3292,10 @@ function currentView(){
       labelMap.set(n.midi, { text: keyLabelText(n.name, n.tok), strong: true });
     }
   }
-  // 沒被選到的 C 也淡淡標一下,才知道現在看的是哪個八度
-  for (let m = KB_LOW; m <= KB_HIGH; m += 12) {
+  // 沒被選到的 C 也淡淡標一下,才知道現在看的是哪個八度。
+  // 從音域裡第一個 C 開始:音階分頁的鋼琴從 C 或 F 起(scaleOctaveRange),從 KB_LOW 直接每 12 跳的話
+  // 會標在 F 上、八度數變成 4.4166…(使用者回報「奇怪的數字」)
+  for (let m = KB_LOW + (12 - pcOf(KB_LOW)) % 12; m <= KB_HIGH; m += 12) {
     if (!labelMap.has(m)) labelMap.set(m, { text: STATE.label === "deg" ? "" : keyLabelText("C", null) + (m / 12 - 1), strong: false });
   }
   return { activeMap, labelMap };

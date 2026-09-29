@@ -424,6 +424,23 @@ async function openPage(browser, opts = {}){
     });
     report("辨識命名", r.total, r.fails);
   }
+  /* ── 4c. 鋼琴的琴鍵標示:淡淡的八度標示只能在 C 上、八度是整數
+     (音階分頁的鋼琴從 C 或 F 起,曾經在 F 上標出「C4.4166666667」,使用者回報) ── */
+  {
+    const r = await p.evaluate(() => {
+      const fails = []; let total = 0;
+      const keep = [STATE.tab, STATE.scaleId, STATE.letter, STATE.acc];
+      STATE.tab = "scale";
+      for (const sc of SCALES) for (let L = 0; L < 7; L++) for (const a of [-1, 0, 1]) {
+        STATE.scaleId = sc.id; STATE.letter = L; STATE.acc = a; render(); total++;
+        for (const [m, l] of currentView().labelMap)
+          if (/\d\.\d/.test(l.text) || (!l.strong && l.text && pcOf(m) !== 0)) { fails.push(sc.id + " " + LETTERS[L] + a + " 鍵 " + m + " 標成「" + l.text + "」"); break; }
+      }
+      [STATE.tab, STATE.scaleId, STATE.letter, STATE.acc] = keep; render();
+      return { total, fails: fails.slice(0, 10) };
+    });
+    report("琴鍵標示", r.total, r.fails);
+  }
   await p.close();
 
   /* ── 5. 互動:鋼琴只讓組成音發聲、摘要列音名單獨發聲、吉他撥弦與刷弦 ── */
