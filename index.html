@@ -992,7 +992,7 @@ const I18N = {
     clearSelection: "清除選音",
     spellAuto: "拼寫:照調號(自動)", spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
     omit5: "省略五音",
-    searchPlaceholder: "搜尋(如:C/B)",
+    searchPlaceholder: "搜尋(如:C/B)", searchPlaceholderScale: "搜尋(如:Dorian、小調)",
     filterToggleText: "篩選",
     accFlat: "♭ 降(再按一次取消)", accSharp: "♯ 升(再按一次取消)",
     filterStyle: "風格", filterLevel: "程度", filterSize: "編制", filterEnharmonic: "同音",
@@ -1087,7 +1087,7 @@ const I18N = {
     clearSelection: "Clear notes",
     spellAuto: "Spelling: by key (auto)", spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
     omit5: "no 5th",
-    searchPlaceholder: "Search (e.g. C/B)",
+    searchPlaceholder: "Search (e.g. C/B)", searchPlaceholderScale: "Search (e.g. Dorian, minor)",
     filterToggleText: "Filter",
     accFlat: "♭ Flat (tap again to cancel)", accSharp: "♯ Sharp (tap again to cancel)",
     filterStyle: "Style", filterLevel: "Level", filterSize: "Size", filterEnharmonic: "Enh.",
@@ -4272,6 +4272,8 @@ function render(){
   // 起始八度只對鋼琴有意義(吉他的音高由指法決定)。label 是 display:flex,hidden 屬性蓋不過,直接改 style
   $("octaveSel").closest("label").style.display = gtr ? "none" : "";
   $("gtrToneRow").style.display = gtr ? "" : "none";
+  // 「C/B」是和弦的斜線寫法,音階搜尋不吃這個,提示要換成音階的例子
+  $("typeSearch").placeholder = t(STATE.tab === "scale" ? "searchPlaceholderScale" : "searchPlaceholder");
   $("gtrToneSel").value = STATE.gtrTone;
   buildPlayModes();
   scheduleVoicingWarm();
