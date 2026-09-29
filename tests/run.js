@@ -1059,6 +1059,19 @@ async function openPage(browser, opts = {}){
       total++; if (bad.length) fails.push("字太小(" + w + "×" + h + "): " + bad.slice(0, 6).join(", "));
       await q.close();
     }
+    // 吉他音階摘要列:七個音名一律完整顯示(320 起);390 以上連名稱也不能被截;非大小調的音階名用英文
+    for (const [w, h] of [[320, 568], [390, 844], [430, 932]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+      const r = await q.evaluate((w) => { const bad = []; STATE.inst = "guitar"; STATE.tab = "scale";
+        for (const id of ["phrygian", "lydian", "mixolydian", "locrian", "dorian", "ionian", "aeolian"]) { STATE.scaleId = id; STATE.letter = 0; STATE.acc = 0; render();
+          const t = document.querySelector("#kbSummary .tones"), b = document.querySelector("#kbSummary b");
+          if (t.scrollWidth > t.clientWidth + 1) bad.push(id + " 音名被截");
+          if (w >= 390 && b.scrollWidth > b.clientWidth + 1) bad.push(id + " 名稱被截");
+          if (/[\u4e00-\u9fff]/.test(b.textContent) !== /ionian|aeolian/.test(id)) bad.push(id + " 名稱語言 " + b.textContent); }
+        return bad; }, w);
+      total++; if (r.length) fails.push("吉他音階摘要列(" + w + "): " + r.join(", "));
+      await q.close();
+    }
     // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
     for (const [w, h] of [[320, 568], [844, 390], [390, 844], [1280, 860]]) for (const inst of ["Piano", "Guitar"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });

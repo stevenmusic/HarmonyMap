@@ -628,11 +628,14 @@ html[data-lang="en"] .chip i{white-space:normal}
 .vc-nav .n{min-width:2.6em;text-align:center;font-variant-numeric:tabular-nums}
 .pos-nav{gap:0}
 /* 寬度固定、★ 永遠佔位(不是把位 1 時只是看不見):換把位時數字不移位,右邊的 ‹ › 與前面的音名也跟著不動 */
-.pos-nav .n{width:3.6em;padding:0;white-space:nowrap;font-size:var(--fs-sm);color:var(--ivory)}
+.pos-nav .n{width:3.1em;padding:0;white-space:nowrap;font-size:var(--fs-sm);color:var(--ivory)}
 .pos-nav small.off{visibility:hidden}
-.pos-nav button{width:24px;height:24px}
+.pos-nav button{width:22px;height:22px}
 /* 有把位箭頭的那一行:名稱(這是哪個音階)比音名重要,放不下時音名先縮 */
-.kb-summary.has-pos .tones{flex-shrink:4}
+.kb-summary.has-pos{gap:5px;padding-left:8px;padding-right:6px}
+.kb-summary.has-pos b{font-size:var(--fs-md)}
+.kb-summary.has-pos .kb-gear{margin-left:-2px}
+.kb-summary.has-pos .tones{flex-shrink:0;letter-spacing:.02em}   /* 七個音要完整顯示:名稱讓,音名不讓 */
 .pos-nav small{color:var(--gold);margin-left:1px}
 .pos-nav .n i{font-style:normal;color:var(--muted)}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
@@ -1178,6 +1181,10 @@ function shortName(def){
   const full = localName(def), base = full.replace(/\s*[(（][^()（）]*[)）]\s*$/, "");
   if (base === full || !base) return full;
   return SCALES.some(x => x !== def && localName(x).replace(/\s*[(（][^()（）]*[)）]\s*$/, "") === base) ? full : base;
+}
+/* 摘要列的音階名:大調/小調類保留中文,其他調式(弗里吉安、利底亞…)一律用英文,中文音譯看不懂 */
+function summaryScaleName(def){
+  return LANG === "zh" && def.en && !/大調|小調/.test(def.zh) ? def.en : shortName(def);
 }
 function subName(def){ return LANG === "en" ? "" : (def.en || def.zh); }
 function nameWithSub(main, def){ const s = subName(def); return s ? main + " · " + s : main; }
@@ -4878,7 +4885,7 @@ function renderSummary(){
   } else {
     const isChord = STATE.tab === "chord";
     const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
-    name = isChord ? chordTitle(def) : rootName() + " " + shortName(def);
+    name = isChord ? chordTitle(def) : rootName() + " " + summaryScaleName(def);
     zh = isChord ? localName(def) : subName(def);
     // 和弦用 displayNotes:斜線和弦的低音排在最前面(C/B → B C E G)
     // 吉他和弦:點音名發出「這個指法裡那個音」(在哪條弦上就撥哪條),不是另一個八度的音
