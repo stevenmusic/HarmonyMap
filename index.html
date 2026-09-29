@@ -1421,6 +1421,9 @@ const SCALES = [
 
   // ── 旋律小調系統 ──
   {id:"melMinor",   zh:"旋律小調(爵士小調)", en:"Melodic Minor",     g:"旋律小調系統", t:["1","2","♭3","4","5","6","7"],       lv:3, d:"小三度配自然六、七度。爵士裡上下行都用同一組音,是七個現代調式的母體。", d_en:"A minor 3rd paired with a natural 6th and 7th. In jazz, the same notes are used ascending and descending — the parent scale of the seven modern modes."},
+  // 古典旋律小調:上行升高 6、7 級,下行改用自然小調(down)。音高集合跟爵士旋律小調的上行一樣,
+  // 但下行不同,所以不算「同音重複」(pitchKey 連下行一起比)
+  {id:"melMinorCl", zh:"旋律小調(古典)",   en:"Melodic Minor (Classical)", g:"旋律小調系統", t:["1","2","♭3","4","5","6","7"], down:["1","2","♭3","4","5","♭6","♭7"], lv:2, d:"古典和聲的旋律小調:上行把 6、7 級升高(避開和聲小調 ♭6 到 7 的增二度,並保留導音),下行不需要導音,改回自然小調的 ♭7、♭6。「逐音上下行」播放時下行照這個規則走;鍵盤與公式顯示的是上行。", d_en:"Melodic minor as used in classical harmony: ascending raises the 6th and 7th (avoiding harmonic minor's augmented 2nd from ♭6 to 7 while keeping the leading tone); descending needs no leading tone and returns to natural minor's ♭7 and ♭6. The \"Up & down\" playback follows this rule on the way down; the keyboard and formula show the ascending form."},
   {id:"dorianb2",   zh:"多利安 ♭2",       en:"Dorian ♭2 / Phrygian ♮6", g:"旋律小調系統", t:["1","♭2","♭3","4","5","6","♭7"],  lv:2, d:"旋律小調第二級,用在 sus♭9 這類和弦上,暗色但仍保有六度的亮點。", d_en:"The 2nd degree of melodic minor — used over sus♭9-type chords, dark but still keeping the bright spot of the 6th."},
   {id:"lydianAug",  zh:"利底安 ♯5",       en:"Lydian Augmented",     g:"旋律小調系統", t:["1","2","3","♯4","♯5","6","7"],      lv:2, d:"旋律小調第三級,對應 maj7♯5,完全沒有重力感的漂浮音階。", d_en:"The 3rd degree of melodic minor, matching maj7♯5 — a completely weightless, floating scale."},
   {id:"lydianDom",  zh:"利底安屬音階",    en:"Lydian Dominant",      g:"旋律小調系統", t:["1","2","3","♯4","5","6","♭7"],      lv:2, d:"旋律小調第四級,又稱 Overtone 音階(接近自然泛音列),是 7♯11 與三全音代理的標準選擇。", d_en:"The 4th degree of melodic minor, also called the Overtone scale (close to the natural harmonic series) — the standard choice for 7♯11 and tritone substitution."},
@@ -1646,10 +1649,12 @@ function sizeBucket(n){ return n <= 3 ? 3 : (n === 4 ? 4 : 5); }
        vadi(骨幹音)與演奏時辰,同一個塔特可以長出完全不同的拉格
    所以一律保留條目(有人就是要查「拜拉夫」),但要讓使用者一眼看到重複關係,
    而且可以一鍵把重複的收起來 */
+/* 音階「同一組音」的比對鍵:有下行(古典旋律小調)的連下行一起比,上行一樣、下行不同的不算同音重複 */
+function pitchKey(s){ return setKey(s.t.map(tokenSemi)) + (s.down ? "|" + setKey(s.down.map(tokenSemi)) : ""); }
 const SAME_PITCH = (() => {
   const first = new Map(), map = new Map();
   for (const s of SCALES) {
-    const k = setKey(s.t.map(tokenSemi));
+    const k = pitchKey(s);
     if (first.has(k)) map.set(s.id, first.get(k));   // 指向代表條目
     else first.set(k, s);
   }
@@ -3137,7 +3142,7 @@ function isSounding(midi){
 }
 /* at:指定在音訊時鐘的哪一刻開始(練習的節拍器用,跟點擊聲同一個時鐘)。
    有指定時,前一個和弦不是立刻切掉,而是排在新和弦開始的那一刻停 */
-function playNotes(midis, mode, at){
+function playNotes(midis, mode, at, downMidis){
   ensureAudio();
   if (at == null) stopAllSound();
   else { for (const n of scheduledNodes) fadeStop(n, at); scheduledNodes = []; }
@@ -3153,7 +3158,7 @@ function playNotes(midis, mode, at){
   } else { // 逐音上下行:上去再下來,最後一顆是最高音的下行起點,不重複敲
     const gap = 0.30;
     const up = midis.slice();
-    const down = midis.slice(0, -1).reverse();
+    const down = downMidis || midis.slice(0, -1).reverse();
     seq = up.concat(down).map((m, i) => ({ midi: m, at: t0 + i * gap, dur: gap * 1.6 }));
   }
   let end = t0;
@@ -3932,8 +3937,8 @@ function renderReadout(){
   } else {
     /* 跨文化的同音異名:同一組音在不同傳統裡有不同名字(希賈茲 = 弗里吉安屬音階、
        羽調式 = 小調五聲…)。這是使用者最想知道的關聯,直接列出來並可點擊跳轉 */
-    const myKey = setKey(def.t.map(tokenSemi));
-    const alsoKnown = SCALES.filter(x => x.id !== def.id && setKey(x.t.map(tokenSemi)) === myKey);
+    const myKey = pitchKey(def);
+    const alsoKnown = SCALES.filter(x => x.id !== def.id && pitchKey(x) === myKey);
     const dia = diatonicChords(def);
     const sameHtml = alsoKnown.length
       ? '<div class="card-title" style="margin-top:16px">' + t("otherScaleNames") + '</div><div class="link-chips">' +
@@ -4940,6 +4945,7 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
     }
     return;
   }
+  if (STATE.tab === "scale") return;   // 音階分頁:整個鍵盤方框都是「播上行音階」,交給 .kb-wrap 的處理
   const m = keyAt(ev.clientX - rect.left, ev.clientY - rect.top);
   if (m === undefined) return;
   if (STATE.tab === "find") {
@@ -4961,6 +4967,12 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
   }
 });
 
+document.querySelector(".kb-wrap").addEventListener("pointerdown", ev => {
+  if (STATE.tab !== "scale" || STATE.inst !== "piano") return;
+  // 摘要列(整條重播、音名單音)、齒輪與設定面板照原本的功能
+  if (ev.target.closest(".kb-summary, .kb-popover, .pos-row")) return;
+  playScaleUp();
+});
 $("practiceOpen").onclick = () => { PRACTICE.open = true; if (PRACTICE.steps.length) practiceApply(); render(); };
 // 換分頁、換樂器都取消還沒用掉的「/」,不然回來後下一個字母會悄悄變成低音
 /* 換分頁、換樂器後,剛按的那顆按鈕要留在手指底下:釘住區在 320×568 這種矮螢幕上會因為換分頁
@@ -4994,13 +5006,26 @@ function currentPlayback(){
   const midis = STATE.tab === "find"
     ? [...STATE.findSel].sort((a, b) => a - b)
     : v ? voicingMidis(v) : displayNotes().map(n => n.midi);
+  // 古典旋律小調:逐音上下行時下行改走自然小調(♭7 ♭6),從高八度主音下來
+  let down = null;
+  const def = STATE.tab === "scale" ? scaleById(STATE.scaleId) : null;
+  if (def && def.down && midis.length) {
+    const base = Math.min(...midis);
+    down = def.down.map(tokenSemi).filter(x => x > 0).sort((a, b) => b - a).map(x => base + x).concat(base);
+  }
   // 吉他的「齊奏」照吉他的方式發聲:刷弦
-  return { midis, mode: STATE.inst === "guitar" && STATE.playMode === "block" ? "strum" : STATE.playMode };
+  return { midis, down, mode: STATE.inst === "guitar" && STATE.playMode === "block" ? "strum" : STATE.playMode };
 }
 function playCurrent(at){
-  const { midis, mode } = currentPlayback();
+  const { midis, mode, down } = currentPlayback();
   if (!midis.length) return;
-  playNotes(midis, mode, at);
+  playNotes(midis, mode, at, down);
+}
+/* 音階分頁的鋼琴:點鍵盤方框內任何地方(琴鍵或旁邊的空白)= 從主音彈上行音階到高八度主音(使用者要求)。
+   單音改從摘要列的音名點 */
+function playScaleUp(){
+  const ms = displayNotes().map(n => n.midi).sort((a, b) => a - b);
+  if (ms.length) playNotes(ms, "arp");
 }
 function syncFindFromFrets(){
   STATE.findSel = new Set(gtrFindFrets().map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null));

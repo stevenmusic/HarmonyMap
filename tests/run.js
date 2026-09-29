@@ -441,6 +441,36 @@ async function openPage(browser, opts = {}){
     });
     report("琴鍵標示", r.total, r.fails);
   }
+  /* ── 4d. 音階分頁的鋼琴:點鍵盤方框內任何地方 = 上行音階(使用者要求);音名照舊單音。
+     古典旋律小調逐音上下行時,下行走自然小調(♭7 ♭6) ── */
+  {
+    const r = await p.evaluate(() => {
+      const fails = []; let total = 0;
+      const keep = [STATE.tab, STATE.inst, STATE.scaleId, STATE.letter, STATE.acc, STATE.playMode];
+      const calls = [], pn = window.playNotes, ps = window.playSingle;
+      window.playNotes = (m, mode, at, down) => { calls.push({ m: m.slice(), mode, down }); };
+      window.playSingle = m => { calls.push({ single: m }); };
+      STATE.tab = "scale"; STATE.inst = "piano"; STATE.scaleId = "melMinorCl"; STATE.letter = 5; STATE.acc = 0; render();
+      const cv = $("keyboardCanvas"), rc = cv.getBoundingClientRect(), wr = document.querySelector(".kb-wrap").getBoundingClientRect();
+      const fire = (el, x, y) => el.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: x, clientY: y, pointerId: 1 }));
+      const want = "69,71,72,74,76,78,80,81";
+      for (const [name, el, x, y] of [["白鍵", cv, rc.left + rc.width * 0.5, rc.top + rc.height * 0.85], ["黑鍵", cv, rc.left + rc.width * 0.5, rc.top + rc.height * 0.2],
+                                       ["方框空白", document.querySelector(".kb-wrap"), wr.left + 3, wr.top + 3]]) {
+        calls.length = 0; fire(el, x, y); total++;
+        const c = calls[0];
+        if (!c || c.mode !== "arp" || c.m.join(",") !== want || calls.length !== 1) fails.push("點" + name + "應該播上行音階 A 旋律小調(古典),實際 " + JSON.stringify(calls));
+      }
+      calls.length = 0; document.querySelectorAll("#kbSummary .tn")[1].click(); total++;
+      if (!calls.length || calls[0].single !== 71) fails.push("點音名應該只響那一個音,實際 " + JSON.stringify(calls));
+      STATE.playMode = "updown"; calls.length = 0; playCurrent(); total++;
+      if (!calls[0] || (calls[0].down || []).join(",") !== "79,77,76,74,72,71,69") fails.push("古典旋律小調下行應該是 G F E D C B A,實際 " + JSON.stringify(calls[0]));
+      total++; if (SAME_PITCH.has("melMinorCl") || SAME_PITCH.has("melMinor")) fails.push("古典旋律小調下行不同,不能算同音重複");
+      window.playNotes = pn; window.playSingle = ps;
+      [STATE.tab, STATE.inst, STATE.scaleId, STATE.letter, STATE.acc, STATE.playMode] = keep; render();
+      return { total, fails };
+    });
+    report("音階點擊", r.total, r.fails);
+  }
   await p.close();
 
   /* ── 5. 互動:鋼琴只讓組成音發聲、摘要列音名單獨發聲、吉他撥弦與刷弦 ── */
