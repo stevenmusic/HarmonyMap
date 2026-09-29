@@ -1075,7 +1075,7 @@ const I18N = {
     inv1: "第一轉位", inv2: "第二轉位", inv3: "第三轉位",
     noExactMatch: "這組音沒有完全對應的標準和弦名稱。下面列出「包含這幾個音」的和弦,可以當作候選。",
     couldBelongTo: "這些音可以屬於(還差幾個音)", scalesContaining: "包含這些音的音階",
-    missingNotes: "還差 {n} 音",
+    missingNotes: "還差 {n} 音", missingNote1: "還差 1 音",
     playBlock: "齊奏", playArp: "琶音", playAsc: "逐音上下行",
     octavePrefix: "起始 ",
     findPickNotes: "選音", findNoMatch: "沒有完全符合的和弦", findTapStart: "點琴鍵開始",
@@ -1133,7 +1133,7 @@ const I18N = {
     clearSelection: "Clear notes",
     spellAuto: "Spelling: by key (auto)", spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
     omit5: "no 5th",
-    searchPlaceholder: "Search (e.g. C/B)", searchPlaceholderScale: "Search (e.g. Dorian, minor)",
+    searchPlaceholder: "e.g. C/B, Am7", searchPlaceholderScale: "e.g. Dorian, minor",
     filterToggleText: "Filter",
     accFlat: "♭ Flat (tap again to cancel)", accSharp: "♯ Sharp (tap again to cancel)",
     filterStyle: "Style", filterLevel: "Level", filterSize: "Size", filterEnharmonic: "Enh.",
@@ -1143,8 +1143,8 @@ const I18N = {
     filterHintChord: 'Top-left <b>★</b> = essential &nbsp;·&nbsp; Top-right <b>≡</b> = same pitches as another chord',
     styleCl: "Classical", stylePop: "Pop/Rock", styleJz: "Jazz", styleBl: "Blues/Soul", styleFilm: "Film Score",
     levelEssential: "★ Essential", levelCommon: "Common", levelAdvanced: "Advanced",
-    tierEssential: "essential", tierCommon: "common", tierAdvanced: "advanced",
-    tierToggle: "{n} more {name}",
+    tierEssential: "Essential", tierCommon: "Common", tierAdvanced: "Advanced",
+    tierToggle: "{name} · {n}",
     sizeTriad: "Triads", size7th: "7ths & Adds", sizeExt: "Extensions",
     dupOptLabel: "Hide enharmonic dups",
     groupAll: "All",
@@ -1161,7 +1161,7 @@ const I18N = {
     diatonicChordsTitle: "Diatonic Chords",
     diatonicChordsTitleFull: "Diatonic Chords (tertian)",
     colDegree: "Degree", colTriad: "Triad", col7th: "7th chord", colTones: "Notes",
-    clickSeventhHint: "Click a 7th chord to jump to its notes.",
+    clickSeventhHint: "Tap a 7th chord to jump to its notes.",
     enhNote: "≅ The notes stacked in thirds (e.g. {a}) are an enharmonic respelling of the chord name ({b}) — they sound the same.",
     enhNoteTri: "≅ Spelling this key by degree would need triple sharps or flats, so these rows use enharmonic spellings.",
     findHelpTextGuitar: "Tap a few frets on the fretboard above and every matching chord name shows up here. For example C E G B♭ gives <strong>C7</strong>; add a D and it becomes <strong>C9</strong>.",
@@ -1171,7 +1171,7 @@ const I18N = {
     inv1: "1st inversion", inv2: "2nd inversion", inv3: "3rd inversion",
     noExactMatch: "No standard chord name matches this exact set of notes. Chords that contain these notes are listed below as candidates.",
     couldBelongTo: "Could belong to (notes still missing)", scalesContaining: "Scales containing these notes",
-    missingNotes: "{n} note(s) short",
+    missingNotes: "{n} notes short", missingNote1: "1 note short",
     playBlock: "Block", playArp: "Arpeggio", playAsc: "Up & Down",
     octavePrefix: "Start ",
     findPickNotes: "Pick notes", findNoMatch: "No exact chord match", findTapStart: "Tap a key to start",
@@ -1242,7 +1242,7 @@ function localDesc(def){ return LANG === "en" ? (def.d_en || def.d) : def.d; }
    換語言不能連 key 一起換,只能換「顯示出來的文字」——所以另外做一份顯示用的翻譯表 */
 const GROUP_LABEL_EN = {
   "大調系":"Major Family", "屬和弦系":"Dominant Family", "小調系":"Minor Family",
-  "減系與半減系":"Diminished & Half-Dim", "無三度和弦":"No-3rd Chords", "增六和弦":"Augmented 6th",
+  "減系與半減系":"Dim & Half-Dim", "無三度和弦":"No-3rd Chords", "增六和弦":"Augmented 6th",
   "大調七聲調式":"Major Scale Modes", "和聲小調系統":"Harmonic Minor System",
   "旋律小調系統":"Melodic Minor System", "和聲大調系統":"Harmonic Major System",
   "雙和聲大調系統":"Double Harmonic Major", "五聲與藍調":"Pentatonic & Blues",
@@ -4302,7 +4302,7 @@ function renderFindReadout(ro, ex){
     for (const s of supers.slice(0, 10)) {
       e += '<div class="find-item" role="button" tabindex="0"' + findJumpAttrs(s.rootPc, s.chord, an.bassPc, spellPrefFor(s.rootPc, s.chord)) + '><span class="fname">' + findChordName(s.rootPc, s.chord, an.bassPc, spellPrefFor(s.rootPc, s.chord)) + '</span>' +
            '<span class="fzh">' + localName(s.chord) + '</span>' +
-           '<span class="ftag">' + t("missingNotes", { n: s.missing }) + '</span></div>';
+           '<span class="ftag">' + t(s.missing === 1 ? "missingNote1" : "missingNotes", { n: s.missing }) + '</span></div>';
     }
     e += '</div>';
     ex.innerHTML = e;
@@ -4575,6 +4575,7 @@ function storeSavedProgs(a){ try { localStorage.setItem(PROG_KEY, JSON.stringify
    斜線低音存的是「離根音幾個半音」,跟著走,不用另外算 */
 const PC_SPELL = [[0,0],[1,-1],[1,0],[2,-1],[2,0],[3,0],[3,1],[4,0],[5,-1],[5,0],[6,-1],[6,0]];
 function practiceTranspose(d){
+  PRACTICE.shift = (((PRACTICE.shift || 0) + d + 6) % 12 + 12) % 12 - 6;   // 目前移了幾個半音(−6 ~ +5),顯示在「移調」旁邊
   PRACTICE.steps = PRACTICE.steps.map(st => {
     const [letter, acc] = PC_SPELL[pcOf(LETTER_PC[st.letter] + st.acc + d)];
     return Object.assign({}, st, { letter, acc });
@@ -5151,7 +5152,7 @@ function renderPractice(){
         '<button class="kb-gear" id="prFaster" aria-label="+5 BPM">' + svg("M12 5v14M5 12h14") + '</button></span>' +
       '<span class="pr-bpm" role="group" aria-label="' + t("practiceTranspose") + '">' +
         '<button class="kb-gear" id="prDown" aria-label="' + t("practiceTranspose") + ' -1"' + (P.steps.length ? "" : " disabled") + '>' + svg("M5 12h14") + '</button>' +
-        '<output class="tr">' + t("practiceTranspose") + '</output>' +
+        '<output class="tr">' + t("practiceTranspose") + (P.shift ? " " + (P.shift > 0 ? "+" : "−") + Math.abs(P.shift) : "") + '</output>' +
         '<button class="kb-gear" id="prUp" aria-label="' + t("practiceTranspose") + ' +1"' + (P.steps.length ? "" : " disabled") + '>' + svg("M12 5v14M5 12h14") + '</button></span>' +
       '<button class="filter-chip" id="prAccomp" aria-pressed="' + P.accomp + '">' + t("practiceAccompShort") + '</button>' +
       '<button class="filter-chip" id="prCountIn" aria-pressed="' + P.countIn + '" title="' + t("practiceCountInTitle") + '">' + t("practiceCountIn") + '</button>' +
@@ -5235,7 +5236,7 @@ function renderPractice(){
     $("prCustom").value = x;
     applyCustom();
   };
-  $("prClearSteps").onclick = () => { P.steps = []; afterEdit(); };
+  $("prClearSteps").onclick = () => { P.steps = []; P.shift = 0; afterEdit(); };
   $("prClose").onclick = () => { practiceStop(); P.open = false; render(); };
   $("prBeats").onchange = e => { P.beats = +e.target.value; render(); };
   const setBpm = d => { P.bpm = Math.max(40, Math.min(200, P.bpm + d)); P.baseBpm = P.bpm; $("prBpmOut").textContent = P.bpm + " BPM"; practiceBeatVar(); };
@@ -5266,7 +5267,7 @@ function renderPractice(){
   const applyCustom = () => {
     const text = $("prCustom").value.trim();
     const r = practiceParseCustom(text);
-    P.custom = text; P.bad = r.bad; P.slash = null;
+    P.custom = text; P.bad = r.bad; P.slash = null; if (r.steps.length) P.shift = 0;   // 換了一整組進行,移調量從 0 算
     if (r.steps.length) { P.steps = r.steps; P.step = 0; practiceApply(); }
     render();
   };
@@ -5317,7 +5318,8 @@ function renderSummary(){
     const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
     name = isChord ? chordTitle(def) : rootName() + " " + summaryScaleName(def);
     if (!isChord) { const sn = summaryScaleName(def), i = sn.indexOf(" / "); if (i > 0) stack = [rootName(), sn.slice(0, i), "(" + sn.slice(i + 3) + ")"]; }
-    zh = isChord ? localName(def) : subName(def);
+    // 中文介面的調式名已經改成英文(summaryScaleName),副標就放中文名,不要英文寫兩次(D Dorian Dorian)
+    zh = isChord ? localName(def) : (summaryScaleName(def) === def.en ? shortName(def) : subName(def));
     // 和弦用 displayNotes:斜線和弦的低音排在最前面(C/B → B C E G)
     // 吉他和弦:點音名發出「這個指法裡那個音」(在哪條弦上就撥哪條),不是另一個八度的音
     const v = isChord && STATE.inst === "guitar" ? currentVoicing() : null;
