@@ -465,13 +465,18 @@ async function openPage(browser, opts = {}){
       STATE.playMode = "updown"; calls.length = 0; playCurrent(); total++;
       if (!calls[0] || (calls[0].down || []).join(",") !== "79,77,76,74,72,71,69") fails.push("古典旋律小調下行應該是 G F E D C B A,實際 " + JSON.stringify(calls[0]));
       total++; if (SAME_PITCH.has("melMinorCl") || SAME_PITCH.has("melMinor")) fails.push("古典旋律小調下行不同,不能算同音重複");
+      // 摘要列的短名稱:括號是別名就拿掉,拿掉會撞名(旋律小調、減音階)就保留
+      for (const [id, want] of [["ionian", "大調"], ["aeolian", "自然小調"], ["melMinorCl", "旋律小調(古典)"], ["melMinor", "旋律小調(爵士小調)"]]) {
+        total++; const got = shortName(scaleById(id)); if (got !== want) fails.push("短名稱 " + id + ": " + got + " ≠ " + want);
+      }
+      { const seen = new Map(); for (const sc of SCALES) { const n = shortName(sc); total++; if (seen.has(n)) fails.push("短名稱撞名: " + n + " = " + seen.get(n) + " / " + sc.id); seen.set(n, sc.id); } }
       // 吉他也一樣(使用者要求):點指板任何地方 = 目前把位裡的上行音階;點把位鈕不發聲
       STATE.inst = "guitar"; STATE.playMode = "arp";
       for (const [id, L, steps] of [["ionian", 0, "2,2,1,2,2,2,1"], ["minPent", 5, "3,2,2,3,2"], ["melMinorCl", 5, "2,1,2,2,2,2,1"]]) {
         STATE.scaleId = id; STATE.letter = L; STATE.acc = 0; render();
-        const nPos = document.querySelectorAll("#scalePosRow button").length;
+        const nPos = scalePositions().length + 1;   // 全部 + 每個把位,用摘要列的 › 一個一個換
         for (let i = 0; i < nPos; i++) {
-          calls.length = 0; document.querySelectorAll("#scalePosRow button")[i].click(); total++;
+          calls.length = 0; $("posNext").click(); total++;
           if (calls.length) { fails.push("吉他 " + id + " 點把位 " + i + " 不應該發聲: " + JSON.stringify(calls)); continue; }
           const g = $("keyboardCanvas").getBoundingClientRect();
           for (const [fx, fy] of [[0.5, 0.5], [0.1, 0.2], [0.9, 0.8]]) {
@@ -609,7 +614,11 @@ async function openPage(browser, opts = {}){
     // 預設是 6 弦根音那個把位,選了把位時其他位置的音只畫淡淡的小點;「全部」才整個指板都畫
     const sp = await q.evaluate(() => {
       STATE.tab = "scale"; STATE.letter = 0; STATE.acc = 0; STATE.scaleId = "ionian"; STATE.scalePos = 0; render();
-      const maj = scalePositions().length, rows = document.querySelectorAll("#scalePosRow [data-pos]").length;
+      const maj = scalePositions().length, seen = [];
+      // 摘要列的 ‹ › 一圈走完:全部 + 7 個把位,按 8 下回到原位;‹ 反方向
+      for (let i = 0; i < 8; i++) { seen.push(STATE.scalePos + ":" + $("kbSummary").querySelector(".pos-nav .n").textContent); $("posNext").click(); }
+      const back = STATE.scalePos; $("posPrev").click(); const prev = STATE.scalePos; $("posNext").click();
+      const rows = new Set(seen).size === 8 && back === 0 && /★$/.test(seen[0]) && seen[0].startsWith("0:") && seen.includes("-1:" + t("scalePosAll")) && prev === seen[7].split(":")[0] * 1 ? 8 : JSON.stringify(seen);
       const gv = guitarView();
       STATE.letter = 5; STATE.scaleId = SCALES.find(x => /pent/i.test(x.id) && x.t.length === 5 && x.t.includes("♭3")).id; render();
       const pent = scalePositions(), box1 = pent.find(p => p.k === 0);

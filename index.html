@@ -512,12 +512,6 @@ html[data-lang="en"] .chip i{white-space:normal}
 .gd-legend{grid-column:1 / -1;font-size:var(--fs-2xs);color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
 .kb-stage .gd-legend{margin:-2px 0 8px}
 .gtr-dgs[hidden]{display:none}
-.pos-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px 10px 0}
-.pos-row[hidden]{display:none}
-.pos-row .pos-lab{font-size:var(--fs-2xs);color:var(--muted);margin-right:2px}
-.pos-row .filter-chip{min-width:30px;padding:3px 8px;justify-content:center}
-.pos-row small{font-size:max(10px,.7em);margin-left:2px;color:var(--gold)}
-.pos-row .filter-chip[aria-pressed="true"] small{color:inherit}
 .gtr-dgs .gd{border:1px solid var(--line);border-radius:var(--radius-md);padding:4px 3px 2px;cursor:pointer;
              touch-action:none;background:var(--surface-inset);min-width:0}
 .gtr-dgs .gd.on{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold) inset}
@@ -576,7 +570,10 @@ html[data-lang="en"] .chip i{white-space:normal}
 }
 .kb-summary b{
   font-family:"Noto Serif TC",serif;font-size:var(--fs-lg);font-weight:700;
-  color:var(--gold-bright);flex:none;
+  color:var(--gold-bright);
+  /* 名稱排第二個縮(副標 100、名稱與音名 1:兩者照比例一起讓):吉他音階多了把位的 ‹ › 之後,320px 放不下「C 大調(愛奧尼安)」全名,
+     不讓名稱縮的話音名會被擠到 0。平常放得下時完全不縮 */
+  flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
 }
 /* 放不下時先縮副標(英文原名/中文名稱),組成音最後才縮:320px 上原本「C 大調(愛奧尼安) Ionian / Major」
    把音名擠到只剩一個「C」。flex-shrink 100 : 1,副標幾乎全部讓完,音名才開始讓 */
@@ -627,6 +624,9 @@ html[data-lang="en"] .chip i{white-space:normal}
 .bass-row small{opacity:.7;font-size:max(11px,.85em)}   /* 11px 是全站最小字級(原本 .85em = 10.2px) */
 .bass-row select{height:30px}
 .vc-nav .n{min-width:2.6em;text-align:center;font-variant-numeric:tabular-nums}
+.pos-nav{gap:0}
+.pos-nav .n{min-width:1.9em;font-size:var(--fs-sm);color:var(--ivory)}
+.pos-nav small{color:var(--gold);margin-left:1px}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
 /* 吉他模式左上角是 ○/× 那一欄,載入提示改貼右上角,不要蓋住空弦標記 */
 .kb-wrap.gtr .audio-status{left:auto;right:8px}
@@ -840,8 +840,6 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 
     <div class="kb-wrap">
       <canvas id="keyboardCanvas"></canvas>
-      <!-- 吉他音階的把位選擇(全部 / 1~7):一次看一個把位,不是整個指板混在一起 -->
-      <div class="pos-row" id="scalePosRow" hidden></div>
       <span id="audioStatus" class="audio-status" hidden></span>
       <!-- 吉他和弦分頁:這個和弦的每一種指法排在一起,取代長指板(renderGuitarGallery 填) -->
       <div class="gtr-dgs" id="gtrDiagrams" hidden></div>
@@ -1165,6 +1163,14 @@ function t(key, vars){
    所以 subName 在英文介面回傳空字串,呼叫端要連分隔號一起省略,
    不然會留下孤零零的「 · 」(用 nameWithSub() 就不必每個地方各判斷一次) */
 function localName(def){ return LANG === "en" ? (def.en || def.zh) : def.zh; }
+/* 摘要列(只有一行、空間最緊)用的短名稱:括號裡是別名或補充(大調(愛奧尼安)、變化音階(超級洛克里安))就拿掉;
+   括號是用來區分兩個音階的(旋律小調(古典)/(爵士小調)、減音階(全半)/(半全))拿掉後會撞名,就保留。
+   清單與結果面板照舊寫全名 */
+function shortName(def){
+  const full = localName(def), base = full.replace(/\s*[(（][^()（）]*[)）]\s*$/, "");
+  if (base === full || !base) return full;
+  return SCALES.some(x => x !== def && localName(x).replace(/\s*[(（][^()（）]*[)）]\s*$/, "") === base) ? full : base;
+}
 function subName(def){ return LANG === "en" ? "" : (def.en || def.zh); }
 function nameWithSub(main, def){ const s = subName(def); return s ? main + " · " + s : main; }
 /* 每個和弦/音階的長篇說明(def.d)也有對應的英文版 def.d_en,挑法跟 localName 一樣。
@@ -1895,8 +1901,6 @@ function resizeKeyboardCanvas(){
      基準是「鋼琴在這個寬度、這個分頁會有的高度」;吉他的指板(音階時連同把位那排按鈕)、
      和弦分頁的三張和弦圖都塞進同一個高度 */
   const H = computeKeyboardHeight(w, KB_MIN_H, Math.max(KB_MIN_H, maxH));
-  const row = $("scalePosRow");
-  const rowH = STATE.inst === "guitar" && row && !row.hidden ? row.getBoundingClientRect().height : 0;
   /* 兩欄版面(≥900px,含大手機橫向 932×430):右邊的顯示區撐滿左欄(分頁 + 根音卡片)的高度,兩欄底部對齊。
      原本右邊只有 170px(或視窗高度的 22%),左欄的根音卡片比它高很多,右邊空一大段(使用者回報)。
      左欄的高度跟顯示區無關,所以換樂器時照樣不會移位;外框兩種樂器一樣高(CSS 的 align-self:stretch)。
@@ -1906,7 +1910,7 @@ function resizeKeyboardCanvas(){
   const avail = twoColumnAvail() && Math.max(H, twoColumnAvail());
   if (STATE.inst === "guitar") {
     const disp = avail || H;
-    cv.style.height = Math.max(60, avail ? Math.min(disp - rowH, w * 0.42) : H - rowH) + "px";
+    cv.style.height = Math.max(60, avail ? Math.min(disp, w * 0.42) : H) + "px";
     $("gtrDiagrams").style.height = disp + "px";
     fitGallery();
   } else {
@@ -2536,18 +2540,6 @@ function currentScalePos(){
   const all = scalePositions();
   return all.find(p => p.k === STATE.scalePos) || all.find(p => p.k === 0) || null;
 }
-function renderScalePosRow(){
-  const row = $("scalePosRow");
-  const show = STATE.inst === "guitar" && STATE.tab === "scale";
-  row.hidden = !show;
-  if (!show) return;
-  const all = scalePositions(), cur = currentScalePos();
-  row.innerHTML = '<span class="pos-lab">' + t("scalePosLabel") + '</span>' +
-    '<button class="filter-chip" data-pos="-1" aria-pressed="' + !cur + '">' + t("scalePosAll") + '</button>' +
-    all.map((p, i) => '<button class="filter-chip" data-pos="' + p.k + '" aria-pressed="' + (cur === p || (cur && cur.k === p.k)) + '" title="' +
-      t("scalePosTitle", { f: p.lo }) + '">' + (i + 1) + (p.k === 0 ? '<small>★</small>' : '') + '</button>').join("");
-  row.querySelectorAll("[data-pos]").forEach(b => b.onclick = () => { STATE.scalePos = +b.dataset.pos; render(); });
-}
 function guitarView(){
   const dots = [], ghosts = [];
   const markers = [null, null, null, null, null, null];
@@ -2979,7 +2971,7 @@ function loadGuitarSamples(kind){
     return fetch(set.base + name + ".mp3").then(r => { if (!r.ok) throw new Error("404"); return r.arrayBuffer(); })
       .then(arr => audioCtx.decodeAudioData(arr))
       .then(buf => {
-        // 這幾套錄音在撥弦前有 30~70ms 的空白,刷弦時每條弦只差 35ms,不裁掉的話節奏會糊。
+        // 這幾套錄音在撥弦前有 30~70ms 的空白,刷弦時每條弦只差幾十 ms,不裁掉的話節奏會糊。
         // 找第一個超過峰值 10% 的點,往前留 5ms 當起點
         const x = buf.getChannelData(0);
         let peak = 0; for (let i = 0; i < x.length; i++) peak = Math.max(peak, Math.abs(x[i]));
@@ -3167,6 +3159,8 @@ function isSounding(midi){
 }
 /* at:指定在音訊時鐘的哪一刻開始(練習的節拍器用,跟點擊聲同一個時鐘)。
    有指定時,前一個和弦不是立刻切掉,而是排在新和弦開始的那一刻停 */
+/* 吉他刷和弦弦與弦的間隔(秒)。原本 35ms 聽起來像一次壓下去,使用者要求刷慢一點;和弦圖上弦亮起的節奏用同一個值 */
+const GTR_STRUM_GAP = 0.06;
 function playNotes(midis, mode, at, downMidis){
   ensureAudio();
   if (at == null) stopAllSound();
@@ -3176,7 +3170,7 @@ function playNotes(midis, mode, at, downMidis){
   if (mode === "block") {
     seq = midis.map(m => ({ midi: m, at: t0, dur: 2.6 }));
   } else if (mode === "strum") { // 吉他的齊奏:由低音弦往高音弦刷下去,弦與弦之間差幾十毫秒
-    seq = midis.map((m, i) => ({ midi: m, at: t0 + i * 0.035, dur: 2.6 }));
+    seq = midis.map((m, i) => ({ midi: m, at: t0 + i * GTR_STRUM_GAP, dur: 2.6 }));
   } else if (mode === "arp") {
     const gap = 0.16;
     seq = midis.map((m, i) => ({ midi: m, at: t0 + i * gap, dur: 2.6 - i * gap * 0.2 }));
@@ -4263,7 +4257,6 @@ function render(){
     // 吉他也照鋼琴的音域算(不畫出來),顯示區的高度才能跟鋼琴一樣
     if (STATE.tab === "scale") scaleOctaveRange(keyboardNotes().map(n => n.midi));
   }
-  renderScalePosRow();
   resizeKeyboardCanvas();
   drawKeyboardLive();
   renderSummary();
@@ -4656,7 +4649,7 @@ function galleryLabel(v, rp){
 /* 點一下:整個和弦(照目前的播放方式,吉他的齊奏是刷弦),彈到的弦由低到高依序亮 */
 function strumGallery(card, v){
   playCurrent();
-  const gap = STATE.playMode === "block" ? 35 : STATE.playMode === "arp" ? 160 : 300;
+  const gap = STATE.playMode === "block" ? GTR_STRUM_GAP * 1000 : STATE.playMode === "arp" ? 160 : 300;
   let k = 0;
   v.frets.forEach((f, s) => { if (f >= 0) setTimeout(() => ringString(card, s, GTR_OPEN[s] + f), gap * k++); });
 }
@@ -4850,7 +4843,7 @@ function renderSummary(){
   } else {
     const isChord = STATE.tab === "chord";
     const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
-    name = isChord ? chordTitle(def) : rootName() + " " + localName(def);
+    name = isChord ? chordTitle(def) : rootName() + " " + shortName(def);
     zh = isChord ? localName(def) : subName(def);
     // 和弦用 displayNotes:斜線和弦的低音排在最前面(C/B → B C E G)
     // 吉他和弦:點音名發出「這個指法裡那個音」(在哪條弦上就撥哪條),不是另一個八度的音
@@ -4882,7 +4875,18 @@ function renderSummary(){
       '<span class="n">' + (STATE.vIdx + 1) + '/' + vs.list.length + '</span>' +
       '<button id="vcNext" aria-label="' + t("voicingNext") + '" title="' + t("voicingNext") + '">' + chev("M9 18l6-6-6-6") + '</button></span>'
     : '';
-  el.innerHTML = '<b></b>' + (zh ? '<span class="zh"></span>' : '') + '<span class="tones"></span>' + nav +
+  /* 吉他音階的把位:‹ 3★ › 放在摘要列(使用者要求)。原本是指板下面一整排「全部 1 2 … 7」,
+     佔掉顯示區 31px,指板被壓扁;改成跟指法切換同一種 ‹ › 之後指板拿回整個高度。順序:全部 → 1 → … → 7 → 全部 */
+  const posList = STATE.inst === "guitar" && STATE.tab === "scale" ? scalePositions() : null;
+  const posCur = posList && currentScalePos(), posIdx = posCur ? posList.findIndex(p => p.k === posCur.k) : -1;
+  const posNav = posList && posList.length
+    ? '<span class="vc-nav pos-nav" title="' + (posCur ? t("scalePosTitle", { f: posCur.lo }) : t("scalePosLabel")) + '">' +
+      '<button id="posPrev" aria-label="' + t("scalePosLabel") + ' −">' + chev("M15 18l-6-6 6-6") + '</button>' +
+      '<span class="n">' + (posCur ? (posIdx + 1) + (posCur.k === 0 ? '<small>★</small>' : '') : t("scalePosAll")) + '</span>' +
+      '<button id="posNext" aria-label="' + t("scalePosLabel") + ' +">' + chev("M9 18l6-6-6-6") + '</button></span>'
+    : '';
+  if (posNav) zh = "";   // 吉他音階的摘要列多了 ‹ ›,副標(英文原名)讓出來;清單與結果面板上都還有
+  el.innerHTML = '<b></b>' + (zh ? '<span class="zh"></span>' : '') + '<span class="tones"></span>' + nav + posNav +
     // 齒輪圖示照抄 ScrollScore 的設定鈕(同一組 24 格線稿、stroke-width 2、圓端點),
     // 兩個工具放在一起看要是同一個產品。原本用 ⚙ 字元,粗細與字型會隨系統跑掉
     '<button class="kb-gear" id="kbGear" aria-label="' + t("kbGearLabel") + '" title="' + t("kbGearTitle") + '">' +
@@ -4915,6 +4919,16 @@ function renderSummary(){
     };
     el.querySelector("#vcPrev").onclick = step(-1);
     el.querySelector("#vcNext").onclick = step(1);
+  }
+  if (posNav) {
+    const step = d => ev => {
+      ev.stopPropagation();
+      const n = posList.length + 1, i = (posIdx + 1 + d + n) % n;   // 0 = 全部
+      STATE.scalePos = i ? posList[i - 1].k : -1;
+      render();
+    };
+    el.querySelector("#posPrev").onclick = step(-1);
+    el.querySelector("#posNext").onclick = step(1);
   }
 }
 
@@ -5006,7 +5020,7 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
 document.querySelector(".kb-wrap").addEventListener("pointerdown", ev => {
   if (STATE.tab !== "scale") return;
   // 摘要列(整條重播、音名單音)、齒輪與設定面板照原本的功能
-  if (ev.target.closest(".kb-summary, .kb-popover, .pos-row")) return;
+  if (ev.target.closest(".kb-summary, .kb-popover")) return;
   playScaleUp();
 });
 $("practiceOpen").onclick = () => { PRACTICE.open = true; if (PRACTICE.steps.length) practiceApply(); render(); };
