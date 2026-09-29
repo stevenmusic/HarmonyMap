@@ -2993,14 +2993,34 @@ function setAudioStatus(key){
   const txt = key ? t(key) : "";
   if (el) { el.textContent = txt; el.hidden = !txt; }
 }
+/* 取樣的抓取:有 Cache API 就把抓到的 mp3 存起來,下次(包括沒網路時)直接從快取拿,不用每次重抓 70 個檔案。
+   快取名稱帶版本號,改了 PIANO_SAMPLES / GUITAR_SETS 的網址要把 v1 往上加。沒有 Cache API(file://、部分 WebView)就照舊直接抓 */
+const SAMPLE_CACHE = "hm-samples-v1";
+function sampleFetch(url){
+  const net = () => fetch(url).then(r => { if (!r.ok) throw new Error("404"); return r; });
+  if (!window.caches || !caches.open) return net().then(r => r.arrayBuffer());
+  return caches.open(SAMPLE_CACHE).then(c => c.match(url).then(hit => hit ||
+    net().then(r => { c.put(url, r.clone()).catch(() => {}); return r; })))
+    .catch(() => net())
+    .then(r => r.arrayBuffer());
+}
+/* 一個都沒抓到(第一次開就沒網路)時不要永遠卡在合成音色:記下失敗時間,15 秒後再碰畫面、或網路恢復時重抓。
+   「載入中…」只在第一次顯示,離線時每點一下就閃一次提示很煩 */
+const sampleFail = { piano: 0 };
+let sampleTried = { piano: false };
+window.addEventListener("online", () => {
+  for (const k in sampleFail) sampleFail[k] = 0;
+  if (audioCtx) { loadPianoSamples(); if (STATE.inst === "guitar") loadGuitarSamples(STATE.gtrTone); }
+});
 function loadPianoSamples(){
   if (pianoBuffers || pianoLoading) return pianoLoading || Promise.resolve();
+  if (sampleFail.piano && Date.now() - sampleFail.piano < 15000) return Promise.resolve();
   const list = [], jobs = [];
   for (const [letter, oct] of PIANO_SAMPLES) {
     const midi = (oct + 1) * 12 + NOTE_SEMITONE[letter];
     const url = PIANO_BASE + letter + oct + ".mp3";
     jobs.push(
-      fetch(url).then(r => { if (!r.ok) throw new Error("404"); return r.arrayBuffer(); })
+      sampleFetch(url)
         .then(arr => audioCtx.decodeAudioData(arr))
         .then(buf => {
           // mp3 解碼後開頭常留一小段空白(編碼器延遲),和弦每個音都晚這麼多才出聲。跟吉他一樣裁到起音前 5ms
@@ -3012,11 +3032,12 @@ function loadPianoSamples(){
         .catch(() => {}) // 該取樣缺失就跳過,不影響其他音符
     );
   }
-  setAudioStatus("loadingPiano");
+  const first = !sampleTried.piano; sampleTried.piano = true;
+  if (first) setAudioStatus("loadingPiano");
   pianoLoading = Promise.all(jobs).then(() => {
-    pianoBuffers = list;
-    setAudioStatus(list.length ? "" : "pianoLoadFailed");
-    if (!list.length) setTimeout(() => setAudioStatus(""), 4000);
+    if (list.length) { pianoBuffers = list; sampleFail.piano = 0; if (audioStatusKey === "loadingPiano") setAudioStatus(""); return; }
+    pianoLoading = null; sampleFail.piano = Date.now();   // 留給下一次重抓
+    if (first) { setAudioStatus("pianoLoadFailed"); setTimeout(() => { if (audioStatusKey === "pianoLoadFailed") setAudioStatus(""); }, 4000); }
   });
   return pianoLoading;
 }
@@ -3037,11 +3058,12 @@ const guitarBuffers = {}, guitarLoading = {};
 function loadGuitarSamples(kind){
   const set = GUITAR_SETS[kind];
   if (!set || guitarBuffers[kind] || guitarLoading[kind]) return;
+  if (sampleFail[kind] && Date.now() - sampleFail[kind] < 15000) return;
   const list = [];
   const jobs = set.files.split(" ").map(name => {
     const m = name.match(/^([A-G]s?)(\d)$/);
     const midi = (+m[2] + 1) * 12 + NOTE_SEMITONE[m[1]];
-    return fetch(set.base + name + ".mp3").then(r => { if (!r.ok) throw new Error("404"); return r.arrayBuffer(); })
+    return sampleFetch(set.base + name + ".mp3")
       .then(arr => audioCtx.decodeAudioData(arr))
       .then(buf => {
         // 這幾套錄音在撥弦前有 30~70ms 的空白,刷弦時每條弦只差幾十 ms,不裁掉的話節奏會糊。
@@ -3053,11 +3075,12 @@ function loadGuitarSamples(kind){
       })
       .catch(() => {});
   });
-  setAudioStatus("loadingGuitar");
+  const first = !sampleTried[kind]; sampleTried[kind] = true;
+  if (first) setAudioStatus("loadingGuitar");
   guitarLoading[kind] = Promise.all(jobs).then(() => {
-    guitarBuffers[kind] = list;
-    setAudioStatus(list.length ? "" : "guitarLoadFailed");
-    if (!list.length) setTimeout(() => setAudioStatus(""), 4000);
+    if (list.length) { guitarBuffers[kind] = list; sampleFail[kind] = 0; if (audioStatusKey === "loadingGuitar") setAudioStatus(""); return; }
+    guitarLoading[kind] = null; sampleFail[kind] = Date.now();
+    if (first) { setAudioStatus("guitarLoadFailed"); setTimeout(() => { if (audioStatusKey === "guitarLoadFailed") setAudioStatus(""); }, 4000); }
   });
 }
 /* 吉他的弦撥下去之後就自己衰減,不像鋼琴需要人為的衰減曲線;只在音符結束時收尾 */

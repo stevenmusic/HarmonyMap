@@ -87,3 +87,5 @@
 - `localStorage` 每一次讀寫都要 try/catch:儲存空間被停用時沒包的那一行會讓整份程式停住、畫面全空(測試有模擬)
 - `playSingle` 不會清掉 `scheduledNodes` / `soundingWindows`(只有 playNotes 會),所以它自己把早就結束的丟掉(節點記 `_end`),
   連點辨識、滑和弦圖時陣列才不會一直長大
+- 取樣載入:`sampleFetch` 有 Cache API 就把 mp3 存進 `hm-samples-v1`,之後(包括離線)直接從快取拿;**改了取樣網址要把版本號往上加**。
+  一個都沒抓到時不要永遠卡在合成音色:記失敗時間,15 秒後再碰畫面或 `online` 事件時重抓;「載入中/失敗」提示只在第一次顯示

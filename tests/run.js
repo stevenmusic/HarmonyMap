@@ -1269,6 +1269,34 @@ async function openPage(browser, opts = {}){
       PRACTICE.open = false; render(); return r;
     });
     total++; if (!tick.sameGo || tick.focus !== "prCustom" || tick.now !== "E" || tick.cur !== 1) fails.push("練習換小節時重建了整張卡片: " + JSON.stringify(tick));
+    // 取樣一個都沒抓到之後,過一陣子(或網路恢復)要能重抓,不能整個工作階段都卡在合成音色
+    const retry = await q.evaluate(async () => {
+      if (pianoLoading) await pianoLoading;
+      const before = { buf: pianoBuffers, loading: pianoLoading };
+      // 做一個很短的 WAV 當作「網路恢復後抓到的檔案」
+      const wav = () => { const n = 800, b = new ArrayBuffer(44 + n * 2), v = new DataView(b), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0)));
+        w(0, "RIFF"); v.setUint32(4, 36 + n * 2, true); w(8, "WAVE"); w(12, "fmt "); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, 44100, true); v.setUint32(28, 88200, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); w(36, "data"); v.setUint32(40, n * 2, true);
+        for (let i = 0; i < n; i++) v.setInt16(44 + i * 2, Math.round(Math.sin(i / 5) * 8000), true); return b; };
+      const orig = sampleFetch; sampleFetch = () => Promise.resolve(wav());
+      window.dispatchEvent(new Event("online"));
+      if (pianoLoading) await pianoLoading;
+      const after = pianoBuffers ? pianoBuffers.length : 0;
+      sampleFetch = orig;
+      return { failedFirst: before.buf === null && before.loading === null, after };
+    });
+    total++; if (!retry.failedFirst || !retry.after) fails.push("取樣抓不到之後不會重抓: " + JSON.stringify(retry));
+    // Cache API:同一個檔案第二次從快取拿,不再上網抓
+    const cached = await q.evaluate(async () => {
+      const store = new Map(); let nets = 0;
+      const cache = { match: u => Promise.resolve(store.has(u) ? store.get(u).clone() : undefined), put: (u, r) => { store.set(u, r); return Promise.resolve(); } };
+      Object.defineProperty(window, "caches", { configurable: true, value: { open: () => Promise.resolve(cache) } });
+      const of = window.fetch; window.fetch = () => { nets++; return Promise.resolve(new Response(new Uint8Array([1, 2, 3]))); };
+      const a = await sampleFetch("https://x/a.mp3"), b = await sampleFetch("https://x/a.mp3");
+      window.fetch = of; delete window.caches;
+      return { nets, a: a.byteLength, b: b.byteLength };
+    });
+    total++; if (cached.nets !== 1 || cached.b !== 3) fails.push("取樣沒有存進快取: " + JSON.stringify(cached));
     // 連點單音:紀錄不能一直累積
     const grow = await q.evaluate(async () => {
       for (let i = 0; i < 300; i++) playSingle(60 + (i % 12));
