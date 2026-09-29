@@ -213,7 +213,7 @@ prefers-reduced-motion:reduce
 - 結果面板標題右邊「+ 加入練習」:把目前的和弦(含斜線低音)排進練習進行,練習按鈕上有數字(`#practiceCount`)
 - 頂欄右上的 **?** 打開使用說明卡片(`toggleHelp`,內容照目前語言即時產生),列出看不出來的操作:
   斜線輸入、點音名單音、滑和弦圖撥弦、搜尋打和弦名稱、練習、快捷鍵、加到主畫面。點外面或 Esc 關掉
-- **加到主畫面**:`apple-mobile-web-app-capable` 等 meta + 內嵌的 PNG 圖示(180 與 32,深色底上一段鍵盤、C E G 亮),
+- **加到主畫面**:`apple-mobile-web-app-capable` 等 meta + 內嵌的 PNG 圖示(180 與 32,深色底上三顆白鍵兩顆黑鍵,圓角、左金右青,可愛風,使用者要求),
   iPhone Safari「分享 → 加入主畫面」就像 App 一樣全螢幕打開。圖示是 data URI,仍然是單檔
 
 ## 介面上的記號
