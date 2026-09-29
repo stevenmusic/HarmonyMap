@@ -2542,7 +2542,7 @@ function voicingMidis(v){
 /* 沒點的弦怎麼算:比「最低那條有點的弦」更高音的弦 = 空弦(照真實彈法,沒按的弦就是空弦音在響,
    不用每條都去點左邊的 ○);更低音的弦 = 不彈。想讓最低那幾條也響,點它的 ○(第 0 格)就好 */
 function gtrFindFrets(){
-  const raw = STATE.findFrets, low = raw.findIndex(f => f != null);
+  const raw = STATE.findFrets, low = raw.findIndex(f => f != null && f >= 0);   // -1 = 使用者點成 ×(不彈)
   const build = from => raw.map((f, s) => f != null ? f : low >= 0 && (s > low || s >= from) ? 0 : -1);
   const base = build(Infinity);
   /* 只點高音弦時,「最低那條有點的弦」下面的空弦到底響不響是兩可的:點 1~3 弦的 2 格,不彈 4 弦是 F♯m/A,
@@ -2555,6 +2555,21 @@ function gtrFindFrets(){
   };
   if (low > 0 && !rootPos(base))
     for (let k = 1; k <= 2 && low - k >= 0; k++) { const c = build(low - k); if (rootPos(c)) return c; }
+  /* sus 和弦的音是對稱的:只點 Dsus2 的按弦(A D E)本身就是 Asus4 的根音位置,上面那條規則不會再往下找。
+     底下的空弦如果只是「重複和弦裡已經有的音」、而且算進去之後低音變成根音,也算進去(Dsus2 = xx0230) */
+  if (low > 0 && rootPos(base)) {
+    const pcsOf = fr => new Set(fr.map((f, s) => f >= 0 ? pcOf(GTR_OPEN[s] + f) : -1).filter(x => x >= 0));
+    // 換成的讀法不能是冷門和弦:x3x453 多算 6 弦空弦 E 會變成 Em♭6(程度 1),原本的 Cmaj7(程度 3)要留著
+    const lvOf = fr => {
+      const sel = fr.map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null).sort((x, y) => x - y);
+      return Math.max(0, ...matchChords(pcOf(sel[0]), [...new Set(sel.map(pcOf))]).map(c => c.lv || 0));
+    };
+    const have = pcsOf(base), baseLv = lvOf(base);
+    for (let k = 1; k <= 2 && low - k >= 0; k++) {
+      const c = build(low - k);
+      if ([...pcsOf(c)].every(x => have.has(x)) && rootPos(c)) { const lv = lvOf(c); if (lv >= 2 && lv >= baseLv - 1) return c; }
+    }
+  }
   return base;
 }
 
@@ -2618,7 +2633,7 @@ function guitarView(){
     gtrMarkers(ff).forEach((mk, s) => {
       const midi = GTR_OPEN[s] + ff[s], x = info.get(pcOf(midi));
       if (mk === "fretted") dots.push({ s, f: ff[s], midi, root: x.root, text: lab(x) });
-      else markers[s] = mk === "open" ? { type: "open", midi, root: x.root, text: lab(x) } : { type: "mute", faint: true };
+      else markers[s] = mk === "open" ? { type: "open", midi, root: x.root, text: lab(x) } : { type: "mute", faint: STATE.findFrets[s] !== -1 };   // 自己點成 × 的畫實心,自動判斷的畫淡的
     });
     return { frets, dots, ghosts, markers };
   }
@@ -2849,7 +2864,9 @@ function fretAt(px, py){
   return { s, f };
 }
 
-function refreshDisplaySize(){ syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); syncStickyMetrics(); if (PRACTICE.open) fitStageNames(); }
+// 摘要列的「放不下就拿掉副標/縮字」是照當下寬度算的:轉向、改視窗大小之後要重算(不重算的話窄→寬會留著縮小的字,寬→窄會被切)
+function refreshDisplaySize(){ syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); renderSummary(); syncStickyMetrics(); if (PRACTICE.open) fitStageNames(); }
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { try { renderSummary(); } catch (e) {} });   // 網頁字型晚到時字寬會變
 window.addEventListener("resize", refreshDisplaySize);
 /* iPhone 轉橫向時 resize 事件比版面還早到:當下量到的還是直向的版面(不是兩欄、高度上限是螢幕的 22%),
    鍵盤就被算成小的;要等捲動讓網址列收起、再觸發一次 resize 才變大(使用者回報)。
@@ -4386,7 +4403,7 @@ function render(){
    沒有內建範例進行(使用者要求拿掉,省版面)。
    節拍用 Web Audio 的時鐘排程(提前 0.1 秒排好點擊聲),畫面在那一刻用 setTimeout 跟上
    ══════════════════════════════════════════════════════════════ */
-const PRACTICE = { runId: 0, pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
+const PRACTICE = { runId: 0, clicks: [], pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
                    steps: [], step: 0, beat: -1, slash: null, padFresh: false, running: false, timer: 0, nextTime: 0, count: 0, flash: -1 };
 /* 級數輸入(老師的寫法):先寫調「G:」「Bb:」「Am:」,後面的羅馬數字照那個調換成和弦。
    大寫 = 大三、小寫 = 小三,° = 減、ø = 半減、+ = 增,後面可以接記號(V7、ii7、Imaj7、IVsus4);前面可以加 ♭ ♯(♭VII、♯iv°)。
@@ -4512,6 +4529,8 @@ function practiceClick(time, accent){
   g.gain.exponentialRampToValueAtTime(0.0001, time + 0.05);
   o.connect(g); g.connect(masterGain);
   o.start(time); o.stop(time + 0.06);
+  o._at = time;
+  PRACTICE.clicks = PRACTICE.clicks.filter(c => c._at > time - 1).concat(o);   // 停止時取消還沒響的點擊聲(不放進 scheduledNodes,換和弦會把它們收掉)
 }
 function practiceStart(){
   if (!PRACTICE.steps.length) return;
@@ -4541,7 +4560,8 @@ function practiceStart(){
         if (!PRACTICE.running || PRACTICE.runId !== run) return;
         PRACTICE.beat = beat;
         if (beat === 0) {
-          PRACTICE.step = step;
+          if (!PRACTICE.steps.length) return;
+          PRACTICE.step = step % PRACTICE.steps.length;   // 排程之後、觸發之前刪掉了最後一個和弦,索引會超出範圍
           practiceApply();
           practiceTick();   // 聲音已經在上面照節拍器的時鐘排好了,這裡只更新會變的那幾塊畫面
         } else renderPracticeBeat();
@@ -4559,7 +4579,14 @@ function practiceStop(){
   PRACTICE.running = false;
   PRACTICE.beat = -1;
   // 節拍器提前 0.1 秒排好下一拍的和弦:在拍子前一刻按停止,那個和弦不該還響出來。還沒開始的音取消,正在響的不動
-  if (audioCtx) { const now = audioCtx.currentTime; for (const n of scheduledNodes) if (n._at > now + 0.001) fadeStop(n, now); }
+  // 還沒開始的音直接取消(停止時間 = 開始時間就完全不出聲;fadeStop 會從預設音量 1 開始收,離開始不到 40ms 時會冒一下);
+  // 已經排好的節拍器點擊聲也一起取消
+  if (audioCtx) {
+    const now = audioCtx.currentTime;
+    for (const n of scheduledNodes) if (n._at > now + 0.001) { try { if (n._g) { n._g.gain.cancelScheduledValues(0); n._g.gain.setValueAtTime(0, now); } n.stop(n._at); } catch (e) {} n._cancelled = true; }
+    for (const o of PRACTICE.clicks) if (o._at > now) { try { o.stop(o._at); } catch (e) {} }
+  }
+  PRACTICE.clicks = [];
 }
 function renderPracticeBeat(){
   const el = document.querySelector("#practiceStage .pr-beats");
@@ -5204,7 +5231,11 @@ function pluckString(s){
   const guard = el => el.addEventListener("touchend", ev => {
     if (ev.target.closest(".kb-summary, .kb-popover, button")) return;
     const now = Date.now();
-    if (now - lastTap < 350) ev.preventDefault();
+    if (now - lastTap < 350) {
+      ev.preventDefault();
+      // 擋掉放大的同時 click 也不會觸發了:練習的「現在 / 下一個」這種 role=button 的卡片自己補一下
+      const rb = ev.target.closest('[role="button"]'); if (rb) rb.click();
+    }
     lastTap = now;
   }, { passive: false });
   guard(document.querySelector(".kb-wrap"));
@@ -5233,9 +5264,13 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
     const midi = GTR_OPEN[hit.s] + hit.f;
     if (STATE.tab === "find") {
       // 一條弦同一時間只能發一個音:點同一格是取消,點別格是移過去
-      STATE.findFrets[hit.s] = STATE.findFrets[hit.s] === hit.f ? null : hit.f;
+      // 琴頸左邊那一欄(第 0 格)三段切換:沒設定(自動)→ ○ 空弦 → × 不彈 → 回到自動。
+      // 最低點以上的弦自動算空弦,想悶掉某一條(Cmaj7 = x3x453)就點兩下變 ×
+      const cur = STATE.findFrets[hit.s];
+      STATE.findFrets[hit.s] = hit.f === 0 ? (cur == null ? 0 : cur === 0 ? -1 : null) : (cur === hit.f ? null : hit.f);
       syncFindFromFrets();
-      if (STATE.findFrets[hit.s] != null) { vibrateString(hit.s, hit.f); playSingle(midi); }
+      const nf = STATE.findFrets[hit.s];
+      if (nf != null && nf >= 0) { vibrateString(hit.s, hit.f); playSingle(midi); }
       render();
     } else if (STATE.tab === "chord") {
       // 和弦:左手已經按好整個和弦,右手撥哪條弦就響那條弦「按住的音」,

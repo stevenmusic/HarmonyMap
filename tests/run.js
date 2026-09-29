@@ -539,6 +539,16 @@ async function openPage(browser, opts = {}){
     // Dmaj7:只點 1~3 弦的 2 格,4 弦空弦要一起算(xx0222),不能變成 F♯m/A
     total++; { const r = await q.evaluate(() => { const o = STATE.findFrets; STATE.findFrets = [null, null, null, 2, 2, 2]; syncFindFromFrets(); const an = findAnalysis(); const nm = findChordName(an.results[0].rootPc, an.results[0].chord, an.bassPc, spellPrefFor(an.results[0].rootPc, an.results[0].chord)); STATE.findFrets = o; return nm; });
       if (r !== "Dmaj7") fails.push("吉他反查 xxx222 應該是 Dmaj7: " + r); }
+    // 常見開放和弦只點按弦的格子(空弦自動),都要認對;sus 和弦是對稱的,容易被讀成別的 sus;-1 = 自己點成 ×
+    total++; { const r = await q.evaluate(() => {
+      const nm = fr => { const o = STATE.findFrets; STATE.findFrets = fr; syncFindFromFrets(); const an = findAnalysis(); STATE.findFrets = o; if (!an.results.length) return "?"; const x = an.results[0]; return findChordName(x.rootPc, x.chord, an.bassPc, spellPrefFor(x.rootPc, x.chord)); };
+      const N = null, cases = [
+        [[N, N, N, 2, 3, N], "Dsus2"], [[N, N, N, 2, 3, 3], "Dsus4"], [[N, N, 2, 2, N, N], "Asus2"], [[N, N, 2, 2, 3, N], "Asus4"],
+        [[N, 2, 2, 2, N, N], "Esus4"], [[N, 3, 2, N, 1, N], "C"], [[N, N, 2, 2, 2, N], "A"], [[N, N, N, 2, 3, 2], "D"], [[N, 2, 2, 1, N, N], "E"],
+        [[N, N, 2, 2, 1, N], "Am"], [[N, 2, 2, N, N, N], "Em"], [[3, 2, N, N, N, 3], "G"], [[N, N, N, 2, 2, 2], "Dmaj7"],
+        [[N, 3, -1, 4, 5, 3], "Cmaj7"], [[N, 3, -1, 3, 4, 3], "Cm7"]];
+      return cases.map(([fr, want]) => { const g = nm(fr); return g === want ? "" : JSON.stringify(fr) + " → " + g + " ≠ " + want; }).filter(Boolean); });
+      if (r.length) fails.push("吉他反查常見和弦: " + r.join(" | ")); }
     await take(); // 前面換根音也會發聲(和弦分頁換根音 = 彈新和弦),先清掉
     await L("D").click(); await expect("和弦分頁 C 換成 D 的瞬間彈 D 大三和弦", "n62,66,69");
     await L("C").click(); await take();
@@ -1292,7 +1302,7 @@ async function openPage(browser, opts = {}){
     total++; if (burst > 2) fails.push("節拍器卡住回來一次補了 " + burst + " 拍");
     // 在拍子前一刻按停止:已經排好、還沒響的下一個和弦要取消
     const cancelled = await q.evaluate(async () => {
-      const orig = fadeStop, hit = [];
+      const hit = [];
       PRACTICE.bpm = 240; practiceStart();
       // 等到下一小節的和弦已經排好、還沒響的那一刻(節拍器提前 0.1 秒排)
       let pending = 0;
@@ -1300,9 +1310,9 @@ async function openPage(browser, opts = {}){
         await new Promise(r => setTimeout(r, 5));
         pending = scheduledNodes.filter(n => n._at > audioCtx.currentTime + 0.01).length;
       }
-      fadeStop = (n, t) => { hit.push(n); orig(n, t); };
-      practiceStop(); fadeStop = orig;
-      return { pending, hit: hit.length };
+      const pend = scheduledNodes.filter(n => n._at > audioCtx.currentTime + 0.01);
+      practiceStop();
+      return { pending, hit: pend.filter(n => n._cancelled).length };
     });
     total++; if (!cancelled.pending || cancelled.hit < cancelled.pending) fails.push("停止後還沒響的和弦沒有取消: " + JSON.stringify(cancelled));
     // 播放中換小節只更新「現在 / 下一個」:文字框不能失去焦點、開始/停止鈕不能被換掉(換小節那一刻按停止會點空)
@@ -1343,6 +1353,18 @@ async function openPage(browser, opts = {}){
       return { nets, a: a.byteLength, b: b.byteLength };
     });
     total++; if (cached.nets !== 1 || cached.b !== 3) fails.push("取樣沒有存進快取: " + JSON.stringify(cached));
+    // 轉向/改視窗大小之後摘要列要重新排:窄→寬不能留著縮小的字,寬→窄不能被切
+    {
+      await q.setViewportSize({ width: 320, height: 568 });
+      await q.evaluate(() => { STATE.inst = "guitar"; STATE.tab = "scale"; STATE.scaleId = "chromatic"; render(); });
+      await q.setViewportSize({ width: 1280, height: 860 }); await q.waitForTimeout(400);
+      const wide = await q.evaluate(() => document.querySelector("#kbSummary .tones").style.fontSize);
+      await q.setViewportSize({ width: 320, height: 568 }); await q.waitForTimeout(400);
+      const narrow = await q.evaluate(() => { const t = document.querySelector("#kbSummary .tones"); return t.scrollWidth > t.clientWidth + 1; });
+      await q.evaluate(() => { STATE.inst = "piano"; STATE.tab = "chord"; render(); });
+      await q.setViewportSize({ width: 390, height: 844 });
+      total++; if (wide || narrow) fails.push("改視窗大小後摘要列沒有重排: 寬版字級=" + wide + " 窄版被切=" + narrow);
+    }
     // 連點單音:紀錄不能一直累積
     const grow = await q.evaluate(async () => {
       for (let i = 0; i < 300; i++) playSingle(60 + (i % 12));
