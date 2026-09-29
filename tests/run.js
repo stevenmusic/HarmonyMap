@@ -1396,7 +1396,28 @@ async function openPage(browser, opts = {}){
     }
     const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
     const h = await q.evaluate(() => { STATE.tab = "scale"; STATE.letter = 6; STATE.acc = -1; STATE.scaleId = "lydian"; render(); return decodeURIComponent(location.hash); });
-    total++; if (h !== "#scale=Bb-lydian") fails.push("換頁後網址沒跟著變: " + h);
+    total++; if (h !== "#scale=Bb-lydian&inst=piano") fails.push("換頁後網址沒跟著變: " + h);
+    // 沒寫樂器的舊連結用鋼琴開,不是收到的人上次用的樂器
+    { const z = await openPage(browser, { viewport: { width: 390, height: 844 } });
+      await z.evaluate(() => { try { localStorage.setItem("harmonymap.inst", "guitar"); } catch (e) {} });
+      await z.goto(PAGE + "#chord=Bbmaj7"); await z.reload();
+      const inst = await z.evaluate(() => STATE.inst);
+      await z.evaluate(() => { try { localStorage.removeItem("harmonymap.inst"); } catch (e) {} });
+      total++; if (inst !== "piano") fails.push("沒寫樂器的連結用了上次的樂器: " + inst);
+      await z.close(); }
+    // 鍵盤操作:焦點在分頁鈕上按空白鍵 = 按那顆鈕(不是播放);按根音字母鈕之後焦點留在根音列
+    { const z = await openPage(browser, { viewport: { width: 1280, height: 860 } });
+      await z.focus("#tabScale"); await z.keyboard.press(" ");
+      const tab = await z.evaluate(() => STATE.tab);
+      await z.click("#tabChord");
+      await z.focus("#letterRow .key-btn:nth-child(2)"); await z.keyboard.press("Enter");
+      const f = await z.evaluate(() => { const a = document.activeElement; return a && a.closest && a.closest("#letterRow") ? a.textContent : (a && a.tagName); });
+      await z.click("#langToggle");
+      const en = await z.evaluate(() => { STATE.tab = "scale"; STATE.scaleId = "dorian"; render(); const s = $("kbSummary"); return (s.querySelector("b").textContent + "|" + ((s.querySelector(".zh") || {}).textContent || "")); });
+      total++; if (tab !== "scale") fails.push("焦點在分頁鈕上按空白鍵沒有切換: " + tab);
+      total++; if (f !== "D") fails.push("按根音鈕後焦點掉了: " + f);
+      total++; if (/Dorian\|.*Dorian/.test(en)) fails.push("英文音階摘要名稱重複: " + en);
+      await z.close(); }
     await q.close();
     report("分享連結", total, fails);
   }
