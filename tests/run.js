@@ -965,7 +965,7 @@ async function openPage(browser, opts = {}){
         }
         total++; if (got.Guitar.join() !== got.Piano.join()) fails.push("兩欄版面換樂器移位(" + w + "×" + h + " " + tab + "): " + got.Guitar + " → " + got.Piano);
       }
-      // 比例:和弦圖最多放大 1.4 倍(圖裡的字才不會比介面的字大一截,使用者回報);鋼琴白鍵最寬 56px(一個八度不會變方磚)
+      // 比例:和弦圖最多放大 GD_MAX_K(2.2)倍,而圖裡的字(數字/格數/×)照螢幕像素限制在 16px 以內,才不會比介面的字大一截(使用者回報過);鋼琴白鍵最寬 56px(一個八度不會變方磚)
       const prop = await q.evaluate(() => {
         $("tabChord").click(); $("instGuitar").click();
         const sv = document.querySelector("#gtrDiagrams svg"), bb = sv.getBoundingClientRect(), vb = sv.viewBox.baseVal;
@@ -973,9 +973,10 @@ async function openPage(browser, opts = {}){
         $("tabScale").click(); $("instPiano").click();
         const key = $("keyboardCanvas").getBoundingClientRect().width / Math.max(KB_WHITE_KEYS.length, 1);
         $("tabChord").click();
-        return { k, key };
+        const big = Math.max(...[...sv.querySelectorAll("text.fn, text.frl, text.mx")].map(t => parseFloat(t.getAttribute("font-size")) * k));
+        return { k, key, big };
       });
-      total++; if (prop.k > 1.41) fails.push("和弦圖放大 " + prop.k.toFixed(2) + " 倍(" + w + "×" + h + "),圖裡的字會比介面大");
+      total++; if (prop.k > 2.21 || prop.big > 16.5) fails.push("和弦圖放大 " + prop.k.toFixed(2) + " 倍、最大的字 " + prop.big.toFixed(1) + "px(" + w + "×" + h + "),圖裡的字會比介面大");
       total++; if (prop.key > 56.5) fails.push("鋼琴白鍵 " + Math.round(prop.key) + "px 寬(" + w + "×" + h + ")");
       await q.close();
     }
