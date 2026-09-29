@@ -1026,6 +1026,7 @@ const I18N = {
     help5: "<b>練習</b>:排一組和弦跟著節拍器換;點進行裡的和弦可以改成<b>半小節</b>,也能打級數(<b>G: I V vi IV</b>)",
     help6: "桌機快捷鍵:<b>空白鍵</b>播放、<b>↑↓</b>換和弦、<b>←→</b>換根音、<b>字母鍵</b>選根音、<b>/</b>斜線和弦",
     help7: "iPhone:Safari 的<b>分享 → 加入主畫面</b>,之後就像 App 一樣從主畫面打開",
+    help8: "<b>網址就是這一頁</b>:和弦、音階、練習的進行都記在網址裡,複製傳給學生,打開就是同一頁",
     tabChord: "和弦", tabScale: "音階", tabFind: "辨識",
     octaveLabel: "起始八度", keyLabelLabel: "琴鍵標示",
     labelOptEn: "音名 C D E", labelOptDo: "唱名 Do Re Mi", labelOptDeg: "數字 1 ♭3 5", labelOptOff: "不標字",
@@ -1121,6 +1122,7 @@ const I18N = {
     help5: "<b>Practice</b>: build a progression and change chords with the metronome; tap a chord in it for a <b>half bar</b>, or type numerals (<b>G: I V vi IV</b>)",
     help6: "Desktop keys: <b>Space</b> play, <b>↑↓</b> chord, <b>←→</b> root, <b>letter keys</b> pick the root, <b>/</b> slash chord",
     help7: "iPhone: in Safari tap <b>Share → Add to Home Screen</b> to open it like an app",
+    help8: "<b>The link is the page</b>: the chord, scale or practice progression is kept in the URL — send it to a student and it opens the same view",
     tabChord: "Chord", tabScale: "Scale", tabFind: "Identify",
     octaveLabel: "Start octave", keyLabelLabel: "Key labels",
     labelOptEn: "Note names C D E", labelOptDo: "Solfège Do Re Mi", labelOptDeg: "Degrees 1 ♭3 5", labelOptOff: "No labels",
@@ -4502,6 +4504,7 @@ function render(){
   { const sm = $("kbSummary"), b = sm.querySelector("b"), tn = sm.querySelector(".tones");
     $("keyboardCanvas").setAttribute("aria-label", ((b ? b.title || b.textContent : "") + " " + (tn ? tn.textContent : "")).trim()); }
   renderReadout();
+  writeHash();
   syncStickyMetrics(); // 鍵盤音域一變,釘住區塊的高度就變,右欄的 sticky 偏移量要跟著更新
 }
 
@@ -5684,7 +5687,7 @@ window.addEventListener("pointerdown", wakeAudio, { capture: true });
 function toggleHelp(force){
   const pop = $("helpPop"), btn = $("helpToggle");
   const open = force !== undefined ? force : pop.hidden;
-  if (open) pop.innerHTML = '<h3 id="helpPopTitle">' + t("helpTitle") + '</h3><ul>' + [1, 2, 3, 4, 5, 6, 7].map(i => '<li>' + t("help" + i) + '</li>').join("") + '</ul>';
+  if (open) pop.innerHTML = '<h3 id="helpPopTitle">' + t("helpTitle") + '</h3><ul>' + [1, 2, 3, 4, 5, 6, 7, 8].map(i => '<li>' + t("help" + i) + '</li>').join("") + '</ul>';
   pop.hidden = !open;
   btn.setAttribute("aria-expanded", String(open));
 }
@@ -5742,6 +5745,48 @@ $("themeToggle").onclick = () => {
   applyTheme();
 };
 
+/* ── 分享連結:網址 # 後面記著目前這一頁 ──
+   #chord=Bbmaj7、#chord=C/E、#scale=D-dorian、#tab=find,另外 inst=guitar、capo=2、prog=G: I V vi IV(練習)。
+   每次 render 用 replaceState 更新(不會塞滿上一頁紀錄),複製網址或用 Safari 分享就是這一頁。
+   網址用 # b 寫升降(Bb、F#),解析時跟搜尋框同一套(parseChordName) */
+let lastHash = "";
+const asciiAcc = x => x.replace(/♯/g, "#").replace(/♭/g, "b");
+function writeHash(){
+  const q = new URLSearchParams();
+  if (PRACTICE.open && STATE.tab === "chord") q.set("prog", PRACTICE.steps.map(stepText).map(asciiAcc).join(" "));
+  else if (STATE.tab === "chord") q.set("chord", asciiAcc(chordTitle(chordById(STATE.chordId))));
+  else if (STATE.tab === "scale") q.set("scale", asciiAcc(rootName()) + "-" + STATE.scaleId);
+  else q.set("tab", "find");
+  if (STATE.inst === "guitar") { q.set("inst", "guitar"); if (STATE.capo) q.set("capo", String(STATE.capo)); }
+  const h = q.toString().replace(/\+/g, "%20");
+  if (h === lastHash) return;
+  lastHash = h;
+  try { history.replaceState(null, "", "#" + h); } catch (e) {}
+}
+function readHash(){
+  const raw = location.hash.slice(1);
+  if (!raw) return;
+  let q; try { q = new URLSearchParams(raw); } catch (e) { return; }
+  const inst = q.get("inst");
+  if (inst === "guitar" || inst === "piano") STATE.inst = inst;
+  const cp = parseInt(q.get("capo") || "0", 10);
+  STATE.capo = cp >= 0 && cp <= 7 ? cp : 0;
+  const ch = q.get("chord"), sc = q.get("scale"), pr = q.get("prog");
+  if (pr != null) {
+    const r = practiceParseCustom(pr);
+    if (r.steps.length) { PRACTICE.steps = r.steps; PRACTICE.custom = r.steps.map(stepText).join(" "); PRACTICE.step = 0; PRACTICE.open = true; STATE.tab = "chord"; practiceApply(); }
+  } else if (ch) {
+    const pc = parseChordName(ch);
+    if (pc) Object.assign(STATE, { tab: "chord", letter: pc.letter, acc: pc.acc, chordId: pc.def.id, bassIv: pc.bass, bassFor: pc.def.id, slash: null });
+    PRACTICE.open = false;
+  } else if (sc) {
+    const m = sc.match(/^([A-G])([#b♯♭]?)-(.+)$/), def = m && scaleById(m[3]);
+    if (def) Object.assign(STATE, { tab: "scale", letter: LETTERS.indexOf(m[1]), acc: m[2] ? (/[#♯]/.test(m[2]) ? 1 : -1) : 0, scaleId: def.id });
+    PRACTICE.open = false;
+  } else if (q.get("tab") === "find") { STATE.tab = "find"; PRACTICE.open = false; }
+  lastHash = raw;
+}
+
 /* ── 語言 ── */
 $("langToggle").onclick = () => { applyLanguage(LANG === "zh" ? "en" : "zh"); };
 
@@ -5752,6 +5797,8 @@ try {
   const r = practiceParseCustom(localStorage.getItem(PRCUR_KEY) || "");
   if (r.steps.length) { PRACTICE.steps = r.steps; PRACTICE.custom = r.steps.map(stepText).join(" "); }
 } catch (e) {}
+readHash();   // 網址裡帶了和弦/音階/進行(老師傳給學生的連結)就直接打開那一頁
+window.addEventListener("hashchange", () => { if (location.hash.slice(1) !== lastHash) { readHash(); render(); } });
 applyLanguage(LANG); // 內部會呼叫 render(),所以下面不用再呼叫一次
 </script>
 </body>

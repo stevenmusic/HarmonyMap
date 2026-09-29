@@ -91,3 +91,6 @@
   吉他音階的摘要列(`.has-pos`)七個音名一律完整顯示:音名 flex-shrink 0、名稱先讓(320~360 太窄時才用省略號),
   字級 14px、間距 5px、‹ › 22px 都是為了讓 390 以上連名稱也放得下(測試:320/390/430)
 - 摘要列的音階名有兩個名字(`A / B`,例如 Aeolian / Natural Minor)時疊成兩行小字(`b.stk`),根音放大到跟兩行同高,整列高度不變
+- 分享連結:網址 # 記著目前這一頁(`writeHash`,每次 render 用 replaceState 更新,不塞上一頁紀錄):
+  `chord=Bbmaj7`、`chord=C/E`、`scale=D-dorian`、`tab=find`,再加 `inst=guitar`、`capo=2`、練習時 `prog=G: I V vi IV`。
+  打開時與 hashchange 時 `readHash` 套用。升降在網址裡寫 # 與 b,解析沿用 parseChordName / practiceParseCustom

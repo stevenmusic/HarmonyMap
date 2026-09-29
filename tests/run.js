@@ -1376,6 +1376,28 @@ async function openPage(browser, opts = {}){
     report("名稱與辨識往返", r.total, r.fails);
   }
 
+  /* ── 6c. 分享連結:網址 # 帶著的和弦/音階/進行打開就是那一頁;換頁時網址跟著變 ── */
+  {
+    const fails = []; let total = 0;
+    const open = async hash => { const q = await openPage(browser, { viewport: { width: 390, height: 844 } }); await q.goto(PAGE + "#" + hash); await q.reload(); return q; };
+    for (const [hash, want] of [
+      ["chord=Bbmaj7", "chord piano B♭maj7"], ["chord=C/E&inst=guitar", "chord guitar C/E"], ["chord=D&inst=guitar&capo=2", "chord guitar D capo2"],
+      ["scale=F%23-dorian", "scale piano F♯ dorian"], ["prog=G:%20I%20V%20vi%20IV", "practice G D Em C"], ["tab=find", "find"]]) {
+      const q = await open(hash);
+      const got = await q.evaluate(() => PRACTICE.open ? "practice " + PRACTICE.steps.map(stepName).join(" ")
+        : STATE.tab === "chord" ? "chord " + STATE.inst + " " + chordTitle(chordById(STATE.chordId)) + (STATE.capo ? " capo" + STATE.capo : "")
+        : STATE.tab === "scale" ? "scale " + STATE.inst + " " + rootName() + " " + STATE.scaleId : STATE.tab);
+      total++; if (got !== want) fails.push("#" + hash + " → " + got + " ≠ " + want);
+      if (q._errors.length) fails.push("#" + hash + " 頁面錯誤 " + q._errors.join("; "));
+      await q.close();
+    }
+    const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
+    const h = await q.evaluate(() => { STATE.tab = "scale"; STATE.letter = 6; STATE.acc = -1; STATE.scaleId = "lydian"; render(); return decodeURIComponent(location.hash); });
+    total++; if (h !== "#scale=Bb-lydian") fails.push("換頁後網址沒跟著變: " + h);
+    await q.close();
+    report("分享連結", total, fails);
+  }
+
   /* ── 7. 音訊生命週期與穩定性:儲存空間被停用、iOS 打斷後叫醒、節拍器補拍與停止、單音不累積 ── */
   {
     const fails = []; let total = 0;
