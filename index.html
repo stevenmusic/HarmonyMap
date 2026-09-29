@@ -516,7 +516,7 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pos-row[hidden]{display:none}
 .pos-row .pos-lab{font-size:var(--fs-2xs);color:var(--muted);margin-right:2px}
 .pos-row .filter-chip{min-width:30px;padding:3px 8px;justify-content:center}
-.pos-row small{font-size:.7em;margin-left:2px;color:var(--gold)}
+.pos-row small{font-size:max(10px,.7em);margin-left:2px;color:var(--gold)}
 .pos-row .filter-chip[aria-pressed="true"] small{color:inherit}
 .gtr-dgs .gd{border:1px solid var(--line);border-radius:var(--radius-md);padding:4px 3px 2px;cursor:pointer;
              touch-action:none;background:var(--surface-inset);min-width:0}
@@ -624,7 +624,7 @@ html[data-lang="en"] .chip i{white-space:normal}
 .vc-nav button svg{display:block}
 .bass-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
 .bass-row .filter-label{min-width:0;margin-right:4px}
-.bass-row small{opacity:.7;font-size:.85em}
+.bass-row small{opacity:.7;font-size:max(11px,.85em)}   /* 11px 是全站最小字級(原本 .85em = 10.2px) */
 .bass-row select{height:30px}
 .vc-nav .n{min-width:2.6em;text-align:center;font-variant-numeric:tabular-nums}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
@@ -1805,7 +1805,8 @@ function drawKeyLabels(ctx, x, y, w, h, labelMap){
   if (!labelMap.size) return;
   const whiteW = w / KB_WHITE_KEYS.length;
   const blackH = h * 0.6, blackW = whiteW * 0.62;
-  const fs = Math.max(8, Math.min(15, whiteW * 0.40));
+  // 字級照白鍵寬度連續放大:手機兩個八度時白鍵只有 21~29px,原本 0.40 倍只剩 8~10px(使用者嫌字太小)
+  const fs = Math.max(9, Math.min(15, whiteW * 0.48));
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
@@ -1820,7 +1821,7 @@ function drawKeyLabels(ctx, x, y, w, h, labelMap){
     ctx.fillText(lab.text, cx, y + h - fs * 0.95);
   }
   // 黑鍵標籤:寫在黑鍵下緣,字比白鍵小一點才塞得下
-  const bfs = Math.max(7, Math.min(12, blackW * 0.46));
+  const bfs = Math.max(7.5, Math.min(12, blackW * 0.55));
   for (let m = KB_LOW; m <= KB_HIGH; m++) {
     if (!isBlackKey(m)) continue;
     const lab = labelMap.get(m);
@@ -2677,7 +2678,8 @@ function drawFretboard(ctx, w, h, gv){
   // 平移時第一格不一定是上面那些數字,左下角補標起始格數,才知道現在在哪
   if (first && ![1, 3, 5, 7, 9, 12, 15, 17, 19, 21].includes(first + 1)) ctx.fillText(String(first + 1), L.xOf(first + 1), bottom + L.numH / 2 + 1);
 
-  const r = Math.max(5, Math.min(sp * 0.44, L.fretW * 0.4));
+  // 音點稍大一點(0.44 → 0.47 倍弦距,相鄰兩弦的點仍不相碰),點裡的音名才放得下 10~11px(原本 7~8px,連桌機都小)
+  const r = Math.max(5, Math.min(sp * 0.47, L.fretW * 0.42));
   const fitText = (text, maxW, fs) => {
     ctx.font = "700 " + fs + "px 'Noto Serif TC', serif";
     const tw = ctx.measureText(text).width;
@@ -2708,7 +2710,7 @@ function drawFretboard(ctx, w, h, gv){
     dot(x, y, r); ctx.fill();
     ctx.restore();
     if (d.text) {
-      fitText(d.text, r * 1.7, Math.max(7, r * 0.95));
+      fitText(d.text, r * 1.8, Math.max(8, r * 1.15));
       ctx.fillStyle = "rgba(20,14,4,0.92)";
       ctx.fillText(d.text, x, y + 0.5);
     }
@@ -2732,7 +2734,7 @@ function drawFretboard(ctx, w, h, gv){
       ctx.strokeStyle = col; ctx.lineWidth = attack ? 3.5 : 2;
       dot(x, y, rr - 1); ctx.stroke();
       if (mk.text) {
-        fitText(mk.text, rr * 1.5, Math.max(7, rr * 0.85));
+        fitText(mk.text, rr * 1.8, Math.max(8, rr * 1.1));   // 空弦圈裡的音名跟按弦的音點同一套比例(原本只有 7px)
         ctx.fillStyle = col;
         ctx.fillText(mk.text, x, y + 0.5);
       }
@@ -4476,22 +4478,22 @@ function voicingSVG(v, rp){
   for (let s = 0; s < 6; s++) g += '<line class="str" data-s="' + s + '" x1="' + xs(s) + '" x2="' + xs(s) + '" y1="' + y0 + '" y2="' + (y0 + rowH * rows) + '" stroke="var(--muted-bright)" stroke-width="' + (1.8 - s * 0.2) + '"/>';
   g += '<line x1="' + (x0 - 0.9) + '" x2="' + (x0 + gap * 5 + 0.9) + '" y1="' + y0 + '" y2="' + y0 + '" stroke="var(--muted-bright)" stroke-width="' + (base === 1 ? 3.5 : 2.6) + '" stroke-linecap="square"/>';
   // 格數標在 1 弦右邊、避開 1 弦上的音點(半徑 7)
-  if (base > 1) g += '<text x="' + (x0 + gap * 5 + 8) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="10" fill="var(--muted)">' + base + 'fr</text>';
+  if (base > 1) g += '<text class="frl" x="' + (x0 + gap * 5 + 8) + '" y="' + (y0 + rowH * 0.5 + 4) + '" data-cy="' + (y0 + rowH * 0.5) + '" font-size="10" fill="var(--muted)">' + base + 'fr</text>';
   // 弦的方向:左邊 6 弦(粗、低音)、右邊 1 弦(細、高音),標在指板左右兩側的空白、最下面那一格的高度(使用者要求),
   // 跟右上的「3fr」錯開
   // 字級:中文 13(左右兩側的空白剛好放得下一個字;原本 9 太小、幾乎看不到,使用者回報),英文 9(low / high 比較寬)
   const fsLab = LANG === "en" ? 9 : 13, yLab = y0 + rowH * (rows - 0.5) + fsLab * 0.36;
   g += '<text class="slab" x="' + (x0 - 3) + '" y="' + yLab + '" text-anchor="end" font-size="' + fsLab + '" fill="var(--muted-bright)">' + t("strThick") + '</text>' +
        '<text class="slab" x="' + (x0 + gap * 5 + 4) + '" y="' + yLab + '" font-size="' + fsLab + '" fill="var(--muted-bright)">' + t("strThin") + '</text>';
-  if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
+  if (v.barreShown) g += '<rect class="brr" data-x1="' + xs(v.barreLo) + '" data-x2="' + xs(v.barreHi) + '" data-cy="' + yOf(v.minF) + '" x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
   const fing = gtrFingering(v.frets);
   v.frets.forEach((f, s) => {
     const col = f >= 0 && pcOf(GTR_OPEN[s] + f) === rp ? "var(--gold)" : "var(--teal)";
-    if (f < 0) g += '<text x="' + xs(s) + '" y="' + (y0 - 9) + '" text-anchor="middle" font-size="12" fill="var(--muted)">×</text>';
+    if (f < 0) g += '<text class="mx" x="' + xs(s) + '" y="' + (y0 - 9) + '" data-cy="' + (y0 - 13) + '" text-anchor="middle" font-size="12" fill="var(--muted)">×</text>';
     else if (f === 0) g += '<circle cx="' + xs(s) + '" cy="' + (y0 - 13) + '" r="5" fill="none" stroke="' + col + '" stroke-width="1.8"/>';
     else {
-      g += '<circle cx="' + xs(s) + '" cy="' + yOf(f) + '" r="7" fill="' + col + '"/>';
-      if (fing[s]) g += '<text x="' + xs(s) + '" y="' + (yOf(f) + 3.4) + '" text-anchor="middle" font-size="9.5" font-weight="700" fill="#16130D">' + fing[s] + '</text>';
+      g += '<circle class="fd" cx="' + xs(s) + '" cy="' + yOf(f) + '" r="7" fill="' + col + '"/>';
+      if (fing[s]) g += '<text class="fn" x="' + xs(s) + '" y="' + (yOf(f) + 3.4) + '" data-cy="' + yOf(f) + '" text-anchor="middle" font-size="9.5" font-weight="700" fill="#16130D">' + fing[s] + '</text>';
     }
   });
   return '<svg class="dg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + gtrTabText(v.frets) + '">' + g + '</svg>';
@@ -4600,6 +4602,20 @@ function fitGallery(){
     // 螢幕上的字級:中文 11~14px、英文 10~12px(桌機不再跟著圖放大到 18px 以上,比旁邊的字大一截)
     const en = LANG === "en", px = Math.min(en ? 12 : 14, Math.max(en ? 10 : 11, (en ? 9 : 13) * k));
     const fs = px / k, pad = Math.max(3, 3 / k);          // 跟弦至少隔 3px
+    /* 圖裡其他的字也照螢幕像素算(使用者嫌 3fr、7fr 太小):手機上整張圖只有 0.4~0.8 倍,
+       10 個單位的「3fr」只剩 4~7px。格數與 × 至少 11px;指法數字寫在圓點裡,圓點跟著放大,
+       但半徑最多 8.6 個單位(弦距 18,相鄰兩弦的點才不會相碰),數字最多到圓點放得下的大小。
+       桌機本來就夠大(1.4 倍),公式算出來比原本小的一律維持原本 */
+    const rU = Math.min(8.6, Math.max(7, 5.4 / k)), fnU = Math.min(rU * 1.3, Math.max(9.5, 8 / k));
+    svg.querySelectorAll("circle.fd").forEach(c => c.setAttribute("r", rU.toFixed(2)));
+    svg.querySelectorAll("text.fn").forEach(t => { t.setAttribute("font-size", fnU.toFixed(2)); t.setAttribute("y", (+t.dataset.cy + fnU * 0.36).toFixed(2)); });
+    svg.querySelectorAll("rect.brr").forEach(b => {
+      b.setAttribute("x", (+b.dataset.x1 - rU).toFixed(2)); b.setAttribute("width", (+b.dataset.x2 - +b.dataset.x1 + 2 * rU).toFixed(2));
+      b.setAttribute("y", (+b.dataset.cy - rU).toFixed(2)); b.setAttribute("height", (2 * rU).toFixed(2)); b.setAttribute("rx", rU.toFixed(2));
+    });
+    const frU = Math.max(10, 11 / k), mxU = Math.max(12, 11 / k);
+    svg.querySelectorAll("text.frl").forEach(t => { t.setAttribute("font-size", frU.toFixed(2)); t.setAttribute("x", (VSVG.x0 + VSVG.gap * 5 + rU + 1.5).toFixed(2)); t.setAttribute("y", (+t.dataset.cy + frU * 0.36).toFixed(2)); });
+    svg.querySelectorAll("text.mx").forEach(t => { t.setAttribute("font-size", mxU.toFixed(2)); t.setAttribute("y", (+t.dataset.cy + mxU * 0.33).toFixed(2)); });
     svg.querySelectorAll("text.slab").forEach((tx, i) => {
       tx.setAttribute("font-size", fs.toFixed(2));
       tx.setAttribute("x", (i === 0 ? VSVG.x0 - pad : VSVG.x0 + VSVG.gap * 5 + pad).toFixed(2));

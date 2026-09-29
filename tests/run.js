@@ -984,6 +984,40 @@ async function openPage(browser, opts = {}){
       total++; if (lab.length) fails.push("粗/細太小或被切掉(" + w + "×" + h + "): " + lab.join(" "));
       await q.close();
     }
+    // 字級下限(使用者要求「依裝置調整所有文字大小」,3fr、7fr 曾經只有 6px):
+    // 手機 390/430 上 HTML 文字 ≥ 11px(★ 等記號 ≥ 10px)、和弦圖的格數與 × ≥ 10.5px、
+    // 鋼琴鍵名 ≥ 11px(和弦分頁兩個八度)、指板音點裡的音名 ≥ 8.5px
+    for (const [w, h] of [[390, 844], [430, 932]]) {
+      const q = await browser.newPage({ viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+      await q.route(/^https?:\/\//, r => r.abort());
+      await q.addInitScript(() => { window.__cv = []; const ft = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function (t) { const m = /([\d.]+)px/.exec(this.font); window.__cv.push([String(t), m ? +m[1] : 0]); return ft.apply(this, arguments); }; });
+      await q.goto(PAGE); await q.waitForTimeout(150);
+      const bad = await q.evaluate(() => {
+        const out = [];
+        const htmlMin = () => { for (const el of document.querySelectorAll("body *")) {
+          if (!el.offsetParent || el.closest("svg")) continue;
+          const txt = [...el.childNodes].filter(n => n.nodeType === 3).map(n => n.textContent.trim()).join("");
+          if (!txt) continue;
+          const fs = parseFloat(getComputedStyle(el).fontSize), min = /^[★≡≅]+$/.test(txt) ? 10 : 11;
+          if (fs < min - 0.05) out.push("HTML「" + txt.slice(0, 8) + "」" + fs + "px"); } };
+        STATE.inst = "piano"; STATE.tab = "chord"; STATE.chordId = "maj7"; STATE.letter = 0; STATE.acc = 0; window.__cv = []; render(); htmlMin();
+        const keyMin = Math.min(...window.__cv.filter(([t]) => /^[A-G]/.test(t)).map(x => x[1]));
+        if (keyMin < 11) out.push("鋼琴鍵名 " + keyMin.toFixed(1) + "px");
+        STATE.inst = "guitar"; render();
+        for (const sv of document.querySelectorAll("#gtrDiagrams svg")) {
+          const k = sv.getBoundingClientRect().width / sv.viewBox.baseVal.width;
+          for (const t of sv.querySelectorAll("text.frl, text.mx")) { const px = parseFloat(t.getAttribute("font-size")) * k; if (px < 10.5) out.push("和弦圖「" + t.textContent + "」" + px.toFixed(1) + "px"); }
+        }
+        STATE.tab = "scale"; window.__cv = []; render(); htmlMin();
+        const noteMin = Math.min(...window.__cv.filter(([t]) => /^[A-G]/.test(t)).map(x => x[1]));
+        if (noteMin < 8.5) out.push("指板音名 " + noteMin.toFixed(1) + "px");
+        STATE.tab = "chord"; STATE.inst = "piano"; render();
+        return [...new Set(out)];
+      });
+      total++; if (bad.length) fails.push("字太小(" + w + "×" + h + "): " + bad.slice(0, 6).join(", "));
+      await q.close();
+    }
     // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
     for (const [w, h] of [[320, 568], [844, 390], [390, 844], [1280, 860]]) for (const inst of ["Piano", "Guitar"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
