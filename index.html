@@ -753,6 +753,9 @@ table.dia button.link:hover{color:var(--gold);border-color:var(--gold)}
   border:1px solid var(--line);border-radius:var(--radius-pill);padding:2px 8px;
 }
 .find-item .ftag.exact{color:var(--gold);border-color:var(--gold)}
+/* 辨識結果可以點:跳到那個和弦(或音階)的頁面 */
+.find-item[role="button"]{cursor:pointer;transition:border-color .15s}
+.find-item[role="button"]:hover,.find-item[role="button"]:focus-visible{border-color:var(--gold);outline:none}
 
 footer{
   padding:16px 14px calc(18px + env(safe-area-inset-bottom));
@@ -1059,7 +1062,7 @@ const I18N = {
     bassInRoot: "根音在低音", inversion: "轉位",
     inv1: "第一轉位", inv2: "第二轉位", inv3: "第三轉位",
     noExactMatch: "這組音沒有完全對應的標準和弦名稱。下面列出「包含這幾個音」的和弦,可以當作候選。",
-    couldBelongTo: "這些音可以屬於(還差幾個音)",
+    couldBelongTo: "這些音可以屬於(還差幾個音)", scalesContaining: "包含這些音的音階",
     missingNotes: "還差 {n} 音",
     playBlock: "齊奏", playArp: "琶音", playAsc: "逐音上下行",
     octavePrefix: "起始 ",
@@ -1154,7 +1157,7 @@ const I18N = {
     bassInRoot: "Root in bass", inversion: "Inversion",
     inv1: "1st inversion", inv2: "2nd inversion", inv3: "3rd inversion",
     noExactMatch: "No standard chord name matches this exact set of notes. Chords that contain these notes are listed below as candidates.",
-    couldBelongTo: "Could belong to (notes still missing)",
+    couldBelongTo: "Could belong to (notes still missing)", scalesContaining: "Scales containing these notes",
     missingNotes: "{n} note(s) short",
     playBlock: "Block", playArp: "Arpeggio", playAsc: "Up & Down",
     octavePrefix: "Start ",
@@ -4237,7 +4240,7 @@ function renderFindReadout(ro, ex){
     for (const r of results.slice(0, 12)) {
       const pref = spellPrefFor(r.rootPc, r.chord);
       const nm = findChordName(r.rootPc, r.chord, an.bassPc, pref);
-      html += '<div class="find-item"><span class="fname">' + nm + '</span>' +
+      html += '<div class="find-item" role="button" tabindex="0"' + findJumpAttrs(r.rootPc, r.chord, an.bassPc, pref) + '><span class="fname">' + nm + '</span>' +
               '<span class="fzh">' + localName(r.chord) + '</span>' +
               '<span class="ftag exact">' + inversionLabel(r.rootPc, r.chord, an.bassPc, pref) + '</span>' +
               (r.no5 ? '<span class="ftag">' + t("omit5") + '</span>' : '') + '</div>';
@@ -4261,7 +4264,7 @@ function renderFindReadout(ro, ex){
   if (supers.length) {
     let e = '<div class="card-title">' + t("couldBelongTo") + '</div><div class="find-list">';
     for (const s of supers.slice(0, 10)) {
-      e += '<div class="find-item"><span class="fname">' + findChordName(s.rootPc, s.chord, an.bassPc, spellPrefFor(s.rootPc, s.chord)) + '</span>' +
+      e += '<div class="find-item" role="button" tabindex="0"' + findJumpAttrs(s.rootPc, s.chord, an.bassPc, spellPrefFor(s.rootPc, s.chord)) + '><span class="fname">' + findChordName(s.rootPc, s.chord, an.bassPc, spellPrefFor(s.rootPc, s.chord)) + '</span>' +
            '<span class="fzh">' + localName(s.chord) + '</span>' +
            '<span class="ftag">' + t("missingNotes", { n: s.missing }) + '</span></div>';
     }
@@ -4269,8 +4272,60 @@ function renderFindReadout(ro, ex){
     ex.innerHTML = e;
     ex.hidden = false;
   } else {
+    ex.innerHTML = "";
     ex.hidden = true;
   }
+  // 包含這些音的音階(三個音以上才列,太少的話幾乎每個音階都符合)
+  const sc = scalesContaining(pcs, an.bassPc);
+  if (sc.length) {
+    ex.insertAdjacentHTML("beforeend", '<div class="card-title"' + (ex.innerHTML ? ' style="margin-top:14px"' : '') + '>' + t("scalesContaining") + '</div><div class="link-chips">' +
+      sc.map(x => '<button class="link-chip" data-rp="' + x.rp + '" data-sid="' + x.s.id + '">' + simpleName(x.rp, spellPrefFor(x.rp, null)) + ' ' + localName(x.s) + '</button>').join("") + '</div>');
+    ex.hidden = false;
+  }
+  // 點結果就跳過去:和弦 → 和弦分頁(低音照選的音);音階 → 音階分頁
+  const jump = el => {
+    if (el.dataset.sid) {
+      const [L, A] = PC_SPELL_PREF(+el.dataset.rp);
+      Object.assign(STATE, { tab: "scale", letter: L, acc: A, scaleId: el.dataset.sid, slash: null });
+      render(); playCurrent(); scrollTo({ top: 0 }); return;
+    }
+    const [L, A] = PC_SPELL_PREF(+el.dataset.rp, el.dataset.pref);
+    const bass = el.dataset.bass === "" ? null : +el.dataset.bass;
+    goToParsedChord({ letter: L, acc: A, def: chordById(el.dataset.cid), bass });
+    scrollTo({ top: 0 });
+  };
+  for (const box of [ro, ex]) box.querySelectorAll('.find-item[role="button"], .link-chip[data-sid]').forEach(el => {
+    el.onclick = () => jump(el);
+    el.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); jump(el); } };
+  });
+}
+/* 辨識結果上帶著「跳過去」要的資料:根音、和弦、低音(離根音幾個半音;就是根音時空白) */
+function findJumpAttrs(rootPc, chord, bassPc, pref){
+  const b = bassPc == null || bassPc === rootPc ? "" : pcOf(bassPc - rootPc);
+  return ' data-rp="' + rootPc + '" data-cid="' + chord.id + '" data-bass="' + b + '" data-pref="' + (pref || "") + '"';
+}
+/* 音高 → 根音卡片的字母 + 升降(照升降偏好;沒有偏好時用常見調名) */
+function PC_SPELL_PREF(pc, pref){
+  if (pref === "sharp" || pref === "flat") { const n = simpleName(pc, pref); return [LETTERS.indexOf(n[0]), n[1] === "♯" ? 1 : n[1] === "♭" ? -1 : 0]; }
+  return PC_SPELL[pcOf(pc)];
+}
+/* 包含這些音的音階:每個音階 × 12 個根音,音都在裡面的留下來;同一組音(不同調式)只留一個——
+   優先主音就是低音的,再來是比較常用的(lv)、多出來的音比較少的。最多 8 個 */
+function scalesContaining(pcs, bassPc){
+  if (pcs.length < 3) return [];
+  const out = [], seen = new Set();
+  const cands = [];
+  for (const s of SCALES) {
+    const rel = [...new Set(s.t.map(x => pcOf(tokenSemi(x))))];
+    for (let rp = 0; rp < 12; rp++) {
+      const abs = new Set(rel.map(x => (x + rp) % 12));
+      if (pcs.every(p => abs.has(p))) cands.push({ rp, s, extra: abs.size - pcs.length, key: [...abs].sort((a, b) => a - b).join(","), isBass: rp === bassPc, inSel: pcs.includes(rp) });
+    }
+  }
+  cands.sort((a, b) => (b.isBass - a.isBass) || (b.inSel - a.inSel) || ((b.s.lv || 0) - (a.s.lv || 0)) || (a.extra - b.extra));
+  for (const c of cands) { if (seen.has(c.key)) continue; seen.add(c.key); out.push(c); }
+  out.sort((a, b) => ((b.s.lv || 0) - (a.s.lv || 0)) || (a.extra - b.extra) || (b.isBass - a.isBass));
+  return out.slice(0, 8);
 }
 
 /* 播放方式的選項隨分頁改變:音階不提供「齊奏」——把一整個音階的音同時壓下去

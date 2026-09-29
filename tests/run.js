@@ -539,6 +539,21 @@ async function openPage(browser, opts = {}){
     // Dmaj7:只點 1~3 弦的 2 格,4 弦空弦要一起算(xx0222),不能變成 F♯m/A
     total++; { const r = await q.evaluate(() => { const o = STATE.findFrets; STATE.findFrets = [null, null, null, 2, 2, 2]; syncFindFromFrets(); const an = findAnalysis(); const nm = findChordName(an.results[0].rootPc, an.results[0].chord, an.bassPc, spellPrefFor(an.results[0].rootPc, an.results[0].chord)); STATE.findFrets = o; return nm; });
       if (r !== "Dmaj7") fails.push("吉他反查 xxx222 應該是 Dmaj7: " + r); }
+    // 辨識結果可以點:跳到那個和弦;下面列出包含這些音的音階,點了跳到音階分頁
+    total++; { const r = await q.evaluate(() => {
+      const keep = { tab: STATE.tab, inst: STATE.inst, letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, scaleId: STATE.scaleId, bassIv: STATE.bassIv, bassFor: STATE.bassFor };
+      STATE.inst = "piano"; STATE.tab = "find"; STATE.findSel = new Set([48, 52, 55, 58]); render();
+      const chips = [...document.querySelectorAll('#extraCard .link-chip[data-sid]')].map(b => b.dataset.rp + ":" + b.dataset.sid);
+      document.querySelector('#readout .find-item[role="button"]').click();
+      const chord = STATE.tab + " " + chordTitle(chordById(STATE.chordId));
+      STATE.tab = "find"; render();
+      const mix = document.querySelector('#extraCard .link-chip[data-sid="mixolydian"][data-rp="0"]');
+      if (mix) mix.click();
+      const scale = STATE.tab + " " + STATE.scaleId + " " + STATE.letter + "/" + STATE.acc;
+      STATE.findSel = new Set(); Object.assign(STATE, keep); render(); window._log && window._log.splice(0);
+      return { chips: chips.slice(0, 8), chord, scale };
+    });
+      if (r.chord !== "chord C7" || r.scale !== "scale mixolydian 0/0") fails.push("辨識結果點擊跳轉: " + JSON.stringify(r)); }
     // 常見開放和弦只點按弦的格子(空弦自動),都要認對;sus 和弦是對稱的,容易被讀成別的 sus;-1 = 自己點成 ×
     total++; { const r = await q.evaluate(() => {
       const nm = fr => { const o = STATE.findFrets; STATE.findFrets = fr; syncFindFromFrets(); const an = findAnalysis(); STATE.findFrets = o; if (!an.results.length) return "?"; const x = an.results[0]; return findChordName(x.rootPc, x.chord, an.bassPc, spellPrefFor(x.rootPc, x.chord)); };
