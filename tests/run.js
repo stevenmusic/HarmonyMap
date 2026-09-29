@@ -980,6 +980,9 @@ async function openPage(browser, opts = {}){
       return { at: chords.slice(0, 4).map(beatOf).join(","), text: r.steps.map(stepText).join(" ") };
     });
     total++; if (dur.at !== "0,2,4,8" || dur.text !== "C*2 G*2 Am") fails.push("半小節和弦: " + JSON.stringify(dur));
+    // 移調夾建議:E♭ B♭ Cm A♭ → 夾第 3 格(C G Am F),或第 1 格(D A Bm G)也行;取開放指型最多、同分取低格
+    const cb = await q.evaluate(() => { const keep = PRACTICE.steps; PRACTICE.steps = practiceParseCustom("Eb Bb Cm Ab").steps; const k = practiceCapoBest(); PRACTICE.steps = keep; return k; });
+    total++; if (cb !== 3 && cb !== 1) fails.push("移調夾建議 E♭ B♭ Cm A♭ → " + cb);
     // 打拍子設定速度:每 500ms 點一下 → 120 BPM
     const tap = await q.evaluate(() => {
       PRACTICE.open = true; STATE.tab = "chord"; render();

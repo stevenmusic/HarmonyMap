@@ -1107,7 +1107,7 @@ const I18N = {
     loadingPiano: "載入鋼琴音色中…", pianoLoadFailed: "音色載入失敗,使用合成音色",
     iosMuteHint: "聽不到聲音?請關閉 iPhone 側邊的靜音開關",
     loadingGuitar: "載入吉他音色中…", guitarLoadFailed: "吉他音色載入失敗,改用鋼琴音色",
-    gtrToneLabel: "吉他音色", leftyLabel: "慣用手", leftyRight: "右手", leftyLeft: "左手(鏡像)", capoLabel: "移調夾", capoNone: "不夾", capoFret: "夾第 {n} 格", capoTag: "夾 {n}", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
+    gtrToneLabel: "吉他音色", leftyLabel: "慣用手", leftyRight: "右手", leftyLeft: "左手(鏡像)", capoLabel: "移調夾", practiceCapoHint: "移調夾(★ = 這組進行用開放和弦最多的位置)", practiceCapo0: "不夾移調夾", practiceCapoN: "移調夾第 {n} 格", capoNone: "不夾", capoFret: "夾第 {n} 格", capoTag: "夾 {n}", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
   },
   en: {
     pageTitle: "HarmonyMap — Chord & Scale Map",
@@ -1203,7 +1203,7 @@ const I18N = {
     loadingPiano: "Loading piano samples…", pianoLoadFailed: "Sample load failed, using synth fallback",
     iosMuteHint: "No sound? Turn off the silent switch on the side of your iPhone",
     loadingGuitar: "Loading guitar samples…", guitarLoadFailed: "Guitar samples failed to load, using piano",
-    gtrToneLabel: "Guitar tone", leftyLabel: "Hand", leftyRight: "Right-handed", leftyLeft: "Left-handed (mirrored)", capoLabel: "Capo", capoNone: "None", capoFret: "Fret {n}", capoTag: "Capo {n}", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
+    gtrToneLabel: "Guitar tone", leftyLabel: "Hand", leftyRight: "Right-handed", leftyLeft: "Left-handed (mirrored)", capoLabel: "Capo", practiceCapoHint: "Capo (★ = the fret that gives this progression the most open-chord shapes)", practiceCapo0: "No capo", practiceCapoN: "Capo {n}", capoNone: "None", capoFret: "Fret {n}", capoTag: "Capo {n}", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
   }
 };
 /* t(key, vars):讀目前語言的字典,缺字退回中文、再退回 key 本身。
@@ -4639,6 +4639,30 @@ const stepName = st => {
   return n;
 };
 /* 進行的時間軸:每個和弦從第幾拍開始、整輪幾拍 */
+/* 練習時(吉他)的移調夾選單:鍵盤設定面板在練習時收起來了,這裡也要能換。
+   ★ 標在「這組進行用開放和弦指型最多」的那一格(同分取比較低的格),例如 E♭ B♭ Cm A♭ 夾第 3 格 = C G Am F */
+function practiceCapoBest(){
+  const steps = PRACTICE.steps;
+  if (!steps.length) return -1;
+  let best = 0, bestN = -1;
+  for (let k = 0; k <= 7; k++) {
+    let n = 0;
+    for (const st of steps) {
+      const rp = pcOf(LETTER_PC[st.letter] + st.acc - k), def = chordById(st.id);
+      const bass = st.bass == null ? null : pcOf(rp + st.bass);
+      const vs = chordVoicingsFor(rp, def, bass), v = vs.list[vs.best];
+      if (v && v.frets.some(f => f === 0) && v.minF <= 4) n++;
+    }
+    if (n > bestN) { bestN = n; best = k; }
+  }
+  return best;
+}
+function practiceCapoSelect(){
+  const best = practiceCapoBest();
+  return '<select class="mini" id="prCapo" aria-label="' + t("capoLabel") + '" title="' + t("practiceCapoHint") + '">' +
+    [0, 1, 2, 3, 4, 5, 6, 7].map(n => '<option value="' + n + '"' + (n === STATE.capo ? " selected" : "") + '>' +
+      (n ? t("practiceCapoN", { n }) : t("practiceCapo0")) + (n === best && best > 0 ? " ★" : "") + '</option>').join("") + '</select>';
+}
 function practiceTimeline(){
   const start = [], B = PRACTICE.beats; let t = 0;
   for (const st of PRACTICE.steps) { start.push(t); t += st.beats && st.beats < B ? st.beats : B; }
@@ -5131,6 +5155,7 @@ function renderPractice(){
         '<button class="kb-gear" id="prUp" aria-label="' + t("practiceTranspose") + ' +1"' + (P.steps.length ? "" : " disabled") + '>' + svg("M12 5v14M5 12h14") + '</button></span>' +
       '<button class="filter-chip" id="prAccomp" aria-pressed="' + P.accomp + '">' + t("practiceAccompShort") + '</button>' +
       '<button class="filter-chip" id="prCountIn" aria-pressed="' + P.countIn + '" title="' + t("practiceCountInTitle") + '">' + t("practiceCountIn") + '</button>' +
+      (STATE.inst === "guitar" ? practiceCapoSelect() : '') +
       '<select class="mini" id="prRamp" aria-label="' + t("practiceRamp") + '" title="' + t("practiceRamp") + '">' +
         [["", t("practiceRampOff")], ["2/1", t("practiceRampOpt1", { n: 2 })], ["5/2", t("practiceRampOpt", { n: 5, k: 2 })], ["5/4", t("practiceRampOpt", { n: 5, k: 4 })]]
           .map(([v, l]) => '<option value="' + v + '"' + (v === P.ramp ? " selected" : "") + '>' + l + '</option>').join("") + '</select>' +
@@ -5217,6 +5242,11 @@ function renderPractice(){
   $("prSlower").onclick = () => setBpm(-5);
   $("prFaster").onclick = () => setBpm(5);
   $("prAccomp").onclick = e => { P.accomp = !P.accomp; e.currentTarget.setAttribute("aria-pressed", String(P.accomp)); };
+  if ($("prCapo")) $("prCapo").onchange = e => {
+    STATE.capo = +e.target.value || 0;
+    try { localStorage.setItem(CAPO_KEY, String(STATE.capo)); } catch (err) {}
+    render();
+  };
   $("prRamp").onchange = e => { P.ramp = e.target.value; try { localStorage.setItem(RAMP_KEY, P.ramp); } catch (err) {} };
   $("prCountIn").onclick = e => {
     P.countIn = !P.countIn; e.currentTarget.setAttribute("aria-pressed", String(P.countIn));
