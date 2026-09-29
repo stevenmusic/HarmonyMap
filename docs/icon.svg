@@ -1,25 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
-<defs><clipPath id="nk"><rect x="104" y="36" width="60" height="110" rx="8"/></clipPath>
-<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFDA7A"/><stop offset=".85" stop-color="#E8A93A"/><stop offset="1" stop-color="#C4901A"/></linearGradient>
-<linearGradient id="ivory" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFDF6"/><stop offset=".85" stop-color="#E6DFCC"/><stop offset="1" stop-color="#D2CAB4"/></linearGradient>
-<linearGradient id="blk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a3a3a"/><stop offset="1" stop-color="#0a0a0a"/></linearGradient>
-<linearGradient id="neck" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#4a3624"/><stop offset=".5" stop-color="#5a4330"/><stop offset="1" stop-color="#3e2c1c"/></linearGradient>
-<linearGradient id="teal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6FE3D2"/><stop offset="1" stop-color="#3FBFAE"/></linearGradient>
+<defs>
+<linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFDA7A"/><stop offset="1" stop-color="#E0A030"/></linearGradient>
+<linearGradient id="ivory" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFDF6"/><stop offset="1" stop-color="#DDD5C0"/></linearGradient>
+<linearGradient id="blk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#454545"/><stop offset="1" stop-color="#111"/></linearGradient>
+<linearGradient id="body" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6FE3D2"/><stop offset="1" stop-color="#2FA898"/></linearGradient>
+<radialGradient id="bg" cx=".5" cy=".4" r=".8"><stop offset="0" stop-color="#241d13"/><stop offset="1" stop-color="#100d08"/></radialGradient>
 </defs>
-<rect width="180" height="180" fill="#14110c"/><g transform="translate(90 91) scale(1.12) translate(-90 -91)">
-<!-- 左半:鋼琴白鍵(金、象牙)+ 一顆黑鍵 -->
-<rect x="16" y="36" width="42" height="110" rx="8" fill="url(#gold)"/>
-<rect x="60" y="36" width="42" height="110" rx="8" fill="url(#ivory)"/>
-<rect x="24" y="137" width="26" height="4" rx="2" fill="#000" opacity=".16"/>
-<rect x="68" y="137" width="26" height="4" rx="2" fill="#000" opacity=".16"/>
-<rect x="45" y="36" width="28" height="70" rx="6" fill="url(#blk)"/>
-<rect x="55" y="42" width="8" height="40" rx="4" fill="#fff" opacity=".13"/>
-<!-- 右半:吉他琴頸(琴枕、品絲、四條弦、兩顆音點) -->
-<g clip-path="url(#nk)"><rect x="104" y="36" width="60" height="110" fill="url(#neck)"/>
-<rect x="104" y="36" width="60" height="9" fill="#efe6cf"/>
-<g stroke="#d8cfb6" stroke-width="2.5" stroke-linecap="round" opacity=".85"><line x1="108" y1="70" x2="162" y2="70"/><line x1="108" y1="96" x2="162" y2="96"/><line x1="108" y1="122" x2="162" y2="122"/></g>
-<g stroke="#f1e7cc" stroke-linecap="round"><line x1="116" y1="45" x2="116" y2="146" stroke-width="2.6"/><line x1="128" y1="45" x2="128" y2="146" stroke-width="2.2"/><line x1="140" y1="45" x2="140" y2="146" stroke-width="1.8"/><line x1="152" y1="45" x2="152" y2="146" stroke-width="1.4"/></g>
-<circle cx="134" cy="83" r="9.5" fill="url(#teal)"/>
-<circle cx="122" cy="109" r="9.5" fill="url(#gold)"/>
-<circle cx="146" cy="135" r="6" fill="url(#teal)" opacity=".85"/></g>
-</g></svg>
+<rect width="180" height="180" fill="url(#bg)"/>
+<g transform="translate(90 92) rotate(-38) scale(0.93) translate(-4 0)">
+  <!-- 吉他琴身(青) -->
+  <g>
+    <g fill="#1d7a6d" stroke="#1d7a6d" stroke-width="6" stroke-linejoin="round"><circle cx="18" cy="0" r="28"/><circle cx="58" cy="0" r="40"/><rect x="16" y="-22" width="42" height="44"/></g>
+    <g fill="#52D6C4"><circle cx="18" cy="0" r="28"/><circle cx="58" cy="0" r="40"/><rect x="16" y="-22" width="42" height="44"/></g>
+    <ellipse cx="66" cy="-22" rx="22" ry="9" fill="#fff" opacity=".22" transform="rotate(-12 66 -22)"/>
+    <circle cx="50" cy="0" r="13" fill="#0e2f2a"/>
+    <circle cx="50" cy="0" r="16" fill="none" stroke="#FFDA7A" stroke-width="3"/>
+    <rect x="78" y="-14" width="7" height="28" rx="3" fill="#3b2a1a"/>
+    <g stroke="#f1e7cc" stroke-width="1.6" stroke-linecap="round"><line x1="-6" y1="-9" x2="81" y2="-9"/><line x1="-6" y1="-3" x2="81" y2="-3"/><line x1="-6" y1="3" x2="81" y2="3"/><line x1="-6" y1="9" x2="81" y2="9"/></g>
+  </g>
+  <!-- 琴頸換成鋼琴鍵 -->
+  <rect x="-92" y="-19" width="90" height="38" rx="5" fill="#0a0806"/>
+  <rect x="-90" y="-17" width="21" height="34" rx="4" fill="url(#gold)"/>
+  <rect x="-67" y="-17" width="21" height="34" rx="4" fill="url(#ivory)"/>
+  <rect x="-44" y="-17" width="21" height="34" rx="4" fill="url(#ivory)"/>
+  <rect x="-21" y="-17" width="21" height="34" rx="4" fill="url(#ivory)"/>
+  <rect x="-74" y="-17" width="13" height="21" rx="3" fill="url(#blk)"/>
+  <rect x="-51" y="-17" width="13" height="21" rx="3" fill="url(#blk)"/>
+  <rect x="-28" y="-17" width="13" height="21" rx="3" fill="url(#blk)"/>
+</g>
+</svg>
