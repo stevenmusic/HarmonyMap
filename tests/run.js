@@ -860,6 +860,13 @@ async function openPage(browser, opts = {}){
     await q.click("#prClose");
     check(await q.evaluate(() => $("practiceCard").hidden && !$("typeCard").hidden && document.querySelector(".kb-wrap").getBoundingClientRect().height > 0 && $("practiceStage").hidden), "結束練習後沒有回到原本的畫面");
     check(!q._errors.length, "頁面錯誤: " + q._errors.join("; "));
+    // 級數輸入:先寫調,再寫羅馬數字;根音照級數拼(F♯ 大調的 vii° 是 E♯dim)
+    const rn = await q.evaluate(() => [
+      ["C: I V vi IV", "C G Am F"], ["Bb: ii7 V7 Imaj7", "Cm7 F7 B♭maj7"], ["Eb: bVII", "D♭"], ["Am: i iv V7", "Am Dm E7"],
+      ["F#: vii°", "E♯dim"], ["C: viiø7 V7/", ""], ["G: I IV V7sus4", "G C D7sus4"], ["Am: III VI VII", "C F G"], ["D: iii7 vi7 ii7 V7", "F♯m7 Bm7 Em7 A7"],
+      ["I V", ""]
+    ].map(([txt, want]) => { const r = practiceParseCustom(txt); const got = r.steps.map(stepName).join(" "); return got === want || (want === "" && r.bad.length) ? "" : txt + " → " + got + " ≠ " + want + " bad:" + r.bad.join(","); }).filter(Boolean));
+    total++; if (rn.length) fails.push("級數輸入: " + rn.join(" | "));
     report("換和弦練習", total, fails);
     await q.close();
   }

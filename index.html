@@ -1082,7 +1082,7 @@ const I18N = {
     practiceKey: "調", practiceTempo: "速度", practiceBeats: "每個和弦", practiceBeatsUnit: "拍",
     practiceAccomp: "換和弦時彈出和弦", practiceStart: "開始", practiceStop: "停止",
     practiceNow: "現在", practiceNext: "下一個", practiceCustom: "自訂進行",
-    practiceCustomPh: "也可以直接打:C G Am F、D/F#(斜線和弦)", practiceCustomApply: "套用",
+    practiceCustomPh: "也可以直接打:C G Am F、D/F#、G: I V vi IV", practiceCustomApply: "套用",
     practiceBad: "看不懂:{x}", practiceHint: "節拍器第一拍是重音,換和弦就在那一拍。先放慢,換得乾淨再加速。",
     bassLabel: "低音", bassRoot: "根音", bassOther: "其他音…",
     bassNonChord: "低音不是和弦內音(例如 D/C),斜線後面的音是另外加的",
@@ -1177,7 +1177,7 @@ const I18N = {
     practiceKey: "Key", practiceTempo: "Tempo", practiceBeats: "Each chord", practiceBeatsUnit: "beats",
     practiceAccomp: "Play the chord on each change", practiceStart: "Start", practiceStop: "Stop",
     practiceNow: "Now", practiceNext: "Next", practiceCustom: "Custom progression",
-    practiceCustomPh: "Or type it: C G Am F, D/F# (slash chords)", practiceCustomApply: "Apply",
+    practiceCustomPh: "Or type it: C G Am F, D/F#, G: I V vi IV", practiceCustomApply: "Apply",
     practiceBad: "Not a chord: {x}", practiceHint: "Beat one is accented and is where the chord changes. Start slow; speed up once the change is clean.",
     bassLabel: "Bass", bassRoot: "Root", bassOther: "Other note…",
     bassNonChord: "The bass is not a chord tone (e.g. D/C); the note after the slash is added",
@@ -3705,6 +3705,15 @@ $("groupCurrent").onclick = () => {
 /* 搜尋框直接打和弦名稱:C/B、D/F#、Bbmaj7、F#m7b5、Am/G。
    打的 # / b 會換成 ♯ / ♭;和弦符號比對 sym 與 alias(maj、min 也認)。
    6/9 本身就有斜線,所以先整串當符號比對,比不到才把最後一個斜線後面當低音 */
+/* 和弦記號(maj7、m7♭5、7♯9、sus4…)→ 和弦定義。和弦名稱解析與級數輸入共用 */
+function chordBySym(x){
+  const norm = y => y.replace(/#/g, "♯").replace(/b/g, "♭").replace(/\s+/g, "");
+  const n = norm(x);
+  if (n === "maj" || n === "M" || n === "") return chordById("maj");
+  if (n === "min" || n === "-") return chordById("min");
+  return CHORDS.find(c => norm(c.sym) === n) ||
+         CHORDS.find(c => c.alias && c.alias.some(a => norm(a) === n)) || null;
+}
 function parseChordName(q){
   // 根音只認大寫:小寫開頭的是一般搜尋字(add9、dim、aug),不能被讀成 A、D 和弦
   const m = q.trim().match(/^([A-G])([#♯b♭]*)(.*)$/);
@@ -3713,14 +3722,7 @@ function parseChordName(q){
   const accOf = x => [...x].reduce((a, c) => a + (c === "#" || c === "♯" ? 1 : -1), 0);
   const acc = accOf(m[2]);
   if (acc < -1 || acc > 1) return null;
-  const norm = x => x.replace(/#/g, "♯").replace(/b/g, "♭").replace(/\s+/g, "");
-  const findSym = x => {
-    const n = norm(x);
-    if (n === "maj" || n === "M" || n === "") return chordById("maj");
-    if (n === "min" || n === "-") return chordById("min");
-    return CHORDS.find(c => norm(c.sym) === n) ||
-           CHORDS.find(c => c.alias && c.alias.some(a => norm(a) === n)) || null;
-  };
+  const findSym = chordBySym;
   let def = findSym(m[3]), bass = null;
   if (!def) {
     const i = m[3].lastIndexOf("/");
@@ -4386,11 +4388,39 @@ function render(){
    ══════════════════════════════════════════════════════════════ */
 const PRACTICE = { runId: 0, pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
                    steps: [], step: 0, beat: -1, slash: null, padFresh: false, running: false, timer: 0, nextTime: 0, count: 0, flash: -1 };
+/* 級數輸入(老師的寫法):先寫調「G:」「Bb:」「Am:」,後面的羅馬數字照那個調換成和弦。
+   大寫 = 大三、小寫 = 小三,° = 減、ø = 半減、+ = 增,後面可以接記號(V7、ii7、Imaj7、IVsus4);前面可以加 ♭ ♯(♭VII、♯iv°)。
+   小調的級數照自然小調算(III = ♭3、VI = ♭6、VII = ♭7)。根音照級數推字母(F♯ 大調的 vii° 是 E♯dim,不是 Fdim) */
+const ROMAN_DEG = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7 };
+function romanStep(w, key){
+  const m = w.match(/^([b♭#♯]?)(vii|iii|iv|vi|ii|v|i|VII|III|IV|VI|II|V|I)(°|o|ø|\+)?(.*)$/);
+  if (!m || !key) return null;
+  const up = m[2] === m[2].toUpperCase(), deg = ROMAN_DEG[m[2].toLowerCase()];
+  let alt = (m[1] === "b" || m[1] === "♭") ? -1 : m[1] ? 1 : 0;
+  if (key.minor && [3, 6, 7].includes(deg)) alt -= 1;
+  const tok = (alt < 0 ? "♭".repeat(-alt) : "♯".repeat(alt)) + deg;
+  const sp = spell(key.letter, key.acc, tok);
+  let letter = sp.letter, acc = sp.acc;
+  if (acc == null || acc < -1 || acc > 1) [letter, acc] = PC_SPELL[pcOf(LETTER_PC[key.letter] + key.acc + tokenSemi(tok))];
+  const q = m[3], rest = m[4];
+  let def = null;
+  if (q === "°" || q === "o") def = chordBySym(rest === "7" ? "dim7" : rest === "" ? "dim" : "dim" + rest);
+  else if (q === "ø") def = chordBySym(rest === "" || rest === "7" ? "m7♭5" : "m" + rest.replace(/^7?/, "") + "♭5");
+  else if (q === "+") def = chordBySym(rest === "" ? "aug" : rest + "♯5") || chordBySym("aug" + rest);
+  else if (up) def = chordBySym(rest);
+  else def = rest === "" ? chordById("min") : (chordBySym("m" + rest) || chordBySym(rest));
+  return def ? { letter, acc, id: def.id, bass: null } : null;
+}
 function practiceParseCustom(text){
   const bad = [], steps = [];
+  let key = null;
   for (const w of text.split(/[\s,|]+/).filter(Boolean)) {
+    const k = w.match(/^([A-G])([#♯b♭]?)(m|min)?:$/);
+    if (k) { key = { letter: LETTERS.indexOf(k[1]), acc: k[2] ? (k[2] === "#" || k[2] === "♯" ? 1 : -1) : 0, minor: !!k[3] }; continue; }
     const pc = parseChordName(w);
-    if (pc) steps.push({ letter: pc.letter, acc: pc.acc, id: pc.def.id, bass: pc.bass }); else bad.push(w);
+    if (pc) { steps.push({ letter: pc.letter, acc: pc.acc, id: pc.def.id, bass: pc.bass }); continue; }
+    const rs = romanStep(w, key);
+    if (rs) steps.push(rs); else bad.push(w);
   }
   return { steps, bad };
 }
