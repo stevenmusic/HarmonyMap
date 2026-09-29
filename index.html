@@ -121,7 +121,7 @@ header h1{
 header h1 span{color:var(--ivory);font-weight:600}
 /* 副標是 HarmonyMap 自己多出來的東西,獨立成一個元素,不寫進 h1 裡面,
    免得動到照抄過來的品牌名字級 */
-.tagline{color:var(--muted);font-size:var(--fs-xs);letter-spacing:.04em;white-space:nowrap}
+.tagline{color:var(--muted);font-size:var(--fs-xs);letter-spacing:.04em;white-space:nowrap;line-height:17px}
 @media (max-width:600px){ .tagline{display:none} }
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1;
@@ -197,7 +197,7 @@ main{
    換語言(和弦/Chord、辨識/Identify、吉他/Guitar)時整排不會移位(使用者要求) */
 .tabs button{
   flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:none;background:transparent;color:var(--muted-bright);
-  font-family:inherit;font-size:var(--fs-md);font-weight:500;
+  font-family:inherit;font-size:var(--fs-md);font-weight:500;line-height:18px;   /* 行高寫死:中文字的行框比英文高 2px,換語言整頁會往上跳 */
   padding:9px 8px;border-radius:var(--radius-pill);cursor:pointer;transition:background .2s,color .2s;
 }
 .tabs button[aria-selected="true"]{background:var(--gold);color:var(--bg);font-weight:700}

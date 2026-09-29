@@ -1033,7 +1033,7 @@ async function openPage(browser, opts = {}){
     for (const w of [320, 390, 1280]) {
       const z = await openPage(browser, { viewport: { width: w, height: 700 } });
       const pos = () => z.evaluate(() => ["tabChord", "tabScale", "tabFind", "instPiano", "instGuitar"].map(id => { const e = document.getElementById(id), r = e.getBoundingClientRect();
-        return [Math.round(r.left), Math.round(r.width), e.scrollWidth > e.clientWidth + 1 ? "cut" : ""].join("/"); }).join(" "));
+        return [Math.round(r.left), Math.round(r.width), Math.round(r.top), Math.round(r.height), e.scrollWidth > e.clientWidth + 1 ? "cut" : ""].join("/"); }).join(" "));
       const a1 = await pos(); await z.click("#langToggle"); const a2 = await pos();
       total++; if (a1 !== a2 || /cut/.test(a1 + a2)) fails.push("換語言分頁移位或文字被切(" + w + "px): " + a1 + " → " + a2);
       // 選中的分頁是粗體、比較寬,每一個分頁都要在選中時放得下(320px 的「Identify」曾經變成「Ident…」)
