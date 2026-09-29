@@ -3195,7 +3195,7 @@ function playNotes(midis, mode, at, downMidis){
   } else if (mode === "strum") { // 吉他的齊奏:由低音弦往高音弦刷下去,弦與弦之間差幾十毫秒
     seq = midis.map((m, i) => ({ midi: m, at: t0 + i * GTR_STRUM_GAP, dur: 2.6 }));
   } else if (mode === "arp") {
-    const gap = midis.length > 14 ? Math.max(0.07, 2.4 / midis.length) : 0.16;   // 吉他把位裡最多十幾到二十個音,照 0.16 秒會太久,加快到約 2.4 秒
+    const gap = midis.length > 14 ? Math.max(0.11, 3.6 / midis.length) : 0.24;   // 吉他把位裡最多十幾到二十個音,照 0.24 秒會太久,加快到約 3.6 秒
     seq = midis.map((m, i) => ({ midi: m, at: t0 + i * gap, dur: 2.6 - i * gap * 0.2 }));
   } else { // 逐音上下行:上去再下來,最後一顆是最高音的下行起點,不重複敲
     const gap = 0.30;
