@@ -534,7 +534,7 @@ html[data-lang="en"] .chip i{white-space:normal}
 .gtr-dgs .gd-lab{align-self:stretch}
 /* 保險:圖只能縮、不能超出格子(字型晚一步載入讓標籤變高時,iPhone 上圖曾經超出格子底部,使用者回報)。
    SVG 維持比例畫在框裡,框被壓矮時圖只是等比例縮小 */
-.gtr-dgs svg{display:block;flex:0 1 auto;min-height:0;min-width:0;max-width:100%}
+.gtr-dgs svg{display:block;flex:0 1 auto;min-height:0;min-width:0;max-width:100%;overflow:visible}
 /* 撥弦時那條弦亮一下(根音金色、其他青色),0.9 秒淡掉;系統減少動態時 animation 會被縮成一瞬間 */
 .gtr-dgs line.str.ring{animation:strRing .9s ease-out}
 .gtr-dgs line.str.ring.root{animation-name:strRingRoot}
@@ -4472,9 +4472,10 @@ function voicingSVG(v, rp){
   if (base > 1) g += '<text x="' + (x0 + gap * 5 + 8) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="10" fill="var(--muted)">' + base + 'fr</text>';
   // 弦的方向:左邊 6 弦(粗、低音)、右邊 1 弦(細、高音),標在指板左右兩側的空白、最下面那一格的高度(使用者要求),
   // 跟右上的「3fr」錯開
-  const yLab = y0 + rowH * (rows - 0.5) + 3;
-  g += '<text x="' + (x0 - 5) + '" y="' + yLab + '" text-anchor="end" font-size="' + (LANG === "en" ? 7 : 9) + '" fill="var(--muted)">' + t("strThick") + '</text>' +
-       '<text x="' + (x0 + gap * 5 + 5) + '" y="' + yLab + '" font-size="' + (LANG === "en" ? 7 : 9) + '" fill="var(--muted)">' + t("strThin") + '</text>';
+  // 字級:中文 13(左右兩側的空白剛好放得下一個字;原本 9 太小、幾乎看不到,使用者回報),英文 9(low / high 比較寬)
+  const fsLab = LANG === "en" ? 9 : 13, yLab = y0 + rowH * (rows - 0.5) + fsLab * 0.36;
+  g += '<text class="slab" x="' + (x0 - 3) + '" y="' + yLab + '" text-anchor="end" font-size="' + fsLab + '" fill="var(--muted-bright)">' + t("strThick") + '</text>' +
+       '<text class="slab" x="' + (x0 + gap * 5 + 4) + '" y="' + yLab + '" font-size="' + fsLab + '" fill="var(--muted-bright)">' + t("strThin") + '</text>';
   if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
   const fing = gtrFingering(v.frets);
   v.frets.forEach((f, s) => {
@@ -4587,6 +4588,16 @@ function fitGallery(){
     const k = Math.min(Math.min(boxW, 185) / VSVG.W, Math.min(boxH, 160) / VSVG.H);
     svg.style.width = Math.floor(VSVG.W * k) + "px";
     svg.style.height = Math.floor(VSVG.H * k) + "px";
+    // 粗/細:手機上整張圖只縮到 0.5~0.6 倍,圖裡的字跟著縮到 5~8px 看不到(使用者回報)。
+    // 這兩個字改用螢幕上至少 11px 算(英文 10px),可以伸進格子左右的空白(svg overflow:visible),圖本身大小不變
+    // 螢幕上的字級:中文 11~14px、英文 10~12px(桌機不再跟著圖放大到 18px 以上,比旁邊的字大一截)
+    const en = LANG === "en", px = Math.min(en ? 12 : 14, Math.max(en ? 10 : 11, (en ? 9 : 13) * k));
+    const fs = px / k, pad = Math.max(3, 3 / k);          // 跟弦至少隔 3px
+    svg.querySelectorAll("text.slab").forEach((tx, i) => {
+      tx.setAttribute("font-size", fs.toFixed(2));
+      tx.setAttribute("x", (i === 0 ? VSVG.x0 - pad : VSVG.x0 + VSVG.gap * 5 + pad).toFixed(2));
+      tx.setAttribute("y", (VSVG.y0 + VSVG.rowH * (VSVG.rows - 0.5) + fs * 0.36).toFixed(2));
+    });
   });
 }
 function galleryLabel(v, rp){

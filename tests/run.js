@@ -927,6 +927,14 @@ async function openPage(browser, opts = {}){
         return sv.bottom > c.bottom + 0.5 || lb.top < c.top - 0.5 ? Math.round(sv.bottom - c.bottom) + "/" + Math.round(c.top - lb.top) : "";
       }).filter(Boolean));
       total++; if (bad.length) fails.push("和弦圖超出格子(" + w + "×" + h + "): " + bad.join(" "));
+      // 粗/細(弦的方向)在手機上要看得到:螢幕上至少 10.5px、不能被格子切掉(原本跟著圖縮到 5~8px,使用者回報看不到)
+      await q.addStyleTag({ content: ".gtr-dgs .gd-lab{font-size:inherit !important;line-height:normal !important}" }); await q.waitForTimeout(200);
+      const lab = await q.evaluate(() => [...document.querySelectorAll("#gtrDiagrams .gd")].map(d => {
+        const sv = d.querySelector("svg"), k = sv.getBoundingClientRect().width / sv.viewBox.baseVal.width, c = d.getBoundingClientRect();
+        return [...d.querySelectorAll("text.slab")].map(t => { const r = t.getBoundingClientRect(); const px = parseFloat(t.getAttribute("font-size")) * k;
+          return px < 10.5 || r.left < c.left || r.right > c.right ? t.textContent + " " + px.toFixed(1) + "px" : ""; }).filter(Boolean).join(",");
+      }).filter(Boolean));
+      total++; if (lab.length) fails.push("粗/細太小或被切掉(" + w + "×" + h + "): " + lab.join(" "));
       await q.close();
     }
     // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
