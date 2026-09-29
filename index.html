@@ -627,7 +627,9 @@ html[data-lang="en"] .chip i{white-space:normal}
 .bass-row select{height:30px}
 .vc-nav .n{min-width:2.6em;text-align:center;font-variant-numeric:tabular-nums}
 .pos-nav{gap:0}
-.pos-nav .n{min-width:1.9em;padding:0 4px;font-size:var(--fs-sm);color:var(--ivory)}
+/* 寬度固定、★ 永遠佔位(不是把位 1 時只是看不見):換把位時數字不移位,右邊的 ‹ › 與前面的音名也跟著不動 */
+.pos-nav .n{width:3.6em;padding:0;white-space:nowrap;font-size:var(--fs-sm);color:var(--ivory)}
+.pos-nav small.off{visibility:hidden}
 .pos-nav button{width:24px;height:24px}
 /* 有把位箭頭的那一行:名稱(這是哪個音階)比音名重要,放不下時音名先縮 */
 .kb-summary.has-pos .tones{flex-shrink:4}
@@ -4910,7 +4912,7 @@ function renderSummary(){
   const posNav = posList && posList.length
     ? '<span class="vc-nav pos-nav" title="' + (posCur ? t("scalePosTitle", { f: posCur.lo }) : t("scalePosLabel")) + '">' +
       '<button id="posPrev" aria-label="' + t("scalePosLabel") + ' −"' + (posCur ? '' : ' disabled') + '>' + chev("M15 18l-6-6 6-6") + '</button>' +
-      '<span class="n">' + (posCur ? (posIdx + 1) + (posCur.k === 0 ? '<small>★</small>' : '') + '<i>/' + posList.length + '</i>' : t("scalePosAll")) + '</span>' +
+      '<span class="n">' + (posCur ? (posIdx + 1) + '<small' + (posCur.k === 0 ? '' : ' class="off"') + '>★</small>' + '<i>/' + posList.length + '</i>' : t("scalePosAll")) + '</span>' +
       '<button id="posNext" aria-label="' + t("scalePosLabel") + ' +"' + (posIdx === posList.length - 1 ? ' disabled' : '') + '>' + chev("M9 18l6-6-6-6") + '</button></span>'
     : '';
   el.classList.toggle("has-pos", !!posNav);
