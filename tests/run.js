@@ -475,15 +475,18 @@ async function openPage(browser, opts = {}){
       for (const [id, L, steps] of [["ionian", 0, "2,2,1,2,2,2,1"], ["minPent", 5, "3,2,2,3,2"], ["melMinorCl", 5, "2,1,2,2,2,2,1"]]) {
         STATE.scaleId = id; STATE.letter = L; STATE.acc = 0; render();
         const nPos = scalePositions().length + 1;   // 全部 + 每個把位,用摘要列的 › 一個一個換
+        STATE.scalePos = -1; render();
         for (let i = 0; i < nPos; i++) {
-          calls.length = 0; $("posNext").click(); total++;
+          calls.length = 0; if (i) $("posNext").click(); total++;
           if (calls.length) { fails.push("吉他 " + id + " 點把位 " + i + " 不應該發聲: " + JSON.stringify(calls)); continue; }
           const g = $("keyboardCanvas").getBoundingClientRect();
           for (const [fx, fy] of [[0.5, 0.5], [0.1, 0.2], [0.9, 0.8]]) {
             calls.length = 0; fire($("keyboardCanvas"), g.left + g.width * fx, g.top + g.height * fy); total++;
             const c = calls[0], m = c && c.m, gvv = guitarView();
             const want = [...new Set(gvv.dots.map(x => x.midi).concat(gvv.markers.filter(x => x && x.type === "open").map(x => x.midi)))].sort((x, y) => x - y).join(",");
-            if (!c || c.mode !== "arp" || calls.length !== 1 || m.join(",") !== want || m.length < 7) { fails.push("吉他 " + id + " 把位 " + i + " 點指板應該播上行音階,實際 " + JSON.stringify(calls)); break; }
+            // 選了把位 = 那個把位畫出來的每個音;「全部」= 一個八度(指板上三十幾個音整串彈不成音階)
+            const ok = i ? m && m.join(",") === want && m.length >= 7 : m && m.length === currentNotes().length + 1 && pcOf(m[0]) === rootPc() && m[m.length - 1] - m[0] === 12;
+            if (!c || c.mode !== "arp" || calls.length !== 1 || !ok) { fails.push("吉他 " + id + " 把位 " + i + " 點指板應該播上行音階,實際 " + JSON.stringify(calls)); break; }
           }
         }
       }
