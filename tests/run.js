@@ -904,6 +904,15 @@ async function openPage(browser, opts = {}){
       return { firstChord: chords[0] != null ? +(chords[0] - clicks[0]).toFixed(3) : null, nClicksBefore: clicks.filter(t => chords[0] == null || t < chords[0] - 1e-6).length };
     });
     total++; if (ci.firstChord !== 2 || ci.nClicksBefore !== 4) fails.push("預備拍(第一個和弦要在 4 下點擊之後,120 BPM = 2 秒): " + JSON.stringify(ci));
+    // 逐漸加速:每輪 +2,繞兩輪後速度多 4;停止時回到原本的速度
+    const rampR = await q.evaluate(async () => {
+      PRACTICE.steps = [{ letter: 0, acc: 0, id: "maj", bass: null }]; PRACTICE.beats = 2; PRACTICE.bpm = 200 - 10; PRACTICE.ramp = "2/1";
+      const oc = practiceClick; practiceClick = () => {};
+      practiceStart(); await new Promise(r => setTimeout(r, 1300));   // 190 BPM、兩拍一輪:約 0.63 秒一輪
+      const during = PRACTICE.bpm; practiceStop(); practiceClick = oc;
+      const after = PRACTICE.bpm; PRACTICE.ramp = ""; PRACTICE.bpm = 70; return { during, after };
+    });
+    total++; if (!(rampR.during >= 192 && rampR.during <= 196) || rampR.after !== 190) fails.push("逐漸加速: " + JSON.stringify(rampR));
     // 打拍子設定速度:每 500ms 點一下 → 120 BPM
     const tap = await q.evaluate(() => {
       PRACTICE.open = true; STATE.tab = "chord"; render();
