@@ -594,8 +594,6 @@ html[data-lang="en"] .chip i{white-space:normal}
   background:var(--surface-glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid var(--gold);border-radius:var(--radius-md);
   padding:6px 10px;box-shadow:var(--shadow-md);
-  /* 列數增加後小螢幕放不下,面板自己捲動,不要被 .kb-wrap 切掉 */
-  max-height:calc(100% - 16px);overflow-y:auto;overscroll-behavior:contain;
 }
 .kb-popover[hidden]{display:none}
 #findDesc{display:grid}
@@ -868,15 +866,6 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
           <option value="nylon" data-i18n="gtrToneNylon">古典吉他(尼龍弦)</option>
           <option value="electric" data-i18n="gtrToneElectric">電吉他(清音)</option>
         </select></label>
-        <label><span data-i18n="latencyLabel">音訊延遲</span><select class="mini" id="latencySel">
-          <option value="0" data-i18n="latencyAuto">自動</option>
-          <option value="0.1">+100 ms</option>
-          <option value="0.15">+150 ms</option>
-          <option value="0.2">+200 ms</option>
-          <option value="0.25">+250 ms</option>
-          <option value="0.3">+300 ms</option>
-          <option value="0.4">+400 ms</option>
-        </select></label>
       </div>
     </div>
 
@@ -1068,7 +1057,7 @@ const I18N = {
     loadingPiano: "載入鋼琴音色中…", pianoLoadFailed: "音色載入失敗,使用合成音色",
     iosMuteHint: "聽不到聲音?請關閉 iPhone 側邊的靜音開關",
     loadingGuitar: "載入吉他音色中…", guitarLoadFailed: "吉他音色載入失敗,改用鋼琴音色",
-    gtrToneLabel: "吉他音色", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)", latencyLabel: "音訊延遲", latencyAuto: "自動"
+    gtrToneLabel: "吉他音色", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
   },
   en: {
     pageTitle: "HarmonyMap — Chord & Scale Map",
@@ -1163,7 +1152,7 @@ const I18N = {
     loadingPiano: "Loading piano samples…", pianoLoadFailed: "Sample load failed, using synth fallback",
     iosMuteHint: "No sound? Turn off the silent switch on the side of your iPhone",
     loadingGuitar: "Loading guitar samples…", guitarLoadFailed: "Guitar samples failed to load, using piano",
-    gtrToneLabel: "Guitar tone", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)", latencyLabel: "Audio delay", latencyAuto: "Auto"
+    gtrToneLabel: "Guitar tone", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
   }
 };
 /* t(key, vars):讀目前語言的字典,缺字退回中文、再退回 key 本身。
@@ -3183,8 +3172,8 @@ function startHighlightLoop(untilTime){
 /* 使用者「聽到」的時刻:currentTime 只是排程時鐘,喇叭/藍牙耳機實際出聲還要再晚 outputLatency。
    高亮跟著聽到的時刻走,畫面才不會比聲音早亮 */
 function heardTime(){
-  const lat = (audioCtx.outputLatency || 0) + (audioCtx.baseLatency || 0) + STATE.latency;
-  return audioCtx.currentTime - Math.min(lat, 0.8);
+  const lat = (audioCtx.outputLatency || 0) + (audioCtx.baseLatency || 0);
+  return audioCtx.currentTime - Math.min(lat, 0.6);
 }
 function isSounding(midi){
   if (!audioCtx || !soundingWindows.length) return false;
@@ -3256,7 +3245,6 @@ const STATE = {
   findSel: new Set(),
   findSpell: "auto",
   inst: "piano",       // "piano" / "guitar"
-  latency: 0,         // 使用者手動補的音訊延遲(秒),只用來讓發亮晚一點,配合藍牙耳機
   gtrTone: "acoustic", // 吉他音色:acoustic / nylon / electric
   vKey: "", vIdx: 0,   // 吉他:目前是哪個和弦的第幾個指法
   bassIv: null, bassFor: "", // 吉他斜線和弦:低音離根音幾個半音(null = 根音),只對 bassFor 這個和弦有效
@@ -3264,11 +3252,8 @@ const STATE = {
 };
 const INST_KEY = "harmonymap.inst";
 const GTR_TONE_KEY = "harmonymap.gtrTone";
-const LATENCY_KEY = "harmonymap.latency"; // iPhone Safari 量不到藍牙耳機的延遲,讓使用者自己補
 try {
   if (localStorage.getItem(INST_KEY) === "guitar") STATE.inst = "guitar";
-  const lat = parseFloat(localStorage.getItem(LATENCY_KEY));
-  if (lat >= 0 && lat <= 0.4) STATE.latency = lat;
   const tone = localStorage.getItem(GTR_TONE_KEY);
   if (tone === "acoustic" || tone === "nylon" || tone === "electric") STATE.gtrTone = tone;
 } catch (e) {}
@@ -5145,12 +5130,6 @@ function setInstrument(inst){
   if (inst === "guitar") { STATE.findSel.clear(); if (audioCtx) loadGuitarSamples(STATE.gtrTone); }
   render();
 }
-$("latencySel").value = String(STATE.latency);
-if ($("latencySel").value !== String(STATE.latency)) $("latencySel").value = "0";
-$("latencySel").addEventListener("change", e => {
-  STATE.latency = parseFloat(e.target.value) || 0;
-  try { localStorage.setItem(LATENCY_KEY, String(STATE.latency)); } catch (err) {}
-});
 $("gtrToneSel").addEventListener("change", e => {
   STATE.gtrTone = e.target.value;
   try { localStorage.setItem(GTR_TONE_KEY, STATE.gtrTone); } catch (err) {}
