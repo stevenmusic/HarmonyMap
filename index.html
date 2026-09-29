@@ -5022,11 +5022,15 @@ function pluckString(s){
    畫布上的點擊全部走 pointerdown,不靠 click,所以在畫布上擋掉「兩下之間 < 350ms 的 touchend」不影響任何操作 */
 {
   let lastTap = 0;
-  $("keyboardCanvas").addEventListener("touchend", ev => {
+  // 範圍擴大到整個 .kb-wrap(含吉他和弦圖)與練習卡片;摘要列、設定面板、按鈕靠 click,排除,否則連點會掉第二下
+  const guard = el => el.addEventListener("touchend", ev => {
+    if (ev.target.closest(".kb-summary, .kb-popover, button")) return;
     const now = Date.now();
     if (now - lastTap < 350) ev.preventDefault();
     lastTap = now;
   }, { passive: false });
+  guard(document.querySelector(".kb-wrap"));
+  guard($("practiceStage"));
 }
 $("keyboardCanvas").addEventListener("pointermove", ev => {
   const cv = $("keyboardCanvas");

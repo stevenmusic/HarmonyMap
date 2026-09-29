@@ -78,5 +78,5 @@
     toString 與同一批資料表組成 Blob,仍然是單檔)。新增指法相關的函式或資料表時,要一起加進那兩張清單,
     否則 Worker 會出錯(測試會比對 Worker 與主執行緒的結果)。Worker 建不起來就退回閒置時在主執行緒算
   - 殘響的脈衝響應(20 萬個取樣)在閒置時才算,不要放回第一次碰畫面的那一下
-- iOS Safari 在辨識模式一直點指板格子會放大整頁(`touch-action:manipulation` 擋不住):畫布上兩下之間 < 350ms 的 `touchend`
-  用 `preventDefault` 擋掉(畫布的點擊都走 pointerdown,不受影響)。不要對整份文件這樣做,按鈕連點會掉第二下
+- iOS Safari 在辨識模式一直點指板格子會放大整頁(`touch-action:manipulation` 擋不住):鍵盤/指板/和弦圖區(`.kb-wrap`,含 4 個分頁 × 2 種樂器)與練習卡片上,兩下之間 < 350ms 的 `touchend`
+  用 `preventDefault` 擋掉(摘要列、設定面板、按鈕排除,它們靠 click)。不要對整份文件這樣做,按鈕連點會掉第二下
