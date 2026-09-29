@@ -349,6 +349,42 @@ async function openPage(browser, opts = {}){
     report("指法都按得到", r.total, r.fails);
   }
 
+  /* ── 3d. 左手指法(和弦圖圓點裡的 T 1 2 3 4):常見和弦要跟和弦書一樣,每一個列出來的按法都要是手指做得到的 ── */
+  {
+    const r = await p.evaluate(() => {
+      const fails = [];
+      let total = 0;
+      const std = { "x32010": "x32010", "x02220": "x01230", "320003": "210003", "022100": "023100", "xx0232": "xx0132", "x02210": "x02310",
+        "022000": "012000", "xx0231": "xx0231", "133211": "134211", "x24432": "x13421", "x21202": "x21304", "x35453": "x13241",
+        "200232": "T00132", "x02010": "x02010", "320001": "320001", "x32310": "x32410", "xx3211": "xx3211", "xx0211": "xx0211",
+        "xx0212": "xx0213", "xx3210": "xx3210", "x02020": "x01020", "320033": "210034", "x33211": "x34211" };
+      const show = (f, g) => g.map((x, i) => f[i] < 0 ? "x" : f[i] === 0 ? "0" : x).join("");
+      for (const [fr, want] of Object.entries(std)) {
+        total++;
+        const f = [...fr].map(c => c === "x" ? -1 : +c), got = show(f, gtrFingering(f));
+        if (got !== want) fails.push(fr + " 指法 " + got + ",和弦書是 " + want);
+      }
+      // 全部列出來的按法:每個按弦都有手指、最多 4 指(拇指另計)、同一指同一格、編號小的手指不在比較高的格(不交叉)
+      const seen = new Set();
+      for (const d of CHORDS) for (let rp = 0; rp < 12; rp++) for (const bs of [null, ...Array.from({ length: 12 }, (_, i) => i)])
+        for (const v of chordVoicingsFor(rp, d, bs == null ? null : (rp + bs) % 12).list) {
+          const k = v.frets.join(","); if (seen.has(k)) continue; seen.add(k); total++;
+          const f = v.frets, g = gtrFingering(f), nums = [...new Set(g.filter(x => x && x !== "T"))];
+          let why = "";
+          if (f.some((x, s) => x > 0 && !g[s])) why = "有按弦沒有手指";
+          else if (nums.some(x => +x > 4)) why = "超過 4 指";
+          else for (const a of nums) {
+            const fa = f.filter((x, s) => g[s] === a);
+            if (new Set(fa).size > 1) why = "同一指按不同格";
+            for (const b of nums) if (+a < +b && Math.max(...fa) > Math.min(...f.filter((x, s) => g[s] === b))) why = "手指交叉";
+          }
+          if (why) fails.push(gtrTabText(f) + " → " + show(f, g) + ":" + why);
+        }
+      return { total, fails };
+    });
+    report("左手指法", r.total, r.fails);
+  }
+
   /* ── 4. 搜尋框的和弦名稱解析 ── */
   {
     const r = await p.evaluate(() => {

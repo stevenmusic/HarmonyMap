@@ -4401,6 +4401,53 @@ function guitarDiagramSVG(){
 const VSVG = { x0: 16, gap: 18, y0: 26, rowH: 20, rows: 4 };
 // 右邊只留格數標示(「12fr」)需要的寬度,不要多留白
 VSVG.W = VSVG.x0 + VSVG.gap * 5 + 26; VSVG.H = VSVG.y0 + VSVG.rowH * VSVG.rows + 8;
+/* 左手指法:T = 拇指,1 = 食指,2 = 中指,3 = 無名指,4 = 小指(使用者要求標在和弦圖的圓點裡)。
+   照一般和弦書的規則從按法推出來,不另外存表:
+     1. 手指照格數由低到高分配,同一格由低音弦往高音弦(C = × 3 2 0 1 0、D = × × 0 1 3 2)
+     2. 手指不夠(> 4)才用食指橫按最低那一格(F = 1 3 4 2 1 1、Bm = × 1 3 4 2 1);
+        最低格落在最高音那幾條弦、上面還有別的格時也用食指小橫按(小 F = × × 3 2 1 1、Dm7 = × × 0 2 1 1)
+     3. 還不夠,相鄰弦同一格共用一指(× 3 5 5 5 3 的無名指)
+     4. 6 弦有按、5 弦沒按、6 弦又是最低格:拇指從琴頸上方勾(D/F♯ = T 0 0 1 3 2)
+   回傳每條弦的標記(沒按的是 null) */
+function gtrFingering(frets){
+  const out = frets.map(() => null);
+  let fretted = [];
+  frets.forEach((f, s) => { if (f > 0) fretted.push(s); });
+  if (!fretted.length) return out;
+  const minOf = list => Math.min(...list.map(s => frets[s]));
+  // 拇指
+  if (frets[0] > 0 && !(frets[1] > 0) && fretted.length > 1 && frets[0] <= minOf(fretted.slice(1))) {
+    out[0] = "T"; fretted = fretted.slice(1);
+  }
+  const assign = (groups) => {                 // groups:[[弦…], …],每組一根手指
+    groups.sort((a, b) => frets[a[0]] - frets[b[0]] || a[0] - b[0]);
+    groups.forEach((g, i) => g.forEach(s => { out[s] = String(i + 1); }));
+  };
+  const singles = fretted.map(s => [s]);
+  // 橫按:最低那一格、最外側兩條弦之間不能有更低的格(空弦、不彈)
+  const lo = minOf(fretted), atLo = fretted.filter(s => frets[s] === lo);
+  const canBarre = atLo.length >= 2 && frets.slice(atLo[0], atLo[atLo.length - 1] + 1).every(f => f >= lo);
+  const barred = () => [atLo].concat(fretted.filter(s => frets[s] !== lo || s < atLo[0] || s > atLo[atLo.length - 1]).map(s => [s]));
+  // 高音那幾條弦在最低格、上面還有別的格:食指小橫按(小 F = × × 3 2 1 1、Dm7 = × × 0 2 1 1)。
+  // 全部同一格的(A = × 0 2 2 2 0)不算,照常 1 2 3
+  // 而且那幾條弦要相鄰:D = × × 0 2 3 2 的兩個 2 格中間夾著 3 格,照常 1 3 2
+  const topBarre = canBarre && atLo[atLo.length - 1] === fretted[fretted.length - 1] && atLo[atLo.length - 1] - atLo[0] === atLo.length - 1 &&
+    fretted.some(s => frets[s] > lo);
+  if (singles.length <= 4 && !topBarre) { assign(singles); return out; }
+  let groups = canBarre ? barred() : singles;
+  if (groups.length > 4) {                     // 相鄰弦同一格共用一指
+    const merged = [];
+    groups.forEach(g => {
+      const last = merged[merged.length - 1];
+      if (g.length === 1 && last && last.length >= 1 && frets[last[0]] === frets[g[0]] && last[last.length - 1] === g[0] - 1 &&
+          !(last === groups[0] && groups[0].length > 1)) last.push(g[0]);
+      else merged.push(g.slice());
+    });
+    groups = merged;
+  }
+  assign(groups);
+  return out;
+}
 function voicingSVG(v, rp){
   const fr = v.frets.filter(f => f > 0);
   const maxF = fr.length ? Math.max(...fr) : 0, minF = fr.length ? Math.min(...fr) : 0;
@@ -4416,11 +4463,15 @@ function voicingSVG(v, rp){
   // 格數標在 1 弦右邊、避開 1 弦上的音點(半徑 7)
   if (base > 1) g += '<text x="' + (x0 + gap * 5 + 8) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="10" fill="var(--muted)">' + base + 'fr</text>';
   if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
+  const fing = gtrFingering(v.frets);
   v.frets.forEach((f, s) => {
     const col = f >= 0 && pcOf(GTR_OPEN[s] + f) === rp ? "var(--gold)" : "var(--teal)";
     if (f < 0) g += '<text x="' + xs(s) + '" y="' + (y0 - 9) + '" text-anchor="middle" font-size="12" fill="var(--muted)">×</text>';
     else if (f === 0) g += '<circle cx="' + xs(s) + '" cy="' + (y0 - 13) + '" r="5" fill="none" stroke="' + col + '" stroke-width="1.8"/>';
-    else g += '<circle cx="' + xs(s) + '" cy="' + yOf(f) + '" r="7" fill="' + col + '"/>';
+    else {
+      g += '<circle cx="' + xs(s) + '" cy="' + yOf(f) + '" r="7" fill="' + col + '"/>';
+      if (fing[s]) g += '<text x="' + xs(s) + '" y="' + (yOf(f) + 3.4) + '" text-anchor="middle" font-size="9.5" font-weight="700" fill="#16130D">' + fing[s] + '</text>';
+    }
   });
   return '<svg class="dg" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + gtrTabText(v.frets) + '">' + g + '</svg>';
 }
