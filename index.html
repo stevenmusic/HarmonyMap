@@ -3158,14 +3158,20 @@ function startHighlightLoop(untilTime){
   cancelAnimationFrame(animId);
   const step = () => {
     drawKeyboardLive();
-    if (audioCtx && audioCtx.currentTime < untilTime) animId = requestAnimationFrame(step);
+    if (audioCtx && heardTime() < untilTime) animId = requestAnimationFrame(step);
     else { soundingWindows = []; drawKeyboardLive(); }
   };
   animId = requestAnimationFrame(step);
 }
+/* 使用者「聽到」的時刻:currentTime 只是排程時鐘,喇叭/藍牙耳機實際出聲還要再晚 outputLatency。
+   高亮跟著聽到的時刻走,畫面才不會比聲音早亮 */
+function heardTime(){
+  const lat = (audioCtx.outputLatency || 0) + (audioCtx.baseLatency || 0);
+  return audioCtx.currentTime - Math.min(lat, 0.6);
+}
 function isSounding(midi){
   if (!audioCtx || !soundingWindows.length) return false;
-  const t = audioCtx.currentTime;
+  const t = heardTime();
   return soundingWindows.some(s => s.midi === midi && t >= s.from && t <= s.to);
 }
 /* at:指定在音訊時鐘的哪一刻開始(練習的節拍器用,跟點擊聲同一個時鐘)。

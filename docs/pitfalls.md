@@ -23,6 +23,9 @@
 - 響度:訊號鏈是 masterGain → loudnessComp(-18dB / 3:1)→ makeupGain(1.6)→ 限幅器。
   少了中間那段響度壓縮,平均音量會低到使用者得把裝置音量開到 80~90%。
   實測積分響度:合成備援 -9~-10 LUFS、取樣路徑最壞情況 -5 LUFS,峰值都在 0 dBFS 以下沒有削波
+- 播放時的發亮要跟「聽到」的時刻同步:`audioCtx.currentTime` 只是排程時鐘,喇叭/藍牙耳機實際出聲
+  還要再晚 `outputLatency + baseLatency`。高亮與結束判斷一律用 `heardTime()`,不要直接用 `currentTime`,
+  否則(尤其藍牙、吉他音階逐音播放)畫面會比聲音早亮
 - 釘在鍵盤下方的那行摘要(`.kb-summary`)必須維持「絕對只有一行」(nowrap + 省略號)。
   它一旦會換行,底下整排和弦按鈕就會跟著上下跳,手指會點錯
 - 摘要列放不下時先縮副標(`.zh` flex-shrink 100),再來名稱與音名照比例一起縮(`b`、`.tones` 都是 flex-shrink 1)。
