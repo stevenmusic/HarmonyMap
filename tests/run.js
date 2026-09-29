@@ -561,6 +561,18 @@ async function openPage(browser, opts = {}){
       return bad;
     });
       if (r.length) fails.push("移調夾: " + r.join(" | ")); }
+    // 左手吉他:指板鏡像後點畫出來的位置要對到同一條弦同一格;和弦圖 6 弦在右邊
+    total++; { const r = await q.evaluate(() => {
+      const keep = { tab: STATE.tab, inst: STATE.inst, lefty: STATE.lefty, chordId: STATE.chordId, letter: STATE.letter, acc: STATE.acc, bassIv: STATE.bassIv };
+      Object.assign(STATE, { inst: "guitar", tab: "find", lefty: true }); render();
+      const cv = $("keyboardCanvas"), L = cv._fb, hit = fretAt(cv._cssW - L.xOf(3), L.yOf(5));
+      Object.assign(STATE, { tab: "chord", letter: 0, acc: 0, chordId: "maj", bassIv: null }); render();
+      const lines = [...document.querySelectorAll("#gtrDiagrams .gd svg")][0].querySelectorAll("line.str");
+      const x6 = +lines[0].getAttribute("x1"), x1 = +lines[5].getAttribute("x1");
+      Object.assign(STATE, keep); render();
+      return { hit: hit && hit.s + "/" + hit.f, order: x6 > x1 };
+    });
+      if (r.hit !== "5/3" || !r.order) fails.push("左手吉他: " + JSON.stringify(r)); }
     // 辨識結果可以點:跳到那個和弦;下面列出包含這些音的音階,點了跳到音階分頁
     total++; { const r = await q.evaluate(() => {
       const keep = { tab: STATE.tab, inst: STATE.inst, letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, scaleId: STATE.scaleId, bassIv: STATE.bassIv, bassFor: STATE.bassFor };

@@ -908,6 +908,10 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
           <option value="electric" data-i18n="gtrToneElectric">電吉他(清音)</option>
         </select></label>
         <label id="capoRow"><span data-i18n="capoLabel">移調夾</span><select class="mini" id="capoSel"></select></label>
+        <label id="leftyRow"><span data-i18n="leftyLabel">慣用手</span><select class="mini" id="leftySel">
+          <option value="0" data-i18n="leftyRight">右手</option>
+          <option value="1" data-i18n="leftyLeft">左手(鏡像)</option>
+        </select></label>
       </div>
     </div>
 
@@ -1101,7 +1105,7 @@ const I18N = {
     loadingPiano: "載入鋼琴音色中…", pianoLoadFailed: "音色載入失敗,使用合成音色",
     iosMuteHint: "聽不到聲音?請關閉 iPhone 側邊的靜音開關",
     loadingGuitar: "載入吉他音色中…", guitarLoadFailed: "吉他音色載入失敗,改用鋼琴音色",
-    gtrToneLabel: "吉他音色", capoLabel: "移調夾", capoNone: "不夾", capoFret: "夾第 {n} 格", capoTag: "夾 {n}", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
+    gtrToneLabel: "吉他音色", leftyLabel: "慣用手", leftyRight: "右手", leftyLeft: "左手(鏡像)", capoLabel: "移調夾", capoNone: "不夾", capoFret: "夾第 {n} 格", capoTag: "夾 {n}", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
   },
   en: {
     pageTitle: "HarmonyMap — Chord & Scale Map",
@@ -1196,7 +1200,7 @@ const I18N = {
     loadingPiano: "Loading piano samples…", pianoLoadFailed: "Sample load failed, using synth fallback",
     iosMuteHint: "No sound? Turn off the silent switch on the side of your iPhone",
     loadingGuitar: "Loading guitar samples…", guitarLoadFailed: "Guitar samples failed to load, using piano",
-    gtrToneLabel: "Guitar tone", capoLabel: "Capo", capoNone: "None", capoFret: "Fret {n}", capoTag: "Capo {n}", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
+    gtrToneLabel: "Guitar tone", leftyLabel: "Hand", leftyRight: "Right-handed", leftyLeft: "Left-handed (mirrored)", capoLabel: "Capo", capoNone: "None", capoFret: "Fret {n}", capoTag: "Capo {n}", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
   }
 };
 /* t(key, vars):讀目前語言的字典,缺字退回中文、再退回 key 本身。
@@ -1997,7 +2001,16 @@ function drawKeyboardLive(){
   const ctx = cv.getContext("2d");
   ctx.setTransform(cv._dpr, 0, 0, cv._dpr, 0, 0);
   ctx.clearRect(0, 0, cv._cssW, cv._cssH);
-  if (STATE.inst === "guitar") { cv._fb = drawFretboard(ctx, cv._cssW, cv._cssH, guitarView()); return; }
+  if (STATE.inst === "guitar") {
+    /* 左手吉他:整張指板左右翻過來畫(上弦枕在右邊),文字另外轉回來,不然會變成鏡像字 */
+    if (STATE.lefty) {
+      ctx.save(); ctx.translate(cv._cssW, 0); ctx.scale(-1, 1);
+      const ft = ctx.fillText;
+      ctx.fillText = function(txt, x, y){ this.save(); this.translate(x, y); this.scale(-1, 1); ft.call(this, txt, 0, 0); this.restore(); };
+      try { cv._fb = drawFretboard(ctx, cv._cssW, cv._cssH, guitarView()); } finally { delete ctx.fillText; ctx.restore(); }
+    } else cv._fb = drawFretboard(ctx, cv._cssW, cv._cssH, guitarView());
+    return;
+  }
   const view = currentView();
   drawKeyboard(ctx, 0, 0, cv._cssW, cv._cssH, view.activeMap);
   drawBlackKeyEdges(ctx, 0, 0, cv._cssW, cv._cssH);
@@ -2874,6 +2887,7 @@ function vibrateString(s, f){
 function fretAt(px, py){
   const L = $("keyboardCanvas")._fb;
   if (!L) return null;
+  if (STATE.lefty) px = $("keyboardCanvas")._cssW - px;   // 左手吉他是鏡像畫的
   const s = Math.max(0, Math.min(5, 5 - Math.floor((py - L.top) / L.sp)));
   if (px < L.nutX - 2 && L.first) return null;   // 平移時左邊那一欄不是空弦
   const f = px < L.nutX - 2 ? 0 : L.first + Math.max(1, Math.min(L.frets, Math.floor((px - L.nutX) / L.fretW) + 1));
@@ -3366,11 +3380,13 @@ const STATE = {
   vKey: "", vIdx: 0,   // 吉他:目前是哪個和弦的第幾個指法
   bassIv: null, bassFor: "", // 吉他斜線和弦:低音離根音幾個半音(null = 根音),只對 bassFor 這個和弦有效
   findFrets: [null, null, null, null, null, null], // 吉他反查:每條弦按第幾格(null = 不彈)
-  capo: 0              // 吉他移調夾夾在第幾格(0 = 不夾)
+  capo: 0,             // 吉他移調夾夾在第幾格(0 = 不夾)
+  lefty: false         // 左手吉他:指板與和弦圖左右鏡像
 };
 const INST_KEY = "harmonymap.inst";
-const GTR_TONE_KEY = "harmonymap.gtrTone", CAPO_KEY = "harmonymap.capo";
+const GTR_TONE_KEY = "harmonymap.gtrTone", CAPO_KEY = "harmonymap.capo", LEFTY_KEY = "harmonymap.lefty";
 try {
+  STATE.lefty = localStorage.getItem(LEFTY_KEY) === "1";
   const cp = parseInt(localStorage.getItem(CAPO_KEY), 10);
   if (cp >= 0 && cp <= 7) STATE.capo = cp;
   if (localStorage.getItem(INST_KEY) === "guitar") STATE.inst = "guitar";
@@ -4433,6 +4449,8 @@ function render(){
   $("octaveSel").closest("label").style.display = gtr ? "none" : "";
   $("gtrToneRow").style.display = gtr ? "" : "none";
   $("capoRow").style.display = gtr ? "" : "none";
+  $("leftyRow").style.display = gtr ? "" : "none";
+  $("leftySel").value = STATE.lefty ? "1" : "0";
   { const cs = $("capoSel"), built = LANG;
     if (cs._built !== built) { cs._built = built; cs.innerHTML = [0, 1, 2, 3, 4, 5, 6, 7].map(n => '<option value="' + n + '">' + (n ? t("capoFret", { n }) : t("capoNone")) + '</option>').join(""); }
     cs.value = String(STATE.capo); }
@@ -4787,7 +4805,8 @@ function voicingSVG(v, rp){
   const maxF = fr.length ? Math.max(...fr) : 0, minF = fr.length ? Math.min(...fr) : 0;
   const base = maxF <= 4 ? 1 : minF;
   const { x0, gap, y0, rowH, rows, W, H } = VSVG;
-  const xs = s => x0 + s * gap, yOf = f => y0 + (f - base + 0.5) * rowH;
+  // 左手吉他:6 弦在右、1 弦在左(整張圖左右鏡像,字不鏡像)
+  const xs = s => x0 + (STATE.lefty ? 5 - s : s) * gap, yOf = f => y0 + (f - base + 0.5) * rowH;
   let g = '<rect x="' + x0 + '" y="' + y0 + '" width="' + gap * 5 + '" height="' + rowH * rows + '" fill="var(--surface-inset)"/>';
   // 琴格橫線跟最左邊那條弦(6 弦)同色同粗;最上面那條稍粗(開放和弦是上弦枕 3.5、封閉和弦 2.6),
   // 最後才畫、方頭收邊,才不會被弦蓋住而看起來粗細不一(使用者回報過)
@@ -4801,8 +4820,9 @@ function voicingSVG(v, rp){
   // 字級:中文 13(左右兩側的空白剛好放得下一個字;原本 9 太小、幾乎看不到,使用者回報),英文 9(low / high 比較寬)
   const fsLab = LANG === "en" ? 9 : 13, sl0 = slabPos(fsLab, 3, 0), sl1 = slabPos(fsLab, 3, 1);
   const slab = (p, txt) => '<text class="slab" x="' + p.x + '" y="' + p.y + '" text-anchor="' + p.anchor + '" dominant-baseline="central" font-size="' + fsLab + '" fill="var(--muted-bright)">' + txt + '</text>';
-  g += slab(sl0, t("strThick")) + slab(sl1, t("strThin"));
-  if (v.barreShown) g += '<rect class="brr" data-x1="' + xs(v.barreLo) + '" data-x2="' + xs(v.barreHi) + '" data-cy="' + yOf(v.minF) + '" x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
+  g += STATE.lefty ? slab(sl0, t("strThin")) + slab(sl1, t("strThick")) : slab(sl0, t("strThick")) + slab(sl1, t("strThin"));
+  if (v.barreShown) { const bx1 = Math.min(xs(v.barreLo), xs(v.barreHi)), bx2 = Math.max(xs(v.barreLo), xs(v.barreHi));
+    g += '<rect class="brr" data-x1="' + bx1 + '" data-x2="' + bx2 + '" data-cy="' + yOf(v.minF) + '" x="' + (bx1 - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (bx2 - bx1 + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>'; }
   const fing = gtrFingering(v.frets);
   v.frets.forEach((f, s) => {
     const col = f >= 0 && pcOf(gm(s, f)) === rp ? "var(--gold)" : "var(--teal)";
@@ -4866,7 +4886,8 @@ function renderGuitarGallery(){
     const strAt = ev => {
       const r = svg.getBoundingClientRect();
       const x = (ev.clientX - r.left) / r.width * VSVG.W;
-      return Math.max(0, Math.min(5, Math.round((x - VSVG.x0) / VSVG.gap)));
+      const s = Math.max(0, Math.min(5, Math.round((x - VSVG.x0) / VSVG.gap)));
+      return STATE.lefty ? 5 - s : s;
     };
     let last = null, moved = false;
     d.addEventListener("pointerdown", ev => {
@@ -4946,9 +4967,9 @@ function fitGallery(){
       const p = slabPos(fs, pad, i);
       tx.setAttribute("font-size", fs.toFixed(2));
       tx.setAttribute("x", p.x); tx.setAttribute("y", p.y); tx.setAttribute("text-anchor", p.anchor);
-      tx.textContent = t(i ? "strThinFull" : "strThickFull");
+      tx.textContent = t((i ? 1 : 0) ^ (STATE.lefty ? 1 : 0) ? "strThinFull" : "strThickFull");
     });
-    if (labs.some((tx, i) => tx.getComputedTextLength() > room[i])) labs.forEach((tx, i) => { tx.textContent = t(i ? "strThin" : "strThick"); });
+    if (labs.some((tx, i) => tx.getComputedTextLength() > room[i])) labs.forEach((tx, i) => { tx.textContent = t((i ? 1 : 0) ^ (STATE.lefty ? 1 : 0) ? "strThin" : "strThick"); });
   });
 }
 function galleryLabel(v, rp){
@@ -5538,6 +5559,11 @@ function setInstrument(inst){
   if (inst === "guitar") { STATE.findSel.clear(); if (audioCtx) loadGuitarSamples(STATE.gtrTone); }
   render();
 }
+$("leftySel").addEventListener("change", e => {
+  STATE.lefty = e.target.value === "1";
+  try { localStorage.setItem(LEFTY_KEY, STATE.lefty ? "1" : "0"); } catch (err) {}
+  render();
+});
 $("capoSel").addEventListener("change", e => {
   STATE.capo = +e.target.value || 0;
   try { localStorage.setItem(CAPO_KEY, String(STATE.capo)); } catch (err) {}
