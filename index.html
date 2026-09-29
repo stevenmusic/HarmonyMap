@@ -399,7 +399,7 @@ main{
 .tier-toggle{
   display:flex;align-items:center;gap:6px;width:100%;margin-top:8px;
   background:transparent;border:0;border-top:1px solid var(--line);
-  padding:9px 2px 0;font-family:inherit;font-size:var(--fs-2xs);
+  padding:9px 2px 0;font-family:inherit;font-size:var(--fs-2xs);min-height:32px;
   color:var(--muted);cursor:pointer;transition:color .15s;
 }
 .tier-toggle:hover{color:var(--gold)}
@@ -484,7 +484,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-beats i.on{background:var(--teal)}
 .pr-beats i.on.one{background:var(--gold)}
 .pr-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
-.pr-steps span{border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px 10px;font-size:var(--fs-sm);font-variant-numeric:tabular-nums}
+.pr-steps span{border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px 10px;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;
+  min-height:30px;display:inline-flex;align-items:center}   /* 點一下切換半小節:至少 30px 高才點得準 */
 .pr-steps span.cur{border-color:var(--gold);color:var(--gold);font-weight:700;
   box-shadow:0 0 0 1px var(--gold),0 0 10px 1px rgba(242,185,75,.45)}
 /* 練習進行中:現在這個和弦的邊框跟著拍子呼吸發光(一拍一次,--beat 由 renderPractice 依 BPM 設定),
@@ -501,7 +502,7 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-edit{display:flex;gap:6px;align-items:center;margin-bottom:8px}
 /* 進行永遠只有一行(橫向捲動,自動捲到現在/剛加的那個):會換行的話,加和弦、移調時底下的設定列跟著上下跳,
    手指會點錯(320px 上移調 + 一按,整列掉 29px)。上下留 5px 給光暈,不然會被捲動區切掉 */
-.pr-edit .pr-steps{flex:1;min-width:0;margin:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:5px 4px;
+.pr-edit .pr-steps{flex:1;min-width:0;margin:-4px 0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:9px 8px;   /* 光暈 10px:內距加大、負邊距抵掉,版面高度不變 */
   scrollbar-width:none;overscroll-behavior-x:contain}
 .pr-edit .pr-steps::-webkit-scrollbar{display:none}
 .pr-edit .kb-gear{width:32px;height:32px;margin:0}
@@ -629,6 +630,11 @@ html[data-lang="en"] .chip i{white-space:normal}
 .vc-nav button:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
 .vc-nav button:disabled{opacity:.3;cursor:default}
 .vc-nav button svg{display:block}
+/* 圖示鈕只有 22~26px:看得到的大小不變,用透明的 ::after 把手指點得到的範圍往外擴到 34px 以上 */
+.vc-nav button{position:relative}
+.vc-nav button::after{content:"";position:absolute;inset:-6px}
+table.dia button.link{position:relative}
+table.dia button.link::after{content:"";position:absolute;inset:-10px -8px}
 .bass-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
 .bass-row .filter-label{min-width:0;margin-right:4px}
 .bass-row small{opacity:.7;font-size:max(11px,.85em)}   /* 11px 是全站最小字級(原本 .85em = 10.2px) */
@@ -1187,7 +1193,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceBeatsShort: "{n} beats", practiceHalfBar: "Tap to switch between a whole bar and half a bar", practiceRamp: "Speed up gradually", practiceRampOff: "Steady tempo", practiceRampOpt: "+{n} every {k} loops", practiceRampOpt1: "+{n} every loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to switch between a whole bar and half a bar", practiceRamp: "Speed up gradually", practiceRampOff: "Steady tempo", practiceRampOpt: "+{n} every {k} loops", practiceRampOpt1: "+{n} every loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
