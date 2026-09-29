@@ -857,7 +857,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
   </div>
 </header>
 
-<div class="help-pop" id="helpPop" hidden role="dialog" aria-modal="false"></div>
+<div class="help-pop" id="helpPop" hidden role="dialog" aria-modal="false" aria-labelledby="helpPopTitle"></div>
 
 <main>
   <!-- ══ 釘在上方的區塊:分頁 / 鍵盤 / 根音,捲動時不會離開畫面 ══ -->
@@ -877,8 +877,8 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
     </div>
 
     <div class="kb-wrap">
-      <canvas id="keyboardCanvas"></canvas>
-      <span id="audioStatus" class="audio-status" hidden></span>
+      <canvas id="keyboardCanvas" role="img"></canvas>
+      <span id="audioStatus" class="audio-status" role="status" aria-live="polite" hidden></span>
       <!-- 吉他和弦分頁:這個和弦的每一種指法排在一起,取代長指板(renderGuitarGallery 填) -->
       <div class="gtr-dgs" id="gtrDiagrams" hidden></div>
       <div class="kb-summary" id="kbSummary"></div>
@@ -4344,6 +4344,7 @@ function render(){
   $("gtrToneRow").style.display = gtr ? "" : "none";
   // 「C/B」是和弦的斜線寫法,音階搜尋不吃這個,提示要換成音階的例子
   $("typeSearch").placeholder = t(STATE.tab === "scale" ? "searchPlaceholderScale" : "searchPlaceholder");
+  $("typeSearch").setAttribute("aria-label", $("typeSearch").placeholder);   // 只有 placeholder 的輸入框,讀屏軟體念不出名稱
   $("gtrToneSel").value = STATE.gtrTone;
   buildPlayModes();
   scheduleVoicingWarm();
@@ -4371,6 +4372,9 @@ function render(){
   resizeKeyboardCanvas();
   drawKeyboardLive();
   renderSummary();
+  // 畫布本身讀屏軟體看不到內容:用摘要列的名稱 + 音名當它的說明
+  { const sm = $("kbSummary"), b = sm.querySelector("b"), tn = sm.querySelector(".tones");
+    $("keyboardCanvas").setAttribute("aria-label", ((b ? b.title || b.textContent : "") + " " + (tn ? tn.textContent : "")).trim()); }
   renderReadout();
   syncStickyMetrics(); // 鍵盤音域一變,釘住區塊的高度就變,右欄的 sticky 偏移量要跟著更新
 }
@@ -4889,7 +4893,7 @@ function renderPractice(){
       '<button class="kb-gear" id="prUndo" aria-label="' + t("practiceUndo") + '" title="' + t("practiceUndo") + '"' + (P.steps.length ? "" : " disabled") + '>' +
         svg("M21 4H8l-7 8 7 8h13a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zM18 9l-6 6M12 9l6 6") + '</button>' +
       '<button class="btn small ghost" id="prClearSteps"' + (P.steps.length ? "" : " disabled") + '>' + t("practiceClearSteps") + '</button></div>' +
-    '<div class="pr-custom"><input id="prCustom" type="text" autocomplete="off" enterkeyhint="done" placeholder="' + t("practiceCustomPh") + '">' +
+    '<div class="pr-custom"><input id="prCustom" type="text" autocomplete="off" enterkeyhint="done" placeholder="' + t("practiceCustomPh") + '" aria-label="' + t("practiceCustomPh") + '">' +
       // 儲存是開關:這一組已經存過就變成「取消儲存」,不用另外一顆刪除鈕
       '<button class="filter-chip" id="prSave" aria-pressed="' + isSaved + '"' + (P.steps.length ? "" : " disabled") + '>' + t(isSaved ? "practiceUnsave" : "practiceSave") + '</button>' +
       (saved.length ? '<select class="mini" id="prSaved" aria-label="' + t("practiceSaved") + '"><option value="">' + t("practiceSaved") + ' (' + saved.length + ')</option>' +
@@ -5411,7 +5415,7 @@ window.addEventListener("pointerdown", wakeAudio, { capture: true });
 function toggleHelp(force){
   const pop = $("helpPop"), btn = $("helpToggle");
   const open = force !== undefined ? force : pop.hidden;
-  if (open) pop.innerHTML = '<h3>' + t("helpTitle") + '</h3><ul>' + [1, 2, 3, 4, 5, 6, 7].map(i => '<li>' + t("help" + i) + '</li>').join("") + '</ul>';
+  if (open) pop.innerHTML = '<h3 id="helpPopTitle">' + t("helpTitle") + '</h3><ul>' + [1, 2, 3, 4, 5, 6, 7].map(i => '<li>' + t("help" + i) + '</li>').join("") + '</ul>';
   pop.hidden = !open;
   btn.setAttribute("aria-expanded", String(open));
 }

@@ -871,12 +871,15 @@ async function openPage(browser, opts = {}){
     const fails = [];
     let total = 0;
     for (const inst of ["piano", "guitar"]) for (const tab of ["chord", "scale"]) {
-      if (tab === "scale" && inst === "guitar") continue;
       const r = await q.evaluate(([inst, tab]) => {
         STATE.inst = inst; STATE.tab = tab; STATE.search = ""; STATE.group[tab] = ""; render();
         const bad = [];
         const items = tab === "chord" ? CHORDS : SCALES;
-        const cjk = () => { const m = document.body.innerText.replace(/中/g, "").match(/[㐀-鿿]+/g); return m ? m.slice(0, 3).join(",") : ""; };
+        // 畫面文字 + 讀屏軟體念的屬性(aria-label、title、placeholder);語言切換鈕本身的「中」除外
+        const cjk = () => {
+          const attrs = [...document.querySelectorAll("[aria-label],[title],[placeholder]")].filter(e => e.id !== "langToggle")
+            .map(e => [e.getAttribute("aria-label"), e.getAttribute("title"), e.getAttribute("placeholder")].join(" ")).join(" ");
+          const m = (document.body.innerText.replace(/中/g, "") + " " + attrs).match(/[㐀-鿿]+/g); return m ? m.slice(0, 3).join(",") : ""; };
         for (const it of items) {
           if (tab === "chord") STATE.chordId = it.id; else STATE.scaleId = it.id;
           render();
@@ -908,6 +911,18 @@ async function openPage(browser, opts = {}){
       }
       await z.close();
     }
+    // 辨識分頁(鋼琴選音、吉他按弦)與鍵盤設定面板
+    const fd = await q.evaluate(() => {
+      const bad = [], cjk = () => { const attrs = [...document.querySelectorAll("[aria-label],[title],[placeholder]")].filter(e => e.id !== "langToggle")
+        .map(e => [e.getAttribute("aria-label"), e.getAttribute("title"), e.getAttribute("placeholder")].join(" ")).join(" ");
+        const m = (document.body.innerText.replace(/中/g, "") + " " + attrs).match(/[\u3400-\u9fff]+/g); return m ? m.slice(0, 3).join(",") : ""; };
+      STATE.tab = "find"; STATE.inst = "piano"; STATE.findSel = new Set([60, 64, 67, 71]); render(); let c = cjk(); if (c) bad.push("鋼琴辨識: " + c);
+      STATE.inst = "guitar"; STATE.findSel.clear(); STATE.findFrets = [null, 3, 2, 0, 1, 0]; syncFindFromFrets(); render(); c = cjk(); if (c) bad.push("吉他辨識: " + c);
+      toggleKbPopover(); c = cjk(); if (c) bad.push("設定面板: " + c); toggleKbPopover();
+      STATE.findFrets = [null, null, null, null, null, null]; STATE.findSel.clear(); STATE.inst = "piano"; STATE.tab = "chord"; render();
+      return bad;
+    });
+    total++; fails.push(...fd);
     const hp = await q.evaluate(() => { toggleHelp(true); const m = $("helpPop").innerText.match(/[\u3400-\u9fff]+/g); toggleHelp(false); return m ? m.slice(0, 3).join(",") : ""; });
     if (hp) fails.push("使用說明: " + hp);
     report("英文介面無中文", total, fails);
@@ -1204,6 +1219,30 @@ async function openPage(browser, opts = {}){
       await q.close();
     }
     report("版面", total, fails);
+  }
+
+  /* ── 6b. 往返一致:每個和弦 × 21 根音,寫出來的名稱要解析得回來;把組成音丟進辨識,要找得到自己 ── */
+  {
+    const rq = await openPage(browser);
+    const r = await rq.evaluate(() => {
+      const fails = []; let total = 0;
+      STATE.tab = "chord"; STATE.inst = "piano"; STATE.bassIv = null; STATE.slash = null;
+      for (const d of CHORDS) for (let L = 0; L < 7; L++) for (const A of [-1, 0, 1]) {
+        STATE.letter = L; STATE.acc = A; STATE.chordId = d.id;
+        const name = chordTitle(d), pc = parseChordName(name);
+        total++;
+        if (!pc || pc.letter !== L || pc.acc !== A || pc.def.id !== d.id || pc.bass != null) fails.push("解析 " + name + " → " + (pc ? LETTERS[pc.letter] + pc.acc + " " + pc.def.id + " /" + pc.bass : "null"));
+        const rp = pcOf(rootMidi());
+        STATE.findSel = new Set(d.t.map(x => 48 + rp + tokenSemi(x)));
+        const an = findAnalysis();
+        total++;
+        if (!an.results.some(x => x.rootPc === rp && x.chord.id === d.id)) fails.push("辨識找不到 " + name);
+      }
+      STATE.findSel = new Set(); STATE.letter = 0; STATE.acc = 0; STATE.chordId = "maj7"; render();
+      return { total, fails };
+    });
+    await rq.close();
+    report("名稱與辨識往返", r.total, r.fails);
   }
 
   /* ── 7. 音訊生命週期與穩定性:儲存空間被停用、iOS 打斷後叫醒、節拍器補拍與停止、單音不累積 ── */
