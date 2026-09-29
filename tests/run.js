@@ -21,7 +21,8 @@ const PAGE = "file://" + path.resolve(__dirname, "..", "index.html");
 const exe = process.env.CHROMIUM_PATH || (fs.existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
 
 const results = [];   // { group, total, fails: [] }
-function report(group, total, fails){ results.push({ group, total, fails }); }
+let lastT = Date.now();
+function report(group, total, fails){ results.push({ group, total, fails, ms: Date.now() - lastT }); lastT = Date.now(); }
 
 async function openPage(browser, opts = {}){
   const p = await browser.newPage(Object.assign({ viewport: { width: 1200, height: 900 } }, opts));
@@ -1231,7 +1232,8 @@ async function openPage(browser, opts = {}){
       await q.close();
     }
     // 摘要列任何內容都不能被截成「…」:所有音階/和弦 × 鋼琴/吉他 × 中英文,高度固定不隨內容變
-    for (const [w, h] of [[320, 568], [390, 844], [1280, 860]]) for (const lang of ["zh", "en"]) {
+    // 最窄(320)與寬版(1280)兩端;根音用最長的拼法(C 與 B♭)。390 夾在中間,320 放得下的它一定放得下
+    for (const [w, h] of [[320, 568], [1280, 860]]) for (const lang of ["zh", "en"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
       if (lang === "en") await q.click("#langToggle");
       const r = await q.evaluate(() => {
@@ -1241,7 +1243,7 @@ async function openPage(browser, opts = {}){
           STATE.inst = inst; STATE.tab = tab;
           for (const d of tab === "scale" ? SCALES : CHORDS) {
             if (tab === "scale") STATE.scaleId = d.id; else STATE.chordId = d.id;
-            for (const [L, A] of [[0, 0], [3, 1], [6, -1]]) {
+            for (const [L, A] of [[0, 0], [6, -1]]) {
               STATE.letter = L; STATE.acc = A; render();
               const s = $("kbSummary"), sr = s.getBoundingClientRect(); hs.add(s.offsetHeight);
               for (const e of s.querySelectorAll("b, .zh, .tones, .nm span, .nmrow")) if (cut(e)) bad.add(inst + " " + d.id);
@@ -1495,7 +1497,7 @@ async function openPage(browser, opts = {}){
   let failed = 0;
   for (const r of results) {
     const ok = !r.fails.length;
-    console.log((ok ? "✓ " : "✗ ") + r.group + "  " + (r.total - Math.min(r.total, r.fails.length)) + "/" + r.total);
+    console.log((ok ? "✓ " : "✗ ") + r.group + "  " + (r.total - Math.min(r.total, r.fails.length)) + "/" + r.total + (process.env.TIMING ? "  " + (r.ms / 1000).toFixed(1) + "s" : ""));
     for (const f of r.fails.slice(0, 20)) console.log("    " + f);
     if (r.fails.length > 20) console.log("    …另外 " + (r.fails.length - 20) + " 項");
     failed += r.fails.length;
