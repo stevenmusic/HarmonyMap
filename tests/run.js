@@ -573,6 +573,24 @@ async function openPage(browser, opts = {}){
       return { hit: hit && hit.s + "/" + hit.f, order: x6 > x1 };
     });
       if (r.hit !== "5/3" || !r.order) fails.push("左手吉他: " + JSON.stringify(r)); }
+    // 辨識結果點下去,和弦頁的名稱要跟點的那個一模一樣(斜線和弦的低音拼法:D♭13♭9/D 在和弦頁會變 E♭♭,要改寫成 C♯13♭9/D)
+    total++; { const r = await q.evaluate(() => {
+      const keep = { tab: STATE.tab, inst: STATE.inst, letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, bassIv: STATE.bassIv, bassFor: STATE.bassFor };
+      const op = playCurrent; playCurrent = () => {};
+      const bad = [];
+      for (const id of ["13b9", "7b9", "7alt", "mMaj7", "7", "m7b5", "maj7"]) for (const rp of [1, 8, 6, 3]) {
+        const d = chordById(id), tones = d.t.map(x => pcOf(rp + tokenSemi(x)));
+        for (const bpc of tones.slice(1, 3)) {
+          STATE.tab = "find"; STATE.inst = "piano"; STATE.findSel = new Set([36 + bpc, ...tones.map(p => 48 + p)]); render();
+          const it = document.querySelector('#readout .find-item[role="button"]'); if (!it) continue;
+          const shown = it.querySelector(".fname").textContent; it.click();
+          const got = chordTitle(chordById(STATE.chordId)); if (got !== shown) bad.push(shown + " → " + got);
+        }
+      }
+      playCurrent = op; STATE.findSel = new Set(); Object.assign(STATE, keep); render();
+      return bad;
+    });
+      if (r.length) fails.push("辨識跳到和弦頁名稱不一致: " + r.slice(0, 5).join(" | ")); }
     // 辨識結果可以點:跳到那個和弦;下面列出包含這些音的音階,點了跳到音階分頁
     total++; { const r = await q.evaluate(() => {
       const keep = { tab: STATE.tab, inst: STATE.inst, letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, scaleId: STATE.scaleId, bassIv: STATE.bassIv, bassFor: STATE.bassFor };
@@ -923,6 +941,7 @@ async function openPage(browser, opts = {}){
     const rn = await q.evaluate(() => [
       ["C: I V vi IV", "C G Am F"], ["Bb: ii7 V7 Imaj7", "Cm7 F7 B♭maj7"], ["Eb: bVII", "D♭"], ["Am: i iv V7", "Am Dm E7"],
       ["F#: vii°", "E♯dim"], ["C: viiø7 V7/", ""], ["G: I IV V7sus4", "G C D7sus4"], ["Am: III VI VII", "C F G"], ["D: iii7 vi7 ii7 V7", "F♯m7 Bm7 Em7 A7"],
+      ["Am: i bVI bVII", "Am F G"], ["Am: bVII7", "G7"], ["Am: vii°7", "G♯dim7"], ["Am: VII", "G"], ["Am: imaj7", "AmMaj7"], ["Am: iadd9", "Am(add9)"], ["C: isus4", "Csus4"],
       ["I V", ""]
     ].map(([txt, want]) => { const r = practiceParseCustom(txt); const got = r.steps.map(stepName).join(" "); return got === want || (want === "" && r.bad.length) ? "" : txt + " → " + got + " ≠ " + want + " bad:" + r.bad.join(","); }).filter(Boolean));
     total++; if (rn.length) fails.push("級數輸入: " + rn.join(" | "));

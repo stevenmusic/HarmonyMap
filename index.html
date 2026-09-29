@@ -674,6 +674,7 @@ html[data-lang="en"] .chip i{white-space:normal}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
 /* 吉他模式左上角是 ○/× 那一欄,載入提示改貼右上角,不要蓋住空弦標記 */
 .kb-wrap.gtr .audio-status{left:auto;right:8px}
+.kb-wrap.gtr.lefty .audio-status{left:8px;right:auto}   /* 左手吉他的 ○/× 欄在右邊 */
 .audio-status{
   position:absolute;top:8px;left:8px;z-index:2;
   /* 絕對定位,換行不會推動版面;iPhone 靜音提示比較長,窄螢幕要能折行而不是被切掉 */
@@ -4270,7 +4271,9 @@ function renderFindReadout(ro, ex){
     html += '<div class="find-list">';
     for (const r of results.slice(0, 12)) {
       const pref = spellPrefFor(r.rootPc, r.chord);
-      const nm = findChordName(r.rootPc, r.chord, an.bassPc, pref);
+      let nm = findChordName(r.rootPc, r.chord, an.bassPc, pref);
+      // 斜線和弦:名稱跟點下去之後和弦頁寫的一致(D♭13♭9/D 在和弦頁要寫成 E♭♭,改用 C♯13♭9/D)
+      if (an.bassPc !== r.rootPc) nm = chordPageSpelling(r.rootPc, r.chord, pcOf(an.bassPc - r.rootPc), pref)[2];
       html += '<div class="find-item" role="button" tabindex="0"' + findJumpAttrs(r.rootPc, r.chord, an.bassPc, pref) + '><span class="fname">' + nm + '</span>' +
               '<span class="fzh">' + localName(r.chord) + '</span>' +
               '<span class="ftag exact">' + inversionLabel(r.rootPc, r.chord, an.bassPc, pref) + '</span>' +
@@ -4320,15 +4323,25 @@ function renderFindReadout(ro, ex){
       Object.assign(STATE, { tab: "scale", letter: L, acc: A, scaleId: el.dataset.sid, slash: null });
       render(); playCurrent(); scrollTo({ top: 0 }); return;
     }
-    const [L, A] = PC_SPELL_PREF(+el.dataset.rp, el.dataset.pref);
-    const bass = el.dataset.bass === "" ? null : +el.dataset.bass;
-    goToParsedChord({ letter: L, acc: A, def: chordById(el.dataset.cid), bass });
+    /* 和弦頁的低音是照和弦級數拼的,根音拼法不同時低音可能變成重升重降(G♯mMaj7/F♯♯)。
+       兩種根音拼法都試:優先跟點下去的那個名稱一模一樣的,再來是沒有重升重降的 */
+    const def = chordById(el.dataset.cid), bass = el.dataset.bass === "" ? null : +el.dataset.bass;
+    const pick = chordPageSpelling(+el.dataset.rp, def, bass, el.dataset.pref);
+    goToParsedChord({ letter: pick[0], acc: pick[1], def, bass });
     scrollTo({ top: 0 });
   };
   for (const box of [ro, ex]) box.querySelectorAll('.find-item[role="button"], .link-chip[data-sid]').forEach(el => {
     el.onclick = () => jump(el);
     el.onkeydown = ev => { if (ev.key === "Enter") { ev.preventDefault(); jump(el); } };
   });
+}
+/* 和弦頁會怎麼寫這個和弦:低音照和弦級數拼,根音拼法不同時低音可能變成重升重降(D♭13♭9/E♭♭)。
+   依序試「偏好的拼法 → 升記號 → 降記號」,優先沒有重升重降的那個。回傳 [字母, 升降, 名稱] */
+function chordPageSpelling(rootPc, def, bassIv, pref){
+  const cands = [PC_SPELL_PREF(rootPc, pref === "sharp" || pref === "flat" ? pref : undefined), PC_SPELL_PREF(rootPc, "sharp"), PC_SPELL_PREF(rootPc, "flat")];
+  const keep = { tab: STATE.tab, letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, bassIv: STATE.bassIv, bassFor: STATE.bassFor };
+  const out = cands.map(([L, A]) => { Object.assign(STATE, { tab: "chord", letter: L, acc: A, chordId: def.id, bassIv, bassFor: def.id }); const x = chordTitle(def); Object.assign(STATE, keep); return [L, A, x]; });
+  return out.find(c => !/♯♯|♭♭|𝄪|𝄫/.test(c[2])) || out[0];
 }
 /* 辨識結果上帶著「跳過去」要的資料:根音、和弦、低音(離根音幾個半音;就是根音時空白) */
 function findJumpAttrs(rootPc, chord, bassPc, pref){
@@ -4436,6 +4449,7 @@ function render(){
   $("findCard").hidden = !findMode;
   const gtr = STATE.inst === "guitar";
   document.querySelector(".kb-wrap").classList.toggle("gtr", gtr);
+  document.querySelector(".kb-wrap").classList.toggle("lefty", gtr && STATE.lefty);
   // 吉他和弦可以按住上下滑來刷弦,觸控時畫布不能把這個手勢拿去捲頁面
   $("keyboardCanvas").style.touchAction = gtr && STATE.tab === "chord" ? "none" : "";
   $("instPiano").setAttribute("aria-pressed", String(!gtr));
@@ -4507,7 +4521,10 @@ function romanStep(w, key){
   if (!m || !key) return null;
   const up = m[2] === m[2].toUpperCase(), deg = ROMAN_DEG[m[2].toLowerCase()];
   let alt = (m[1] === "b" || m[1] === "♭") ? -1 : m[1] ? 1 : 0;
-  if (key.minor && [3, 6, 7].includes(deg)) alt -= 1;
+  // 小調:沒寫升降的 III VI VII 照自然小調降半音;已經寫了 ♭(i ♭VI ♭VII 的流行寫法)就不再降第二次。
+  // 小寫的 vii° / viiø 是導音上的減和弦(A 小調 = G♯dim7),照和聲小調不降
+  const leading = deg === 7 && !up && /^(°|o|ø)$/.test(m[3] || "");
+  if (key.minor && [3, 6, 7].includes(deg) && !m[1] && !leading) alt -= 1;
   const tok = (alt < 0 ? "♭".repeat(-alt) : "♯".repeat(alt)) + deg;
   const sp = spell(key.letter, key.acc, tok);
   let letter = sp.letter, acc = sp.acc;
@@ -4518,7 +4535,13 @@ function romanStep(w, key){
   else if (q === "ø") def = chordBySym(rest === "" || rest === "7" ? "m7♭5" : "m" + rest.replace(/^7?/, "") + "♭5");
   else if (q === "+") def = chordBySym(rest === "" ? "aug" : rest + "♯5") || chordBySym("aug" + rest);
   else if (up) def = chordBySym(rest);
-  else def = rest === "" ? chordById("min") : (chordBySym("m" + rest) || chordBySym(rest));
+  else {
+    // 小寫 = 小三度:i7 = m7、imaj7 = mMaj7、iadd9 = m(add9)。找不到小調版本時,只有本來就沒有三音的(sus、5)才退回原記號,
+    // 不然 imaj7 會悄悄變成大七和弦
+    const r2 = rest.replace(/^maj/i, "Maj");
+    def = rest === "" ? chordById("min") : (chordBySym("m" + rest) || chordBySym("m" + r2) || chordBySym("m(" + rest + ")") ||
+          (/^(sus|5$)/.test(rest) ? chordBySym(rest) : null));
+  }
   return def ? { letter, acc, id: def.id, bass: null } : null;
 }
 function practiceParseCustom(text){
@@ -4673,7 +4696,7 @@ function practiceStart(){
         if (loop % k === 0 && PRACTICE.bpm < 200) {
           PRACTICE.bpm = Math.min(200, PRACTICE.bpm + d);
           const bpm = PRACTICE.bpm, delay = Math.max(0, (PRACTICE.nextTime - heardTime()) * 1000);
-          setTimeout(() => { if (PRACTICE.runId === run && $("prBpmOut")) { $("prBpmOut").textContent = bpm + " BPM"; practiceBeatVar(); } }, delay);
+          setTimeout(() => { if (PRACTICE.running && PRACTICE.runId === run && $("prBpmOut")) { $("prBpmOut").textContent = bpm + " BPM"; practiceBeatVar(); } }, delay);
         }
       }
       if (onset && PRACTICE.accomp) {
@@ -5015,7 +5038,9 @@ function fitStageNames(){
 }
 /* 「現在 / 下一個」兩張圖。renderPractice 與每小節的 practiceTick 共用 */
 function practiceNowHTML(a, b, ids){
-  return '<div class="pr-now"><div class="now" role="button" tabindex="0"><small>' + t("practiceNow") + '</small><b' + (ids ? ' id="prNow"' : '') + '>C</b>' + stepDiagram(a) + '</div>' +
+  // 夾了移調夾:圖畫的是指型,標出夾第幾格才不會以為是另一個和弦
+  const capo = capoK() ? ' · ' + t("capoTag", { n: capoK() }) : '';
+  return '<div class="pr-now"><div class="now" role="button" tabindex="0"><small>' + t("practiceNow") + capo + '</small><b' + (ids ? ' id="prNow"' : '') + '>C</b>' + stepDiagram(a) + '</div>' +
     '<div class="next" role="button" tabindex="0"><small>' + t("practiceNext") + '</small><b' + (ids ? ' id="prNext"' : '') + '>C</b>' + stepDiagram(b) + '</div></div>';
 }
 function bindPracticeNow(cur, nxt){
@@ -5249,7 +5274,8 @@ function renderSummary(){
               .map(m => ({ text: an.nameByPc.get(pcOf(m)), midi: m }));
     if (an.results.length) {
       const r0 = an.results[0];
-      name = findChordName(r0.rootPc, r0.chord, an.bassPc, spellPrefFor(r0.rootPc, r0.chord));
+      name = an.bassPc !== r0.rootPc ? chordPageSpelling(r0.rootPc, r0.chord, pcOf(an.bassPc - r0.rootPc), spellPrefFor(r0.rootPc, r0.chord))[2]
+                                     : findChordName(r0.rootPc, r0.chord, an.bassPc, spellPrefFor(r0.rootPc, r0.chord));   // 跟結果清單、和弦頁同一種寫法
       zh = localName(r0.chord) + (r0.no5 ? " · " + t("omit5") : "");
     }
     else { name = an.sel.length ? "?" : t("findPickNotes"); zh = an.sel.length ? t("findNoMatch") : t(STATE.inst === "guitar" ? "findTapStartGuitar" : "findTapStart"); }
@@ -5395,7 +5421,7 @@ function pluckString(s){
   let lastTap = 0;
   // 範圍擴大到整個 .kb-wrap(含吉他和弦圖)與練習卡片;摘要列、設定面板、按鈕靠 click,排除,否則連點會掉第二下
   const guard = el => el.addEventListener("touchend", ev => {
-    if (ev.target.closest(".kb-summary, .kb-popover, button")) return;
+    if (ev.target.closest(".kb-summary, .kb-popover, button, input, select, textarea")) return;
     const now = Date.now();
     if (now - lastTap < 350) {
       ev.preventDefault();
@@ -5406,6 +5432,7 @@ function pluckString(s){
   }, { passive: false });
   guard(document.querySelector(".kb-wrap"));
   guard($("practiceStage"));
+  guard($("practiceCard"));   // 連點 BPM 數字打拍子時也不能被當成雙擊放大
 }
 $("keyboardCanvas").addEventListener("pointermove", ev => {
   const cv = $("keyboardCanvas");
