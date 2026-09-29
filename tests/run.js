@@ -832,6 +832,36 @@ async function openPage(browser, opts = {}){
       }
       await q.close();
     }
+    // 兩欄版面(≥900px,含大手機橫向 932×430):右邊顯示區的底部要跟左欄卡片對齊,不能空一大段(使用者回報);
+    // 換樂器時兩邊與下面的清單都不能動
+    for (const [w, h] of [[932, 430], [1024, 768], [1280, 860]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 1100, isMobile: w < 1100 });
+      for (const tab of ["Chord", "Scale", "Find"]) {
+        const got = {};
+        for (const inst of ["Guitar", "Piano"]) {
+          await q.evaluate(([t, i]) => { $("tab" + t).click(); $("inst" + i).click(); scrollTo(0, 0); }, [tab, inst]);
+          await q.waitForTimeout(80);
+          got[inst] = await q.evaluate(() => { const c = [$("rootCard"), $("findCard")].find(x => !x.hidden).getBoundingClientRect();
+            return [Math.round(c.bottom), Math.round(document.querySelector(".kb-wrap").getBoundingClientRect().bottom), Math.round(document.querySelector(".lower").getBoundingClientRect().top)]; });
+          total++;
+          if (Math.abs(got[inst][0] - got[inst][1]) > 1) fails.push("兩欄沒對齊(" + w + "×" + h + " " + tab + " " + inst + "):左欄底 " + got[inst][0] + " 右邊底 " + got[inst][1]);
+        }
+        total++; if (got.Guitar.join() !== got.Piano.join()) fails.push("兩欄版面換樂器移位(" + w + "×" + h + " " + tab + "): " + got.Guitar + " → " + got.Piano);
+      }
+      // 比例:和弦圖最多放大 1.4 倍(圖裡的字才不會比介面的字大一截,使用者回報);鋼琴白鍵最寬 56px(一個八度不會變方磚)
+      const prop = await q.evaluate(() => {
+        $("tabChord").click(); $("instGuitar").click();
+        const sv = document.querySelector("#gtrDiagrams svg"), bb = sv.getBoundingClientRect(), vb = sv.viewBox.baseVal;
+        const k = Math.min(bb.width / vb.width, bb.height / vb.height);
+        $("tabScale").click(); $("instPiano").click();
+        const key = $("keyboardCanvas").getBoundingClientRect().width / Math.max(KB_WHITE_KEYS.length, 1);
+        $("tabChord").click();
+        return { k, key };
+      });
+      total++; if (prop.k > 1.41) fails.push("和弦圖放大 " + prop.k.toFixed(2) + " 倍(" + w + "×" + h + "),圖裡的字會比介面大");
+      total++; if (prop.key > 56.5) fails.push("鋼琴白鍵 " + Math.round(prop.key) + "px 寬(" + w + "×" + h + ")");
+      await q.close();
+    }
     // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
     for (const [w, h] of [[320, 568], [844, 390], [390, 844], [1280, 860]]) for (const inst of ["Piano", "Guitar"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });

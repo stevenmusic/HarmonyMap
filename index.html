@@ -475,7 +475,7 @@ html[data-lang="en"] .chip i{white-space:normal}
   100%{box-shadow:0 0 0 1px var(--gold),0 0 8px 1px rgba(242,185,75,.2)}
 }
 @media (prefers-reduced-motion: reduce){ .kb-stage.running .pr-now .now{animation:none} }
-.pr-now .dg{display:block;height:auto;margin-top:6px;width:100%;max-width:150px}
+.pr-now .dg{display:block;height:auto;margin-top:6px;width:100%;max-width:185px}   /* 185px = 圖裡的字放大 1.4 倍,跟和弦分頁的圖同一個上限 */
 .pr-now .dg.kb{max-width:none}   /* 鋼琴小鍵盤撐滿格子,兩張一樣寬 */
 .pr-beats{display:flex;gap:8px;justify-content:center;margin:0 0 8px}
 .pr-beats i{width:12px;height:12px;border-radius:50%;background:var(--line)}
@@ -520,8 +520,12 @@ html[data-lang="en"] .chip i{white-space:normal}
 .gtr-dgs .gd-lab{font-size:var(--fs-2xs);color:var(--muted-bright);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gtr-dgs .gd.on .gd-lab{color:var(--gold)}
 /* 和弦圖儘量大、少留白(使用者要求):撐滿格子,只在很寬的桌機擋一個上限,免得釘住區太高 */
-.gtr-dgs .gd{display:flex;flex-direction:column;min-height:0}
-.gtr-dgs svg{display:block;flex:1 1 0;min-height:0;width:100%;height:100%;margin:0 auto}
+/* 和弦圖跟著格子縮放,但最多放大到 1.4 倍(185×160px):圖裡的字(×、○、3fr)是 10~12 個單位,
+   1.4 倍約 14~17px,跟旁邊介面的字一樣大。原本兩欄版面撐滿高度時放大到 2 倍以上,圖很大、其他字很小,
+   比例不對(使用者回報)。格子照樣撐滿(兩欄對齊),圖在格子裡置中 */
+/* 標籤與圖是同一組,一起在格子裡垂直置中(圖那一列最高 160px,格子不夠高時照樣縮) */
+.gtr-dgs .gd{display:grid;grid-template-rows:auto minmax(0,160px);align-content:center;row-gap:2px;min-height:0}
+.gtr-dgs svg{display:block;width:100%;height:100%;max-width:185px;min-height:0;justify-self:center}
 /* 撥弦時那條弦亮一下(根音金色、其他青色),0.9 秒淡掉;系統減少動態時 animation 會被縮成一瞬間 */
 .gtr-dgs line.str.ring{animation:strRing .9s ease-out}
 .gtr-dgs line.str.ring.root{animation-name:strRingRoot}
@@ -585,6 +589,9 @@ html[data-lang="en"] .chip i{white-space:normal}
   padding:6px 10px;box-shadow:var(--shadow-md);
 }
 .kb-popover[hidden]{display:none}
+#findDesc{display:grid}
+#findDesc > span{grid-area:1 / 1}
+#findDesc > span.off{visibility:hidden}
 .kb-popover label{display:flex;align-items:center;gap:8px;font-size:var(--fs-2xs);color:var(--muted)}
 /* 面板要整個放得進鍵盤區(.kb-wrap 是 overflow:hidden),320×568 的鍵盤區只有 145px:
    三列 × 34px 剛好放得下。選擇器寫兩個 class 才蓋得過觸控裝置的 select.mini{min-height:38px} */
@@ -745,6 +752,13 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
      左邊的根音/辨識卡片才不會因為卡片高度不同、或換樂器而上下跳 */
   .topbar{display:grid;grid-template-columns:minmax(280px,340px) 1fr;grid-template-rows:auto 1fr;gap:10px 14px;align-items:start}
   .topbar .tab-row{grid-column:1;grid-row:1}
+  /* 顯示區撐滿左欄高度(高度由 resizeKeyboardCanvas 的 twoColumnAvail 算);內容比較矮時(鋼琴維持琴鍵比例)
+     在摘要列上方置中,不是全部擠在最上面、下面留一塊空白 */
+  .topbar .kb-wrap{align-self:stretch;display:flex;flex-direction:column}
+  .topbar #rootCard,.topbar #findCard{align-self:stretch}
+  .topbar .kb-wrap > #keyboardCanvas{align-self:center}
+  .topbar .kb-wrap > #keyboardCanvas{margin-top:auto}
+  .topbar .kb-wrap > .kb-summary{margin-top:auto}
   /* 左欄只有 340px,三個分頁各約 65px:英文的粗體「Identify」放不下,跟窄螢幕一樣把左右內距收到 2px */
   .tabs button{padding:9px 2px}
   .topbar #rootCard,.topbar #findCard{grid-column:1;grid-row:2}
@@ -1807,10 +1821,29 @@ function drawKeyLabels(ctx, x, y, w, h, labelMap){
 /* ══════════════════════════════════════════════════════════════
    6. 畫布尺寸與繪製迴圈
    ══════════════════════════════════════════════════════════════ */
+/* 兩欄版面時,右邊顯示區可以用的高度 = 左欄高度 − 摘要列 − 外框;不是兩欄(或練習中)就回傳 0 */
+const TWO_COL = window.matchMedia("(min-width:900px)");
+function twoColumnAvail(){
+  if (!TWO_COL.matches) return 0;
+  try { if (PRACTICE.open && STATE.tab === "chord") return 0; } catch (e) { return 0; }   // 載入初期 PRACTICE 還沒宣告
+  const card = [$("rootCard"), $("findCard")].find(c => c && !c.hidden);
+  const tabs = document.querySelector(".topbar .tab-row"), wrap = document.querySelector(".kb-wrap");
+  if (!card || !tabs || !wrap) return 0;
+  const gap = parseFloat(getComputedStyle(document.querySelector(".topbar")).rowGap) || 0;
+  const cs = getComputedStyle(wrap);
+  const chrome = (parseFloat(cs.borderTopWidth) || 0) + (parseFloat(cs.borderBottomWidth) || 0) + $("kbSummary").offsetHeight;
+  // 卡片會被拉高去對齊右邊(align-self:stretch),所以量「內容」的高度,不量卡片本身——量卡片的話兩邊會互相撐大
+  const kids = [...card.children].filter(k => k.offsetParent);
+  const cc = getComputedStyle(card), top = card.getBoundingClientRect().top;
+  const natural = kids.length ? Math.max(...kids.map(k => k.getBoundingClientRect().bottom)) - top +
+    (parseFloat(cc.paddingBottom) || 0) + (parseFloat(cc.borderBottomWidth) || 0) : card.offsetHeight;
+  return Math.floor(tabs.offsetHeight + gap + natural - chrome);
+}
 function resizeKeyboardCanvas(){
   const cv = $("keyboardCanvas");
   if (!cv) return;
   // 吉他和弦分頁的畫布是藏起來的(寬度 0),寬度改量外框,顯示區高度才算得出來
+  cv.style.width = "";   // 先還原成滿版再量(鋼琴在寬螢幕會把畫布縮窄,不還原的話下一次量到的是縮過的寬度)
   const w = cv.getBoundingClientRect().width || cv.parentElement.clientWidth;
   /* 鍵盤是釘住的,螢幕越矮它就越該收斂,否則上半部佔滿整個畫面、下面的清單沒空間捲。
      用「視窗高度的 22%」當上限而不是再開一個高度斷點:斷點會在某個高度突然跳一階,
@@ -1821,13 +1854,27 @@ function resizeKeyboardCanvas(){
      基準是「鋼琴在這個寬度、這個分頁會有的高度」;吉他的指板(音階時連同把位那排按鈕)、
      和弦分頁的三張和弦圖都塞進同一個高度 */
   const H = computeKeyboardHeight(w, KB_MIN_H, Math.max(KB_MIN_H, maxH));
+  const row = $("scalePosRow");
+  const rowH = STATE.inst === "guitar" && row && !row.hidden ? row.getBoundingClientRect().height : 0;
+  /* 兩欄版面(≥900px,含大手機橫向 932×430):右邊的顯示區撐滿左欄(分頁 + 根音卡片)的高度,兩欄底部對齊。
+     原本右邊只有 170px(或視窗高度的 22%),左欄的根音卡片比它高很多,右邊空一大段(使用者回報)。
+     左欄的高度跟顯示區無關,所以換樂器時照樣不會移位;外框兩種樂器一樣高(CSS 的 align-self:stretch)。
+     裡面:吉他和弦圖用滿整個高度;指板最高到寬度的 42%;鋼琴維持真實琴鍵比例、垂直置中(拉長琴鍵會變形) */
+  // 右邊至少維持原本的高度 H(音階分頁左欄很矮,照左欄走的話 1920 寬的指板只剩 110px 高);
+  // 右邊比較高時左欄卡片拉高對齊(CSS align-self:stretch,twoColumnAvail 量的是卡片內容,不會互相撐大)
+  const avail = twoColumnAvail() && Math.max(H, twoColumnAvail());
   if (STATE.inst === "guitar") {
-    const row = $("scalePosRow");
-    const rowH = row && !row.hidden ? row.getBoundingClientRect().height : 0;
-    cv.style.height = Math.max(60, H - rowH) + "px";
-    $("gtrDiagrams").style.height = H + "px";
+    const disp = avail || H;
+    cv.style.height = Math.max(60, avail ? Math.min(disp - rowH, w * 0.42) : H - rowH) + "px";
+    $("gtrDiagrams").style.height = disp + "px";
   } else {
-    cv.style.height = H + "px";
+    // 鋼琴白鍵實際的長寬比約 6.4(寬 23.5mm、長 150mm);照抄的 WHITE_KEY_ASPECT 是 5.2,兩欄有空間時放寬到真實比例
+    /* 白鍵最寬 56px:寬螢幕上一個八度只有 8 個白鍵,撐滿 1000px 會變成一塊塊方磚(1920 寬的音階分頁)。
+       畫布本身縮窄、置中;手機與一般桌機本來就不到 56px,不受影響 */
+    const nWhite = Math.max(KB_WHITE_KEYS.length, 1), kw = Math.min(w, nWhite * 56);
+    cv.style.width = avail && kw < w ? kw + "px" : "";
+    const real = computeKeyboardHeight(kw, KB_MIN_H, 10000) * 6.4 / WHITE_KEY_ASPECT;
+    cv.style.height = (avail ? Math.min(avail, real) : H) + "px";
   }
   const rect = cv.getBoundingClientRect();
   // ScrollScore 的畫布是要拿去錄影的,所以用 CSS px;這裡是給人盯著看音名的,
@@ -4118,7 +4165,11 @@ function render(){
   $("keyboardCanvas").style.touchAction = gtr && STATE.tab === "chord" ? "none" : "";
   $("instPiano").setAttribute("aria-pressed", String(!gtr));
   $("instGuitar").setAttribute("aria-pressed", String(gtr));
-  $("findDesc").textContent = t(gtr ? "findCardDescGuitar" : "findCardDesc");
+  // 兩種樂器的說明長度不同,疊在同一格(看不見的那段照樣佔位),卡片高度取兩段比較長的:換樂器時卡片不會變高變矮
+  $("findDesc").innerHTML = "<span></span><span></span>";
+  $("findDesc").children[0].textContent = t("findCardDesc");
+  $("findDesc").children[1].textContent = t("findCardDescGuitar");
+  $("findDesc").children[gtr ? 0 : 1].className = "off";
   // 起始八度只對鋼琴有意義(吉他的音高由指法決定)。label 是 display:flex,hidden 屬性蓋不過,直接改 style
   $("octaveSel").closest("label").style.display = gtr ? "none" : "";
   $("gtrToneRow").style.display = gtr ? "" : "none";
