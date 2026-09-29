@@ -5082,11 +5082,11 @@ function currentPlayback(){
   const v = STATE.inst === "guitar" ? currentVoicing() : null;
   const midis = STATE.tab === "find"
     ? [...STATE.findSel].sort((a, b) => a - b)
-    : v ? voicingMidis(v) : displayNotes().map(n => n.midi);
+    : v ? voicingMidis(v) : (STATE.tab === "scale" && STATE.inst === "guitar") ? guitarScaleUpMidis() : displayNotes().map(n => n.midi);
   // 古典旋律小調:逐音上下行時下行改走自然小調(♭7 ♭6),從高八度主音下來
   let down = null;
   const def = STATE.tab === "scale" ? scaleById(STATE.scaleId) : null;
-  if (def && def.down && midis.length) {
+  if (def && def.down && midis.length && STATE.inst !== "guitar") { // 吉他的完整音階下行直接照原音反過來
     const base = Math.min(...midis);
     down = def.down.map(tokenSemi).filter(x => x > 0).sort((a, b) => b - a).map(x => base + x).concat(base);
   }
