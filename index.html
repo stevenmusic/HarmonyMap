@@ -528,7 +528,9 @@ html[data-lang="en"] .chip i{white-space:normal}
    原本靠 grid 裡的百分比高度,iPhone Safari 算得跟 Chrome 不一樣,手機橫向時圖被推到格子最底下(使用者回報) */
 .gtr-dgs .gd{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-height:0;overflow:hidden}
 .gtr-dgs .gd-lab{align-self:stretch}
-.gtr-dgs svg{display:block;flex:none}
+/* 保險:圖只能縮、不能超出格子(字型晚一步載入讓標籤變高時,iPhone 上圖曾經超出格子底部,使用者回報)。
+   SVG 維持比例畫在框裡,框被壓矮時圖只是等比例縮小 */
+.gtr-dgs svg{display:block;flex:0 1 auto;min-height:0;min-width:0;max-width:100%}
 /* 撥弦時那條弦亮一下(根音金色、其他青色),0.9 秒淡掉;系統減少動態時 animation 會被縮成一瞬間 */
 .gtr-dgs line.str.ring{animation:strRing .9s ease-out}
 .gtr-dgs line.str.ring.root{animation-name:strRingRoot}
@@ -4501,9 +4503,14 @@ function renderGuitarGallery(){
 }
 /* 和弦圖的像素大小:寬最多 185px、高最多 160px(放大最多約 1.4 倍,圖裡的字才不會比介面大),
    同時放得進格子(扣掉標籤),維持圖本身的比例。跟原本 CSS 算出來的大小一樣,只是不再靠瀏覽器算百分比 */
+/* 標籤或格子的大小變了(網頁字型晚一步載入、轉向)就重算:只在畫的當下算一次的話,
+   之後標籤變高、圖的像素大小還是舊的,就被擠出格子 */
+const galleryRO = window.ResizeObserver ? new ResizeObserver(() => requestAnimationFrame(fitGallery)) : null;
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitGallery());
 function fitGallery(){
   const el = $("gtrDiagrams");
   if (!el || el.hidden) return;
+  if (galleryRO) { galleryRO.disconnect(); el.querySelectorAll(".gd, .gd-lab").forEach(x => galleryRO.observe(x)); }
   el.querySelectorAll(".gd").forEach(c => {
     const cs = getComputedStyle(c), lab = c.querySelector(".gd-lab"), svg = c.querySelector("svg");
     if (!svg) return;

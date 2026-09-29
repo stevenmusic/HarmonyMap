@@ -879,6 +879,20 @@ async function openPage(browser, opts = {}){
       total++; if (got !== want) fails.push("轉橫向後大小不對(" + inst + "):" + got + ",直接橫向打開是 " + want);
       await q.close();
     }
+    // 吉他和弦圖不能超出格子(iPhone 上網頁字型晚一步載入、標籤變高時,圖超出格子底部,使用者回報):
+    // 模擬標籤變高,圖與標籤都要還在格子裡
+    for (const [w, h] of [[320, 568], [390, 844], [430, 932], [932, 430]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+      await q.click("#instGuitar"); await q.waitForTimeout(100);
+      await q.addStyleTag({ content: ".gtr-dgs .gd-lab{font-size:19px !important;line-height:2.4 !important}" });
+      await q.waitForTimeout(250);
+      const bad = await q.evaluate(() => [...document.querySelectorAll("#gtrDiagrams .gd")].map(d => {
+        const c = d.getBoundingClientRect(), sv = d.querySelector("svg").getBoundingClientRect(), lb = d.querySelector(".gd-lab").getBoundingClientRect();
+        return sv.bottom > c.bottom + 0.5 || lb.top < c.top - 0.5 ? Math.round(sv.bottom - c.bottom) + "/" + Math.round(c.top - lb.top) : "";
+      }).filter(Boolean));
+      total++; if (bad.length) fails.push("和弦圖超出格子(" + w + "×" + h + "): " + bad.join(" "));
+      await q.close();
+    }
     // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
     for (const [w, h] of [[320, 568], [844, 390], [390, 844], [1280, 860]]) for (const inst of ["Piano", "Guitar"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
