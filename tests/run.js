@@ -1075,6 +1075,27 @@ async function openPage(browser, opts = {}){
       total++; if (r.length) fails.push("吉他音階摘要列(" + w + "): " + r.join(", "));
       await q.close();
     }
+    // 和弦圖兩側的粗/細:不能被卡片切掉;英文放得下(430 以上)要寫完整 low/high,窄的縮成 L/H
+    for (const [w, h] of [[320, 568], [390, 844], [430, 932], [844, 390], [1280, 860]]) for (const lang of ["en", "zh"]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      if (lang === "en") await q.click("#langToggle");
+      await q.click("#instGuitar"); await q.waitForTimeout(200);
+      const r = await q.evaluate(() => [...document.querySelectorAll("#gtrDiagrams .gd")].map(c => { const cr = c.getBoundingClientRect();
+        return [...c.querySelectorAll("text.slab")].map(t => { const b = t.getBoundingClientRect(); return t.textContent + (b.left < cr.left - 0.5 || b.right > cr.right + 0.5 ? "被切" : ""); }).join("/"); }));
+      const want = lang === "zh" ? "粗/細" : w >= 430 ? "low/high" : "L/H";
+      total++; if (!r.length || r.some(x => x !== want)) fails.push("和弦圖粗細標示(" + w + "×" + h + " " + lang + "): " + r.join(" ") + " ≠ " + want);
+      await q.close();
+    }
+    // 兩個名字的音階(Aeolian / Natural Minor)在摘要列疊兩行,整列高度跟一般音階一樣
+    for (const [w, h] of [[390, 844], [1280, 860]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      await q.click("#langToggle");
+      const r = await q.evaluate(() => { STATE.tab = "scale"; STATE.scaleId = "dorian"; render(); const h1 = $("kbSummary").offsetHeight;
+        STATE.scaleId = "aeolian"; render(); const b = document.querySelector("#kbSummary b");
+        return { h1, h2: $("kbSummary").offsetHeight, stk: b.classList.contains("stk"), txt: [...b.querySelectorAll(".nm span")].map(x => x.textContent).join("|") }; });
+      total++; if (r.h1 !== r.h2 || !r.stk || r.txt !== "Aeolian|(Natural Minor)") fails.push("音階名兩行(" + w + "): " + JSON.stringify(r));
+      await q.close();
+    }
     // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
     for (const [w, h] of [[320, 568], [844, 390], [390, 844], [1280, 860]]) for (const inst of ["Piano", "Guitar"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });

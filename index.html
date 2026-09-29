@@ -578,6 +578,10 @@ html[data-lang="en"] .chip i{white-space:normal}
 }
 /* 放不下時先縮副標(英文原名/中文名稱),組成音最後才縮:320px 上原本「C 大調(愛奧尼安) Ionian / Major」
    把音名擠到只剩一個「C」。flex-shrink 100 : 1,副標幾乎全部讓完,音名才開始讓 */
+.kb-summary b.stk{display:flex;align-items:center;gap:.3em}
+.kb-summary b.stk .rt{font-size:1.5em;line-height:1;flex:none}
+.kb-summary b.stk .nm{display:flex;flex-direction:column;min-width:0;line-height:1.1;font-size:max(11px,.72em)}
+.kb-summary b.stk .nm span{overflow:hidden;text-overflow:ellipsis}
 .kb-summary .zh{font-size:var(--fs-xs);color:var(--muted);flex:0 100 auto;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .kb-summary .tn{cursor:pointer;border-radius:4px;padding:2px 1px}
 .kb-summary .tn:hover{color:var(--gold-bright)}
@@ -1041,7 +1045,7 @@ const I18N = {
     voicingPrev: "上一個指法", voicingNext: "下一個指法",
     guitarTabTitle: "吉他指法", guitarTabNote: "由低音弦(6 弦)寫到高音弦(1 弦)· × = 不彈 · 0 = 空弦 · 數字 = 格數",
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
-    strThick: "粗", strThin: "細",
+    strThick: "粗", strThin: "細", strThickFull: "粗", strThinFull: "細",
     fingerLegend: "T 拇指 · 1 食指 · 2 中指 · 3 無名指 · 4 小指",
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
@@ -1136,7 +1140,7 @@ const I18N = {
     voicingPrev: "Previous voicing", voicingNext: "Next voicing",
     guitarTabTitle: "Guitar voicing", guitarTabNote: "Low string (6th) to high string (1st) · × = muted · 0 = open · number = fret",
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
-    strThick: "L", strThin: "H",
+    strThick: "L", strThin: "H", strThickFull: "low", strThinFull: "high",
     fingerLegend: "T thumb · 1 index · 2 middle · 3 ring · 4 pinky",
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
@@ -4487,9 +4491,10 @@ function guitarDiagramSVG(){
 /* 粗/細(L/H)的位置:貼在指板兩側、最下面兩格的高度,中英文同一個位置,都是直立的一個字。
    橫排的話英文 low/high 比空白寬,會伸出圖外被卡片切掉(low 只剩 ow);直排只佔一個字高 */
 function slabPos(fs, pad, i){
-  const half = fs * 0.5, cy = VSVG.y0 + VSVG.rowH * (VSVG.rows - 1);
-  const cx = i === 0 ? VSVG.x0 - pad * 0.5 - half : VSVG.x0 + VSVG.gap * 5 + pad * 0.5 + half;
-  return { x: cx.toFixed(2), y: cy.toFixed(2), transform: "" };
+  // 左邊靠右對齊、右邊靠左對齊,貼著指板往外長:一個字(L/H、粗/細)或整個字(low/high)都從同一個點起
+  const cy = VSVG.y0 + VSVG.rowH * (VSVG.rows - 1);
+  const x = i === 0 ? VSVG.x0 - pad : VSVG.x0 + VSVG.gap * 5 + pad;
+  return { x: x.toFixed(2), y: cy.toFixed(2), anchor: i === 0 ? "end" : "start" };
 }
 const VSVG = { x0: 20, gap: 18, y0: 26, rowH: 20, rows: 4 };
 // 右邊只留格數標示(「12fr」)需要的寬度,不要多留白
@@ -4559,7 +4564,7 @@ function voicingSVG(v, rp){
   // 跟右上的「3fr」錯開
   // 字級:中文 13(左右兩側的空白剛好放得下一個字;原本 9 太小、幾乎看不到,使用者回報),英文 9(low / high 比較寬)
   const fsLab = LANG === "en" ? 9 : 13, sl0 = slabPos(fsLab, 3, 0), sl1 = slabPos(fsLab, 3, 1);
-  const slab = (p, txt) => '<text class="slab" x="' + p.x + '" y="' + p.y + '" transform="' + p.transform + '" text-anchor="middle" dominant-baseline="central" font-size="' + fsLab + '" fill="var(--muted-bright)">' + txt + '</text>';
+  const slab = (p, txt) => '<text class="slab" x="' + p.x + '" y="' + p.y + '" text-anchor="' + p.anchor + '" dominant-baseline="central" font-size="' + fsLab + '" fill="var(--muted-bright)">' + txt + '</text>';
   g += slab(sl0, t("strThick")) + slab(sl1, t("strThin"));
   if (v.barreShown) g += '<rect class="brr" data-x1="' + xs(v.barreLo) + '" data-x2="' + xs(v.barreHi) + '" data-cy="' + yOf(v.minF) + '" x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
   const fing = gtrFingering(v.frets);
@@ -4695,11 +4700,19 @@ function fitGallery(){
     const frU = Math.min(Math.max(10, 11 / k), 15 / k), mxU = Math.min(Math.max(12, 11 / k), 16 / k);   // 格數最多 15px、× 最多 16px
     svg.querySelectorAll("text.frl").forEach(t => { t.setAttribute("font-size", frU.toFixed(2)); t.setAttribute("x", (VSVG.x0 + VSVG.gap * 5 + rU + 1.5).toFixed(2)); t.setAttribute("y", (+t.dataset.cy + frU * 0.36).toFixed(2)); });
     svg.querySelectorAll("text.mx").forEach(t => { t.setAttribute("font-size", mxU.toFixed(2)); t.setAttribute("y", (+t.dataset.cy + mxU * 0.33).toFixed(2)); });
-    svg.querySelectorAll("text.slab").forEach((tx, i) => {
+    /* 兩側放得下就寫完整的 low / high,放不下(手機)才縮成 L / H。可用空間 = 卡片內距 + 圖置中留下的空白 + 圖裡指板外的邊,
+       卡片是 overflow:hidden,超出就會被切(原本只剩「ow」) */
+    const side = (boxW - VSVG.W * k) / 2;
+    const room = [VSVG.x0 - pad + (parseFloat(cs.paddingLeft) + side - 2) / k,
+                  VSVG.W - VSVG.x0 - VSVG.gap * 5 - pad + (parseFloat(cs.paddingRight) + side - 2) / k];
+    const labs = [...svg.querySelectorAll("text.slab")];
+    labs.forEach((tx, i) => {
       const p = slabPos(fs, pad, i);
       tx.setAttribute("font-size", fs.toFixed(2));
-      tx.setAttribute("x", p.x); tx.setAttribute("y", p.y); tx.setAttribute("transform", p.transform);
+      tx.setAttribute("x", p.x); tx.setAttribute("y", p.y); tx.setAttribute("text-anchor", p.anchor);
+      tx.textContent = t(i ? "strThinFull" : "strThickFull");
     });
+    if (labs.some((tx, i) => tx.getComputedTextLength() > room[i])) labs.forEach((tx, i) => { tx.textContent = t(i ? "strThin" : "strThick"); });
   });
 }
 function galleryLabel(v, rp){
@@ -4891,7 +4904,7 @@ function renderPractice(){
 /* 釘在鍵盤下的那一行:名稱 + 組成音,固定一行高度 */
 function renderSummary(){
   const el = $("kbSummary");
-  let name = "", zh = "", tones = [];  // tones:[{text, midi}],每個音名自己是一顆按鈕
+  let name = "", zh = "", tones = [], stack = null;  // stack:音階名有「A / B」時分兩行排  // tones:[{text, midi}],每個音名自己是一顆按鈕
   if (STATE.tab === "find") {
     const an = findAnalysis();
     const seen = new Set();
@@ -4907,6 +4920,7 @@ function renderSummary(){
     const isChord = STATE.tab === "chord";
     const def = isChord ? chordById(STATE.chordId) : scaleById(STATE.scaleId);
     name = isChord ? chordTitle(def) : rootName() + " " + summaryScaleName(def);
+    if (!isChord) { const sn = summaryScaleName(def), i = sn.indexOf(" / "); if (i > 0) stack = [rootName(), sn.slice(0, i), "(" + sn.slice(i + 3) + ")"]; }
     zh = isChord ? localName(def) : subName(def);
     // 和弦用 displayNotes:斜線和弦的低音排在最前面(C/B → B C E G)
     // 吉他和弦:點音名發出「這個指法裡那個音」(在哪條弦上就撥哪條),不是另一個八度的音
@@ -4956,7 +4970,17 @@ function renderSummary(){
     '<button class="kb-gear" id="kbGear" aria-label="' + t("kbGearLabel") + '" title="' + t("kbGearTitle") + '">' +
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15a3 3 0 100-6 3 3 0 000 6z"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>' +
     '</button>';
-  el.querySelector("b").textContent = name;
+  /* Aeolian / Natural Minor 這種兩個名字的音階,一行塞不下(手機上被截成 Aeolian / Nat…):
+     名字疊成兩行小字、根音放大到跟兩行一樣高,整列高度不變 */
+  const bEl = el.querySelector("b");
+  if (stack) {
+    bEl.className = "stk";
+    bEl.innerHTML = '<span class="rt"></span><span class="nm"><span></span><span></span></span>';
+    bEl.querySelector(".rt").textContent = stack[0];
+    const ln = bEl.querySelectorAll(".nm span");
+    ln[0].textContent = stack[1]; ln[1].textContent = stack[2];
+    bEl.title = name;
+  } else bEl.textContent = name;
   if (zh) el.querySelector(".zh").textContent = zh;
   /* 摘要列整條點下去是「重播整個和弦」,但裡面的音名看起來就是個別的音:
      點 Cmaj7 的 B 卻四個音一起響,使用者會以為壞了(回報過)。所以每個音名各自攔下點擊、只播那一個音 */
