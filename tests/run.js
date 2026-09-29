@@ -515,9 +515,9 @@ async function openPage(browser, opts = {}){
     let box = await q.locator("#keyboardCanvas").boundingBox();
     const g = await q.evaluate(() => { const cv = $("keyboardCanvas"); return { ww: cv._cssW / KB_WHITE_KEYS.length, h: cv._cssH, idx: KB_WHITE_IDX }; });
     const tapWhite = (m, fx, fy) => q.mouse.click(box.x + (g.idx[m] + fx) * g.ww, box.y + g.h * fy);
-    await tapWhite(71, 0.5, 0.85); await expect("鋼琴 Cmaj7 點 B", "s71");
-    await tapWhite(62, 0.5, 0.85); await expect("鋼琴 Cmaj7 點 D(非和弦音)", "");
-    await tapWhite(64, 0.05, 0.3); await expect("鋼琴點 E 左上緣(黑鍵蓋住)", "s64");
+    await tapWhite(71, 0.5, 0.85); await expect("鋼琴 Cmaj7 點 B(整個和弦一起彈)", "n60,64,67,71");
+    await tapWhite(62, 0.5, 0.85); await expect("鋼琴 Cmaj7 點 D(非和弦音,也是整個和弦)", "n60,64,67,71");
+    await tapWhite(64, 0.05, 0.3); await expect("鋼琴點 E 左上緣(黑鍵蓋住,也是整個和弦)", "n60,64,67,71");
     await q.locator("#kbSummary .tn", { hasText: "B" }).click(); await expect("摘要列點 B", "s71");
     await q.locator("#kbSummary b").click(); await expect("摘要列點和弦名稱", "n60,64,67,71");
     // 根音卡片沒有 ♮:♭ ♯ 是開關,按字母回到本位音
@@ -533,6 +533,9 @@ async function openPage(browser, opts = {}){
     await q.evaluate(() => { STATE.letter = 0; STATE.acc = 0; STATE.chordId = "maj"; STATE.bassIv = null; render(); });
     const title = () => q.evaluate(() => chordTitle(chordById(STATE.chordId)));
     const L = x => q.locator("#letterRow .key-btn", { hasText: new RegExp("^" + x + "$") });
+    await take(); // 前面換根音也會發聲(和弦分頁換根音 = 彈新和弦),先清掉
+    await L("D").click(); await expect("和弦分頁 C 換成 D 的瞬間彈 D 大三和弦", "n62,66,69");
+    await L("C").click(); await take();
     await q.click("#rootSlash"); await L("E").click();
     total++; if ((await title()) !== "C/E") fails.push("根音卡片 / + E: " + await title());
     total++; if ((await take()) !== "n64,67,72") fails.push("選好低音要彈 C/E 的轉位");

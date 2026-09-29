@@ -3362,20 +3362,22 @@ function rootSlashState(){
   const sl = STATE.slash;
   return sl && STATE.tab === "chord" && sl.for === STATE.chordId ? sl : null;
 }
+/* 和弦分頁換根音(C → D、加升降記號)的瞬間就發出新和弦的聲音,跟點和弦名稱一樣 */
+function playAfterRootChange(){ if (STATE.tab === "chord") playCurrent(); }
 function rootLetter(i){
   const sl = rootSlashState();
   // 「/」之後的第一個字母是低音;選好之後再按字母就是換根音(離開斜線模式)
   if (sl && sl.letter < 0) { STATE.slash = Object.assign({}, sl, { letter: i, acc: 0 }); rootSetBass(); }
   // 換根音 = 換一個和弦,低音回到原位。原本低音「跟著根音走」(C/E 按 G 變 G/B),
   // 跟用 / 自己打低音互相矛盾:想從 C/E 換到 G 卻得到 G/B(使用者回報切換變不方便)
-  else { STATE.slash = null; STATE.letter = i; STATE.acc = 0; STATE.bassIv = null; render(); }
+  else { STATE.slash = null; STATE.letter = i; STATE.acc = 0; STATE.bassIv = null; render(); playAfterRootChange(); }
 }
 function rootAcc(v){
   const sl = rootSlashState();
   if (sl) {
     if (sl.letter < 0) return;
     STATE.slash = Object.assign({}, sl, { acc: sl.acc === v ? 0 : v }); rootSetBass();
-  } else { STATE.acc = STATE.acc === v ? 0 : v; STATE.bassIv = null; render(); }
+  } else { STATE.acc = STATE.acc === v ? 0 : v; STATE.bassIv = null; render(); playAfterRootChange(); }
 }
 function rootSlash(){
   const sl = rootSlashState();
@@ -5004,6 +5006,7 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
   const cv = $("keyboardCanvas");
   const rect = cv.getBoundingClientRect();
   if (STATE.tab === "scale") return;   // 音階分頁(鋼琴與吉他):整個方框都是「播上行音階」,交給 .kb-wrap 的處理
+  if (STATE.tab === "chord" && STATE.inst === "piano") return;   // 和弦分頁(鋼琴):整個方框都是「整個和弦一起彈」,交給 .kb-wrap 的處理
   if (STATE.inst === "guitar") {
     const hit = fretAt(ev.clientX - rect.left, ev.clientY - rect.top);
     if (!hit) return;
@@ -5045,6 +5048,11 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
 });
 
 document.querySelector(".kb-wrap").addEventListener("pointerdown", ev => {
+  // 和弦分頁(鋼琴)點鍵盤任何地方 = 把整個和弦一起彈出來;吉他的和弦圖各有自己的點擊
+  if (STATE.tab === "chord" && STATE.inst === "piano") {
+    if (!ev.target.closest(".kb-summary, .kb-popover")) playCurrent();
+    return;
+  }
   if (STATE.tab !== "scale") return;
   // 摘要列(整條重播、音名單音)、齒輪與設定面板照原本的功能
   if (ev.target.closest(".kb-summary, .kb-popover")) return;
