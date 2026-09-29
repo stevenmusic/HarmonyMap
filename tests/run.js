@@ -539,6 +539,28 @@ async function openPage(browser, opts = {}){
     // Dmaj7:只點 1~3 弦的 2 格,4 弦空弦要一起算(xx0222),不能變成 F♯m/A
     total++; { const r = await q.evaluate(() => { const o = STATE.findFrets; STATE.findFrets = [null, null, null, 2, 2, 2]; syncFindFromFrets(); const an = findAnalysis(); const nm = findChordName(an.results[0].rootPc, an.results[0].chord, an.bassPc, spellPrefFor(an.results[0].rootPc, an.results[0].chord)); STATE.findFrets = o; return nm; });
       if (r !== "Dmaj7") fails.push("吉他反查 xxx222 應該是 Dmaj7: " + r); }
+    // 移調夾:夾第 2 格彈 D = 用 C 的指型、音高高兩個半音;辨識時按 C 的格子得到 D;音階把位的音都在音階裡
+    total++; { const r = await q.evaluate(() => {
+      const keep = { tab: STATE.tab, inst: STATE.inst, letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, bassIv: STATE.bassIv, capo: STATE.capo, scaleId: STATE.scaleId };
+      const bad = [];
+      Object.assign(STATE, { inst: "guitar", tab: "chord", letter: 0, acc: 0, chordId: "maj", bassIv: null, capo: 0 }); render();
+      const c0 = currentVoicing(), cm = voicingMidis(c0);
+      Object.assign(STATE, { letter: 1, capo: 2 }); render();
+      const d2 = currentVoicing(), dm = voicingMidis(d2);
+      if (d2.frets.join() !== c0.frets.join()) bad.push("D 夾 2 的指型 " + d2.frets + " ≠ C " + c0.frets);
+      if (dm.join() !== cm.map(m => m + 2).join()) bad.push("音高沒有加 2: " + dm);
+      if (!/2/.test((document.querySelector("#kbSummary .capo-tag") || {}).textContent || "")) bad.push("摘要列沒有移調夾標示");
+      STATE.tab = "find"; STATE.findFrets = [null, 3, 2, 0, 1, 0]; syncFindFromFrets(); render();
+      const an = findAnalysis(), x = an.results[0], nm = x ? findChordName(x.rootPc, x.chord, an.bassPc, spellPrefFor(x.rootPc, x.chord)) : "?";
+      if (nm !== "D") bad.push("夾 2 辨識 x32010 → " + nm);
+      STATE.findFrets = [null, null, null, null, null, null]; STATE.findSel = new Set();
+      Object.assign(STATE, { tab: "scale", scaleId: "ionian", letter: 1, acc: 0, scalePos: 0 }); render();
+      const set = new Set(currentNotes().map(n => pcOf(n.midi)));
+      for (const p of scalePositions()) for (const n of p.notes) if (!set.has(pcOf(n.midi)) || n.midi !== gm(n.s, n.f)) { bad.push("把位的音不對: " + JSON.stringify(n)); break; }
+      Object.assign(STATE, keep); render();
+      return bad;
+    });
+      if (r.length) fails.push("移調夾: " + r.join(" | ")); }
     // 辨識結果可以點:跳到那個和弦;下面列出包含這些音的音階,點了跳到音階分頁
     total++; { const r = await q.evaluate(() => {
       const keep = { tab: STATE.tab, inst: STATE.inst, letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, scaleId: STATE.scaleId, bassIv: STATE.bassIv, bassFor: STATE.bassFor };

@@ -598,6 +598,8 @@ html[data-lang="en"] .chip i{white-space:normal}
   background:var(--surface-glass);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
   border:1px solid var(--gold);border-radius:var(--radius-md);
   padding:6px 10px;box-shadow:var(--shadow-md);
+  /* 吉他多了移調夾那一列,320×568 的鍵盤區放不下:面板自己捲動,不要被 .kb-wrap 切掉 */
+  max-height:calc(100% - 16px);overflow-y:auto;overscroll-behavior:contain;
 }
 .kb-popover[hidden]{display:none}
 #findDesc{display:grid}
@@ -641,6 +643,7 @@ html[data-lang="en"] .chip i{white-space:normal}
 .kb-summary.has-pos .kb-gear{margin-left:-2px}
 .kb-summary.has-pos .tones{flex-shrink:0;letter-spacing:.02em}   /* 七個音要完整顯示:名稱讓,音名不讓 */
 .kb-summary .nmrow{display:contents}
+.kb-summary .capo-tag{display:inline-block;margin-right:6px;vertical-align:1px;letter-spacing:0;font-size:var(--fs-2xs);color:var(--teal);border:1px solid var(--teal);border-radius:var(--radius-pill);padding:1px 7px;line-height:1.4}
 /* 手機直向:一行塞不下「名稱 + 副標 + 七個音名 + ‹ › + 齒輪」,一律變成省略號(使用者要求全部完整顯示)。
    改成固定兩列:上列名稱(+ 副標,放不下就整個不顯示、不寫半截)、下列音名,‹ › 與齒輪在右邊跨兩列。
    列高固定(不隨內容變),所有分頁、兩種樂器都用同一個版型,切換時照樣不移位 */
@@ -902,6 +905,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
           <option value="nylon" data-i18n="gtrToneNylon">古典吉他(尼龍弦)</option>
           <option value="electric" data-i18n="gtrToneElectric">電吉他(清音)</option>
         </select></label>
+        <label id="capoRow"><span data-i18n="capoLabel">移調夾</span><select class="mini" id="capoSel"></select></label>
       </div>
     </div>
 
@@ -1095,7 +1099,7 @@ const I18N = {
     loadingPiano: "載入鋼琴音色中…", pianoLoadFailed: "音色載入失敗,使用合成音色",
     iosMuteHint: "聽不到聲音?請關閉 iPhone 側邊的靜音開關",
     loadingGuitar: "載入吉他音色中…", guitarLoadFailed: "吉他音色載入失敗,改用鋼琴音色",
-    gtrToneLabel: "吉他音色", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
+    gtrToneLabel: "吉他音色", capoLabel: "移調夾", capoNone: "不夾", capoFret: "夾第 {n} 格", capoTag: "夾 {n}", gtrToneAcoustic: "民謠吉他(鋼弦)", gtrToneNylon: "古典吉他(尼龍弦)", gtrToneElectric: "電吉他(清音)"
   },
   en: {
     pageTitle: "HarmonyMap — Chord & Scale Map",
@@ -1190,7 +1194,7 @@ const I18N = {
     loadingPiano: "Loading piano samples…", pianoLoadFailed: "Sample load failed, using synth fallback",
     iosMuteHint: "No sound? Turn off the silent switch on the side of your iPhone",
     loadingGuitar: "Loading guitar samples…", guitarLoadFailed: "Guitar samples failed to load, using piano",
-    gtrToneLabel: "Guitar tone", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
+    gtrToneLabel: "Guitar tone", capoLabel: "Capo", capoNone: "None", capoFret: "Fret {n}", capoTag: "Capo {n}", gtrToneAcoustic: "Acoustic (steel)", gtrToneNylon: "Classical (nylon)", gtrToneElectric: "Electric (clean)"
   }
 };
 /* t(key, vars):讀目前語言的字典,缺字退回中文、再退回 key 本身。
@@ -2018,6 +2022,12 @@ function syncStickyMetrics(){
        上面照抄 ScrollScore 的鍵盤程式一行都沒動,吉他是另外一組函式
    ══════════════════════════════════════════════════════════════ */
 const GTR_OPEN = [40, 45, 50, 55, 59, 64]; // 標準調音,索引 0 = 6 弦(低音 E2)… 5 = 1 弦(高音 E4)
+/* 移調夾:夾在第 k 格 = 移調夾就是新的上弦枕,格數從移調夾算起(吉他譜的慣例)。
+   指法搜尋、參考指法表、背景 Worker 都照標準調音不動:聽起來是 D、夾第 2 格,要找的就是 C 的指法(shapeRp);
+   只有「實際發出的音高」與「這個音是不是根音」要加上 k(gm)。鋼琴不受影響 */
+const capoK = () => STATE.inst === "guitar" ? (STATE.capo || 0) : 0;
+const gm = (s, f) => GTR_OPEN[s] + f + capoK();          // 第 s 弦、(從移調夾算起)第 f 格實際的音高
+const shapeRp = pc => pcOf(pc - capoK());                 // 聽起來是 pc 的和弦,要用哪個和弦的指型
 const GTR_FRETS = 15;    // 指法搜尋最高到第幾格
 const GTR_MAX_SPAN = 3;  // 按弦的最低格與最高格最多差 3 格(四根手指各管一格)
 const pcOf = m => ((m % 12) + 12) % 12;
@@ -2466,12 +2476,12 @@ function chordTitle(def){
 function voicingLabel(v){
   const hasOpen = v.frets.some(f => f === 0);
   const low = v.frets.findIndex(f => f >= 0);
-  const rootLow = low >= 0 && pcOf(GTR_OPEN[low] + v.frets[low]) === rootPc();
+  const rootLow = low >= 0 && pcOf(gm(low, v.frets[low])) === rootPc();
   if (hasOpen && v.minF <= 4) return t("vOpen");
   if (!hasOpen && rootLow && low === 0) return t("vClosed6", { n: v.minF });
   if (!hasOpen && rootLow && low === 1) return t("vClosed5", { n: v.minF });
   let s = v.barreShown ? t("vBarre", { n: v.minF }) : t("vPos", { n: Math.max(1, v.minF) });
-  const rs = v.frets.findIndex((f, i) => f >= 0 && pcOf(GTR_OPEN[i] + f) === rootPc());
+  const rs = v.frets.findIndex((f, i) => f >= 0 && pcOf(gm(i, f)) === rootPc());
   if (rs >= 0) s += " · " + t("vRootOn", { n: 6 - rs });
   return s;
 }
@@ -2508,7 +2518,7 @@ const idleCall = window.requestIdleCallback ? cb => requestIdleCallback(cb) : cb
 function scheduleVoicingWarm(){
   if (STATE.tab !== "chord") { warmQueue = []; return; }
   const pads = PRACTICE.open ? PRACTICE.pad : { letter: STATE.letter, acc: STATE.acc };
-  const rp = ((LETTER_PC[pads.letter] + pads.acc) % 12 + 12) % 12;
+  const rp = shapeRp(((LETTER_PC[pads.letter] + pads.acc) % 12 + 12) % 12);   // 夾了移調夾就先算指型那個和弦
   const quick = QUICK_CHORDS.map(q => chordById(q[0])).filter(Boolean);
   // 鋼琴模式只先算快速鍵那幾個:切到吉他的第一下就不用等
   const list = (STATE.inst === "guitar" ? quick.concat(CHORDS.filter(d => !quick.includes(d))) : quick)
@@ -2526,7 +2536,7 @@ function warmStep(){
 startVoicingWorker();
 function currentVoicingSet(){
   const b = bassInfo();
-  return chordVoicingsFor(rootPc(), chordById(STATE.chordId), b ? b.pc : null);
+  return chordVoicingsFor(shapeRp(rootPc()), chordById(STATE.chordId), b ? shapeRp(b.pc) : null);
 }
 /* 目前顯示的指法。換和弦、換根音或換低音時回到「最好彈」的那一個 */
 function currentVoicing(){
@@ -2534,13 +2544,13 @@ function currentVoicing(){
   const def = chordById(STATE.chordId);
   const b = bassInfo();
   const vs = currentVoicingSet();
-  const key = rootPc() + "|" + def.id + "|" + (b ? b.pc : "");
+  const key = rootPc() + "|" + def.id + "|" + (b ? b.pc : "") + "|" + capoK();
   if (STATE.vKey !== key) { STATE.vKey = key; STATE.vIdx = vs.best; }
   return vs.list[STATE.vIdx] || null;
 }
 function voicingMidis(v){
   const out = [];
-  v.frets.forEach((f, s) => { if (f >= 0) out.push(GTR_OPEN[s] + f); });
+  v.frets.forEach((f, s) => { if (f >= 0) out.push(gm(s, f)); });
   return out;
 }
 /* 沒點的弦怎麼算:比「最低那條有點的弦」更高音的弦 = 空弦(照真實彈法,沒按的弦就是空弦音在響,
@@ -2553,7 +2563,7 @@ function gtrFindFrets(){
      連 4 弦空弦一起彈是 Dmaj7(xx0222)。照吉他的習慣,兩種讀法都行時偏向「以根音為低音」的和弦——
      底下多算一、兩條空弦能讓低音就是根音的話就多算;本來就是根音位置(C = x32010)就不動 */
   const rootPos = fr => {
-    const sel = fr.map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null).sort((x, y) => x - y);
+    const sel = fr.map((f, s) => f >= 0 ? gm(s, f) : null).filter(m => m != null).sort((x, y) => x - y);
     const pcs = [...new Set(sel.map(pcOf))];
     return pcs.length >= 3 && matchChords(pcOf(sel[0]), pcs).length > 0;
   };
@@ -2562,10 +2572,10 @@ function gtrFindFrets(){
   /* sus 和弦的音是對稱的:只點 Dsus2 的按弦(A D E)本身就是 Asus4 的根音位置,上面那條規則不會再往下找。
      底下的空弦如果只是「重複和弦裡已經有的音」、而且算進去之後低音變成根音,也算進去(Dsus2 = xx0230) */
   if (low > 0 && rootPos(base)) {
-    const pcsOf = fr => new Set(fr.map((f, s) => f >= 0 ? pcOf(GTR_OPEN[s] + f) : -1).filter(x => x >= 0));
+    const pcsOf = fr => new Set(fr.map((f, s) => f >= 0 ? pcOf(gm(s, f)) : -1).filter(x => x >= 0));
     // 換成的讀法不能是冷門和弦:x3x453 多算 6 弦空弦 E 會變成 Em♭6(程度 1),原本的 Cmaj7(程度 3)要留著
     const lvOf = fr => {
-      const sel = fr.map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null).sort((x, y) => x - y);
+      const sel = fr.map((f, s) => f >= 0 ? gm(s, f) : null).filter(m => m != null).sort((x, y) => x - y);
       return Math.max(0, ...matchChords(pcOf(sel[0]), [...new Set(sel.map(pcOf))]).map(c => c.lv || 0));
     };
     const have = pcsOf(base), baseLv = lvOf(base);
@@ -2603,17 +2613,17 @@ function scalePositions(){
   const out = [];
   pcs.forEach((pc, k) => {
     if (!bset.has(pc)) return;   // 經過音本身不當把位的起點(藍調還是 5 個 box)
-    let f0 = pcOf(pc - GTR_OPEN[0]);          // 6 弦上 0~11 格
-    let m = GTR_OPEN[0] + f0, pat = [];
+    let f0 = pcOf(pc - gm(0, 0));          // 6 弦上 0~11 格(夾了移調夾就從移調夾算)
+    let m = gm(0, f0), pat = [];
     for (let s = 0; s < 6; s++) for (let i = 0; i < per; i++) {
       if (s || i) m = nextUp(m);
-      pat.push({ s, f: m - GTR_OPEN[s], midi: m });
+      pat.push({ s, f: m - gm(s, 0), midi: m });
     }
     if (pat.some(x => x.f < 0)) pat = pat.map(x => ({ s: x.s, f: x.f + 12, midi: x.midi + 12 }));
     let lo = Math.min(...pat.map(x => x.f)), hi = Math.max(...pat.map(x => x.f));
     if (n < 7) {   // 五聲、六聲:範圍內其他的音階音也算(藍調的 ♭5 夾在 box 裡;lo~hi 以 box 為準)
       for (let s = 0; s < 6; s++) for (let f = lo; f <= hi; f++)
-        if (set.has(pcOf(GTR_OPEN[s] + f)) && !pat.some(x => x.s === s && x.f === f)) pat.push({ s, f, midi: GTR_OPEN[s] + f });
+        if (set.has(pcOf(gm(s, f))) && !pat.some(x => x.s === s && x.f === f)) pat.push({ s, f, midi: gm(s, f) });
     }
     out.push({ k, start: f0, notes: pat, lo, hi });
   });
@@ -2635,7 +2645,7 @@ function guitarView(){
     for (const p of an.pcs) info.set(p, { name: an.nameByPc.get(p), tok: an.tokByPc.get(p), root: p === an.bassPc });
     const ff = gtrFindFrets();
     gtrMarkers(ff).forEach((mk, s) => {
-      const midi = GTR_OPEN[s] + ff[s], x = info.get(pcOf(midi));
+      const midi = gm(s, ff[s]), x = info.get(pcOf(midi));
       if (mk === "fretted") dots.push({ s, f: ff[s], midi, root: x.root, text: lab(x) });
       else markers[s] = mk === "open" ? { type: "open", midi, root: x.root, text: lab(x) } : { type: "mute", faint: STATE.findFrets[s] !== -1 };   // 自己點成 × 的畫實心,自動判斷的畫淡的
     });
@@ -2650,7 +2660,7 @@ function guitarView(){
     // 把位在第 12 格以上時,指板往右平移(永遠畫 12 格),不把整個指板拉長到 17~19 格、每一格變很窄
     const first = pos && pos.hi > frets ? pos.hi - frets : 0;
     for (let s = 0; s < 6; s++) for (let f = first ? first + 1 : 0; f <= first + frets; f++) {
-      const midi = GTR_OPEN[s] + f, x = info.get(pcOf(midi));
+      const midi = gm(s, f), x = info.get(pcOf(midi));
       if (!x) continue;
       if (pos && !inPos.has(s + ":" + f)) { if (f > 0) ghosts.push({ s, f, root: x.root }); continue; }
       // 音階沒有「不彈」這回事:空弦不在音階裡就什麼都不標,在的話畫成 ○
@@ -2665,7 +2675,7 @@ function guitarView(){
   if (!v) return { frets, dots, ghosts, markers: markers.map(() => ({ type: "mute" })) };
   frets = Math.min(GTR_FRETS, Math.max(12, Math.max(...v.frets) + 1));
   gtrMarkers(v.frets).forEach((mk, s) => {
-    const f = v.frets[s], midi = GTR_OPEN[s] + f;
+    const f = v.frets[s], midi = gm(s, f);
     if (mk === "mute") { markers[s] = { type: "mute" }; return; }
     const x = info.get(pcOf(midi));
     if (mk === "open") markers[s] = { type: "open", midi, root: x.root, text: lab(x) };
@@ -2676,7 +2686,7 @@ function guitarView(){
   // 同一個和弦在指板上其他位置的組成音淡淡畫出來,看得到「換把位時手要往哪裡去」
   for (let s = 0; s < 6; s++) for (let f = 1; f <= frets; f++) {
     if (f === v.frets[s]) continue;
-    const pc = pcOf(GTR_OPEN[s] + f);
+    const pc = pcOf(gm(s, f));
     const x = info.get(pc);
     if (x && !(b && !b.chordTone && pc === b.pc)) ghosts.push({ s, f, root: x.root });
   }
@@ -2758,7 +2768,7 @@ function drawFretboard(ctx, w, h, gv){
       ctx.fill();
       /* 光暈:振動那一段再描一次、帶 shadowBlur,顏色跟這個音的角色一致
          (根音金色、其他組成音青色,跟指板上的音點同一套),隨振動一起淡出 */
-      const isRoot = STATE.tab !== "find" && pcOf(GTR_OPEN[s] + vib.f) === rootPc();
+      const isRoot = STATE.tab !== "find" && pcOf(gm(s, vib.f)) === rootPc();
       const rgb = isRoot ? "242,185,75" : "63,191,174";
       ctx.save();
       ctx.shadowColor = "rgba(" + rgb + "," + (0.9 * decay) + ")";
@@ -3353,11 +3363,14 @@ const STATE = {
   gtrTone: "acoustic", // 吉他音色:acoustic / nylon / electric
   vKey: "", vIdx: 0,   // 吉他:目前是哪個和弦的第幾個指法
   bassIv: null, bassFor: "", // 吉他斜線和弦:低音離根音幾個半音(null = 根音),只對 bassFor 這個和弦有效
-  findFrets: [null, null, null, null, null, null] // 吉他反查:每條弦按第幾格(null = 不彈)
+  findFrets: [null, null, null, null, null, null], // 吉他反查:每條弦按第幾格(null = 不彈)
+  capo: 0              // 吉他移調夾夾在第幾格(0 = 不夾)
 };
 const INST_KEY = "harmonymap.inst";
-const GTR_TONE_KEY = "harmonymap.gtrTone";
+const GTR_TONE_KEY = "harmonymap.gtrTone", CAPO_KEY = "harmonymap.capo";
 try {
+  const cp = parseInt(localStorage.getItem(CAPO_KEY), 10);
+  if (cp >= 0 && cp <= 7) STATE.capo = cp;
   if (localStorage.getItem(INST_KEY) === "guitar") STATE.inst = "guitar";
   const tone = localStorage.getItem(GTR_TONE_KEY);
   if (tone === "acoustic" || tone === "nylon" || tone === "electric") STATE.gtrTone = tone;
@@ -4417,6 +4430,10 @@ function render(){
   // 起始八度只對鋼琴有意義(吉他的音高由指法決定)。label 是 display:flex,hidden 屬性蓋不過,直接改 style
   $("octaveSel").closest("label").style.display = gtr ? "none" : "";
   $("gtrToneRow").style.display = gtr ? "" : "none";
+  $("capoRow").style.display = gtr ? "" : "none";
+  { const cs = $("capoSel"), built = LANG;
+    if (cs._built !== built) { cs._built = built; cs.innerHTML = [0, 1, 2, 3, 4, 5, 6, 7].map(n => '<option value="' + n + '">' + (n ? t("capoFret", { n }) : t("capoNone")) + '</option>').join(""); }
+    cs.value = String(STATE.capo); }
   // 「C/B」是和弦的斜線寫法,音階搜尋不吃這個,提示要換成音階的例子
   $("typeSearch").placeholder = t(STATE.tab === "scale" ? "searchPlaceholderScale" : "searchPlaceholder");
   $("typeSearch").setAttribute("aria-label", $("typeSearch").placeholder);   // 只有 placeholder 的輸入框,讀屏軟體念不出名稱
@@ -4683,7 +4700,7 @@ function stepDiagram(st){
 }
 function guitarDiagramSVG(){
   const b = bassInfo();
-  const vs = chordVoicingsFor(rootPc(), chordById(STATE.chordId), b ? b.pc : null);
+  const vs = chordVoicingsFor(shapeRp(rootPc()), chordById(STATE.chordId), b ? shapeRp(b.pc) : null);
   const v = vs.list[vs.best];
   return v ? voicingSVG(v, rootPc()) : "";
 }
@@ -4770,7 +4787,7 @@ function voicingSVG(v, rp){
   if (v.barreShown) g += '<rect class="brr" data-x1="' + xs(v.barreLo) + '" data-x2="' + xs(v.barreHi) + '" data-cy="' + yOf(v.minF) + '" x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
   const fing = gtrFingering(v.frets);
   v.frets.forEach((f, s) => {
-    const col = f >= 0 && pcOf(GTR_OPEN[s] + f) === rp ? "var(--gold)" : "var(--teal)";
+    const col = f >= 0 && pcOf(gm(s, f)) === rp ? "var(--gold)" : "var(--teal)";
     if (f < 0) g += '<text class="mx" x="' + xs(s) + '" y="' + (y0 - 9) + '" data-cy="' + (y0 - 13) + '" text-anchor="middle" font-size="12" fill="var(--muted)">×</text>';
     else if (f === 0) g += '<circle cx="' + xs(s) + '" cy="' + (y0 - 13) + '" r="5" fill="none" stroke="' + col + '" stroke-width="1.8"/>';
     else {
@@ -4918,7 +4935,7 @@ function fitGallery(){
 }
 function galleryLabel(v, rp){
   const low = v.frets.findIndex(f => f >= 0), hasOpen = v.frets.some(f => f === 0);
-  const rootLow = low >= 0 && pcOf(GTR_OPEN[low] + v.frets[low]) === rp;
+  const rootLow = low >= 0 && pcOf(gm(low, v.frets[low])) === rp;
   if (hasOpen && v.minF <= 4) return t("gdOpen");
   if (!hasOpen && rootLow && low <= 1) return t(low === 0 ? "gd6" : "gd5", { n: v.minF });
   return t("gdPos", { n: Math.max(1, v.minF) });
@@ -4928,13 +4945,13 @@ function strumGallery(card, v){
   playCurrent();
   const gap = STATE.playMode === "block" ? GTR_STRUM_GAP * 1000 : STATE.playMode === "arp" ? 160 : 300;
   let k = 0;
-  v.frets.forEach((f, s) => { if (f >= 0) setTimeout(() => ringString(card, s, GTR_OPEN[s] + f), gap * k++); });
+  v.frets.forEach((f, s) => { if (f >= 0) setTimeout(() => ringString(card, s, gm(s, f)), gap * k++); });
 }
 /* 撥一條弦:發出那條弦按住的音,圖上那條弦亮一下(顏色照音的角色) */
 function pluckGallery(card, v, s){
   const f = v.frets[s];
   if (f < 0) return;
-  const midi = GTR_OPEN[s] + f;
+  const midi = gm(s, f);
   playSingle(midi);
   ringString(card, s, midi);
 }
@@ -5207,7 +5224,7 @@ function renderSummary(){
     }
     tones = list.map(n => {
       let midi = n.midi, str = -1;
-      if (v) v.frets.forEach((f, si) => { if (str < 0 && f >= 0 && pcOf(GTR_OPEN[si] + f) === pcOf(n.midi)) { str = si; midi = GTR_OPEN[si] + f; } });
+      if (v) v.frets.forEach((f, si) => { if (str < 0 && f >= 0 && pcOf(gm(si, f)) === pcOf(n.midi)) { str = si; midi = gm(si, f); } });
       return { text: STATE.label === "do" ? toSolfege(n.name) : n.name, midi, str };
     });
     // 吉他照指法實際的音由低到高排(C/B 開放 = B E G C),不是照公式排:
@@ -5235,7 +5252,9 @@ function renderSummary(){
     : '';
   el.classList.toggle("has-pos", !!posNav);
   if (posNav) zh = "";   // 吉他音階的摘要列多了 ‹ ›,副標(英文原名)讓出來;清單與結果面板上都還有
-  el.innerHTML = '<span class="nmrow"><b></b>' + (zh ? '<span class="zh"></span>' : '') + '</span><span class="tones"></span>' + nav + posNav +
+  // 夾了移調夾:格數是從移調夾算的,標在音名前面(手機上名稱那一列已經很擠,音名那一列還有空間)
+  const capoTag = capoK() ? '<span class="capo-tag">' + t("capoTag", { n: capoK() }) + '</span>' : '';
+  el.innerHTML = '<span class="nmrow"><b></b>' + (zh ? '<span class="zh"></span>' : '') + '</span><span class="tones">' + capoTag + '</span>' + nav + posNav +
     // 齒輪圖示照抄 ScrollScore 的設定鈕(同一組 24 格線稿、stroke-width 2、圓端點),
     // 兩個工具放在一起看要是同一個產品。原本用 ⚙ 字元,粗細與字型會隨系統跑掉
     '<button class="kb-gear" id="kbGear" aria-label="' + t("kbGearLabel") + '" title="' + t("kbGearTitle") + '">' +
@@ -5263,7 +5282,7 @@ function renderSummary(){
     sp.textContent = tn.text;
     sp.onclick = ev => {
       ev.stopPropagation();
-      if (tn.str >= 0) vibrateString(tn.str, tn.midi - GTR_OPEN[tn.str]);
+      if (tn.str >= 0) vibrateString(tn.str, tn.midi - gm(tn.str, 0));
       playSingle(tn.midi);
     };
     tw.appendChild(sp);
@@ -5319,7 +5338,7 @@ function pluckString(s){
   const v = currentVoicing();
   if (!v || v.frets[s] < 0) return;
   vibrateString(s, v.frets[s]);
-  playSingle(GTR_OPEN[s] + v.frets[s]);
+  playSingle(gm(s, v.frets[s]));
 }
 /* iOS Safari 快速連點指板(辨識模式一直點格子)時,即使有 touch-action:manipulation 也會被當成雙擊放大整頁。
    畫布上的點擊全部走 pointerdown,不靠 click,所以在畫布上擋掉「兩下之間 < 350ms 的 touchend」不影響任何操作 */
@@ -5359,7 +5378,7 @@ $("keyboardCanvas").addEventListener("pointerdown", ev => {
   if (STATE.inst === "guitar") {
     const hit = fretAt(ev.clientX - rect.left, ev.clientY - rect.top);
     if (!hit) return;
-    const midi = GTR_OPEN[hit.s] + hit.f;
+    const midi = gm(hit.s, hit.f);
     if (STATE.tab === "find") {
       // 一條弦同一時間只能發一個音:點同一格是取消,點別格是移過去
       // 琴頸左邊那一欄(第 0 格)三段切換:沒設定(自動)→ ○ 空弦 → × 不彈 → 回到自動。
@@ -5478,7 +5497,7 @@ function guitarScaleUpMidis(){
   return displayNotes().map(n => n.midi).sort((a, b) => a - b);
 }
 function syncFindFromFrets(){
-  STATE.findSel = new Set(gtrFindFrets().map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null));
+  STATE.findSel = new Set(gtrFindFrets().map((f, s) => f >= 0 ? gm(s, f) : null).filter(m => m != null));
 }
 function setInstrument(inst){
   if (STATE.inst === inst) return;
@@ -5491,6 +5510,12 @@ function setInstrument(inst){
   if (inst === "guitar") { STATE.findSel.clear(); if (audioCtx) loadGuitarSamples(STATE.gtrTone); }
   render();
 }
+$("capoSel").addEventListener("change", e => {
+  STATE.capo = +e.target.value || 0;
+  try { localStorage.setItem(CAPO_KEY, String(STATE.capo)); } catch (err) {}
+  if (STATE.tab === "find") syncFindFromFrets();   // 按的格子不變,實際的音高跟著移調夾走
+  render(); if (STATE.tab === "chord") playCurrent();
+});
 $("gtrToneSel").addEventListener("change", e => {
   STATE.gtrTone = e.target.value;
   try { localStorage.setItem(GTR_TONE_KEY, STATE.gtrTone); } catch (err) {}
