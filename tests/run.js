@@ -862,6 +862,23 @@ async function openPage(browser, opts = {}){
       total++; if (prop.key > 56.5) fails.push("鋼琴白鍵 " + Math.round(prop.key) + "px 寬(" + w + "×" + h + ")");
       await q.close();
     }
+    // 轉橫向:iPhone 的 resize 事件比版面還早到,第一次算出來是直向的小鍵盤,捲動後才變大(使用者回報)。
+    // 模擬成「resize 完全沒幫上忙」(在 App 之前攔掉),轉向後大小要跟直接用橫向打開一樣
+    for (const inst of ["Piano", "Guitar"]) {
+      const ref = await openPage(browser, { viewport: { width: 932, height: 430 }, hasTouch: true, isMobile: true });
+      await ref.click("#inst" + inst); await ref.waitForTimeout(100);
+      const want = await ref.evaluate(() => [$("keyboardCanvas"), $("gtrDiagrams")].map(e => Math.round(e.getBoundingClientRect().height)).join("/"));
+      await ref.close();
+      const q = await browser.newPage({ viewport: { width: 430, height: 932 }, hasTouch: true, isMobile: true });
+      await q.route(/^https?:\/\//, r => r.abort());
+      await q.addInitScript(() => { window.addEventListener("resize", e => e.stopImmediatePropagation()); });
+      await q.goto(PAGE);
+      await q.click("#inst" + inst); await q.waitForTimeout(100);
+      await q.setViewportSize({ width: 932, height: 430 }); await q.waitForTimeout(300);
+      const got = await q.evaluate(() => [$("keyboardCanvas"), $("gtrDiagrams")].map(e => Math.round(e.getBoundingClientRect().height)).join("/"));
+      total++; if (got !== want) fails.push("轉橫向後大小不對(" + inst + "):" + got + ",直接橫向打開是 " + want);
+      await q.close();
+    }
     // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
     for (const [w, h] of [[320, 568], [844, 390], [390, 844], [1280, 860]]) for (const inst of ["Piano", "Guitar"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });

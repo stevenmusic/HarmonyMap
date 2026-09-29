@@ -46,6 +46,10 @@ prefers-reduced-motion:reduce
   窄螢幕要把標題改回 `position:static`
 - CSS 同權重的規則要寫在後面才蓋得過去:`.type-scroll` 的手機版覆寫必須放在
   桌機版那條規則之後,寫在版面區塊裡會失效
+- **iPhone 轉向時 resize 事件比版面還早到**:當下量到的是舊方向的版面,轉橫向第一次會算成直向的小鍵盤,
+  要捲動(網址列收起再觸發 resize)才變大(使用者回報)。顯示區大小不能只靠 resize:`ResizeObserver` 盯顯示區寬度與
+  左欄(分頁、根音/辨識卡片),版面真的變完才重算(`refreshIfSizeChanged`,只看寬度/左欄/視窗,顯示區自己變高不算,不會循環);
+  另外 `orientationchange` 與 900px 斷點的 matchMedia change 也會重算。測試把 resize 整個攔掉再轉向
 - 頂欄高度會隨字級與換行改變,鍵盤的 sticky 偏移量用 JS 量出來寫進 `--header-h`,
   不要寫死數字
 - 取樣有 30 個檔案,等按下播放才開始抓的話,第一次播放一定只聽得到合成音色。

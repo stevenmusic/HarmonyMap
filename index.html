@@ -2747,7 +2747,27 @@ function fretAt(px, py){
   return { s, f };
 }
 
-window.addEventListener("resize", () => { syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); syncStickyMetrics(); if (PRACTICE.open) fitStageNames(); });
+function refreshDisplaySize(){ syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); syncStickyMetrics(); if (PRACTICE.open) fitStageNames(); }
+window.addEventListener("resize", refreshDisplaySize);
+/* iPhone 轉橫向時 resize 事件比版面還早到:當下量到的還是直向的版面(不是兩欄、高度上限是螢幕的 22%),
+   鍵盤就被算成小的;要等捲動讓網址列收起、再觸發一次 resize 才變大(使用者回報)。
+   所以不只靠 resize:用 ResizeObserver 盯著「決定顯示區大小的東西」(顯示區寬度、左欄的分頁與卡片),
+   它是在版面真的變完之後才通知。只在寬度/左欄高度/視窗真的變了才重算(顯示區自己的高度變化不算,不會循環) */
+let displaySizeKey = "";
+function refreshIfSizeChanged(){
+  const wrap = document.querySelector(".kb-wrap");
+  if (!wrap) return;
+  const key = [innerWidth, innerHeight, wrap.clientWidth, TWO_COL.matches, twoColumnAvail()].join("|");
+  if (key === displaySizeKey) return;
+  displaySizeKey = key;
+  refreshDisplaySize();
+}
+if (window.ResizeObserver) {
+  const ro = new ResizeObserver(() => requestAnimationFrame(refreshIfSizeChanged));
+  [".kb-wrap", ".topbar .tab-row", "#rootCard", "#findCard"].forEach(sel => { const el = document.querySelector(sel); if (el) ro.observe(el); });
+}
+window.addEventListener("orientationchange", () => { requestAnimationFrame(refreshIfSizeChanged); setTimeout(refreshIfSizeChanged, 350); });
+TWO_COL.addEventListener ? TWO_COL.addEventListener("change", refreshDisplaySize) : TWO_COL.addListener(refreshDisplaySize);
 
 /* ══════════════════════════════════════════════════════════════
    7. 音訊:與 ScrollScore 同一套音源
