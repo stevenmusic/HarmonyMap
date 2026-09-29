@@ -94,3 +94,8 @@
 - 分享連結:網址 # 記著目前這一頁(`writeHash`,每次 render 用 replaceState 更新,不塞上一頁紀錄):
   `chord=Bbmaj7`、`chord=C/E`、`scale=D-dorian`、`tab=find`,再加 `inst=guitar`、`capo=2`、練習時 `prog=G: I V vi IV`。
   打開時與 hashchange 時 `readHash` 套用。升降在網址裡寫 # 與 b,解析沿用 parseChordName / practiceParseCustom
+- 手機橫向(高度 ≤ 420):上半部不釘,顯示區上限不再用「視窗高度 22%」(那是給釘住時留清單空間的),回到 KB_MAX_H;
+  吉他和弦圖從 39×33 變 137×115、指板弦距 11 → 23px。練習的「現在/下一個」圖限 26vh、名稱 24px,開始鈕不用捲就看得到
+- 鍵盤設定面板:標籤固定寬(選單對齊)、最寬 = 鍵盤區 − 齒輪欄;列數多要捲時上下緣有陰影提示還有內容。
+  載入/失敗提示 `pointer-events:none`,不擋底下的點擊;左手吉他時提示移到左邊
+- 吉他辨識還沒點任何格子時不畫 ×(看起來像全部不彈)

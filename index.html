@@ -478,7 +478,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 }
 @media (prefers-reduced-motion: reduce){ .kb-stage.running .pr-now .now{animation:none} }
 .pr-now .dg{display:block;height:auto;margin-top:6px;width:100%;max-width:185px}   /* 185px = 圖裡的字放大 1.4 倍,跟和弦分頁的圖同一個上限 */
-.pr-now .dg.kb{max-width:none}   /* 鋼琴小鍵盤撐滿格子,兩張一樣寬 */
+.pr-now .dg.kb{max-width:none}
+@media (max-height:420px){ .pr-now .dg{max-height:26vh;width:auto;max-width:100%;margin-top:2px} .pr-now b{font-size:24px} .pr-now > div{padding:6px 10px} }   /* 手機橫向:圖不要把開始鈕擠出畫面 */   /* 鋼琴小鍵盤撐滿格子,兩張一樣寬 */
 .pr-beats{display:flex;gap:8px;justify-content:center;margin:0 0 8px}
 .pr-beats i{width:12px;height:12px;border-radius:50%;background:var(--line)}
 .pr-beats i.on{background:var(--teal)}
@@ -611,7 +612,15 @@ html[data-lang="en"] .chip i{white-space:normal}
 .kb-popover label{display:flex;align-items:center;gap:8px;font-size:var(--fs-2xs);color:var(--muted)}
 /* 面板要整個放得進鍵盤區(.kb-wrap 是 overflow:hidden),320×568 的鍵盤區只有 145px:
    三列 × 34px 剛好放得下。選擇器寫兩個 class 才蓋得過觸控裝置的 select.mini{min-height:38px} */
-.kb-popover select.mini{flex:1;min-width:118px;min-height:34px}
+.kb-popover select.mini{flex:1;min-width:96px;min-height:34px}
+.kb-popover label > span{flex:none;width:5.2em}   /* 標籤固定寬,每一列的選單對齊 */
+.kb-popover{max-width:calc(100% - 52px);
+  /* 列數多、要捲動時,上下緣出現陰影提示「還有」(捲到底就消失) */
+  background:linear-gradient(var(--surface-glass) 30%, transparent) top / 100% 24px no-repeat local,
+             linear-gradient(transparent, var(--surface-glass) 70%) bottom / 100% 24px no-repeat local,
+             radial-gradient(farthest-side at 50% 0, rgba(0,0,0,.35), transparent) top / 100% 10px no-repeat scroll,
+             radial-gradient(farthest-side at 50% 100%, rgba(0,0,0,.35), transparent) bottom / 100% 10px no-repeat scroll,
+             var(--surface-glass)}
 /* 手機橫向的鍵盤區只有 130px,放不下三列:改排兩欄 */
 @media (max-height:420px){ .kb-popover:not([hidden]){display:grid;grid-template-columns:auto auto;column-gap:12px} }
 .kb-gear{
@@ -680,7 +689,8 @@ table.dia button.link::after{content:"";position:absolute;inset:-10px -8px}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
 /* 吉他模式左上角是 ○/× 那一欄,載入提示改貼右上角,不要蓋住空弦標記 */
 .kb-wrap.gtr .audio-status{left:auto;right:8px}
-.kb-wrap.gtr.lefty .audio-status{left:8px;right:auto}   /* 左手吉他的 ○/× 欄在右邊 */
+.kb-wrap.gtr.lefty .audio-status{left:8px;right:auto}
+.audio-status{pointer-events:none}   /* 只是提示:手指點下去要穿過它,不能擋住底下的空弦欄或和弦圖 */   /* 左手吉他的 ○/× 欄在右邊 */
 .audio-status{
   position:absolute;top:8px;left:8px;z-index:2;
   /* 絕對定位,換行不會推動版面;iPhone 靜音提示比較長,窄螢幕要能折行而不是被切掉 */
@@ -1937,6 +1947,7 @@ function drawKeyLabels(ctx, x, y, w, h, labelMap){
    ══════════════════════════════════════════════════════════════ */
 /* 兩欄版面時,右邊顯示區可以用的高度 = 左欄高度 − 摘要列 − 外框;不是兩欄(或練習中)就回傳 0 */
 const TWO_COL = window.matchMedia("(min-width:900px)");
+const SHORT_H = window.matchMedia("(max-height:420px)");
 function twoColumnAvail(){
   if (!TWO_COL.matches) return 0;
   try { if (PRACTICE.open && STATE.tab === "chord") return 0; } catch (e) { return 0; }   // 載入初期 PRACTICE 還沒宣告
@@ -1963,7 +1974,9 @@ function resizeKeyboardCanvas(){
      用「視窗高度的 22%」當上限而不是再開一個高度斷點:斷點會在某個高度突然跳一階,
      連續縮放則是一路平滑收斂,而且直向手機與桌機(844/900px 高)算出來仍是原本的 170px 上限,
      外觀完全沒變,只有真的很矮的畫面才會收 */
-  const maxH = Math.min(KB_MAX_H, window.innerHeight * 0.22);
+  /* 手機橫向(高度 ≤ 420):上半部本來就不釘(.topbar position:static,整頁一起捲),22% 的上限沒有意義,
+     只會讓吉他和弦圖縮到 39×33px、弦距 11px 點不準(QA 抓到)。這時上限回到 KB_MAX_H */
+  const maxH = SHORT_H.matches ? KB_MAX_H : Math.min(KB_MAX_H, window.innerHeight * 0.22);
   /* 鋼琴與吉他的顯示區一樣高(使用者要求:切換樂器時下面的根音那一排不能移位)。
      基準是「鋼琴在這個寬度、這個分頁會有的高度」;吉他的指板(音階時連同把位那排按鈕)、
      和弦分頁的三張和弦圖都塞進同一個高度 */
@@ -2668,6 +2681,8 @@ function guitarView(){
     const an = findAnalysis();
     for (const p of an.pcs) info.set(p, { name: an.nameByPc.get(p), tok: an.tokByPc.get(p), root: p === an.bassPc });
     const ff = gtrFindFrets();
+    // 什麼都還沒點:不畫一整排 ×(看起來像「全部不彈」,跟說明寫的「沒點的高音弦自動算空弦」矛盾)
+    if (STATE.findFrets.every(f => f == null)) return { frets, dots, ghosts, markers };
     gtrMarkers(ff).forEach((mk, s) => {
       const midi = gm(s, ff[s]), x = info.get(pcOf(midi));
       if (mk === "fretted") dots.push({ s, f: ff[s], midi, root: x.root, text: lab(x) });
