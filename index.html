@@ -456,6 +456,7 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-head .kb-gear{margin-left:auto}
 .pr-set{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
 .pr-set .pr-bpm{display:inline-flex;align-items:center;gap:2px}
+#prBpmOut{cursor:pointer;user-select:none;-webkit-user-select:none}   /* 連點打拍子設定速度 */
 .pr-set .pr-bpm .kb-gear{margin:0}
 .pr-set output.tr{min-width:0}
 .pr-set output{min-width:4.2em;text-align:center;font-variant-numeric:tabular-nums;color:var(--ivory);font-size:var(--fs-sm)}
@@ -1075,7 +1076,7 @@ const I18N = {
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
-    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
     practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
@@ -1170,7 +1171,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
@@ -4403,7 +4404,7 @@ function render(){
    沒有內建範例進行(使用者要求拿掉,省版面)。
    節拍用 Web Audio 的時鐘排程(提前 0.1 秒排好點擊聲),畫面在那一刻用 setTimeout 跟上
    ══════════════════════════════════════════════════════════════ */
-const PRACTICE = { runId: 0, clicks: [], pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
+const PRACTICE = { runId: 0, clicks: [], countIn: false, taps: [], pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
                    steps: [], step: 0, beat: -1, slash: null, padFresh: false, running: false, timer: 0, nextTime: 0, count: 0, flash: -1 };
 /* 級數輸入(老師的寫法):先寫調「G:」「Bb:」「Am:」,後面的羅馬數字照那個調換成和弦。
    大寫 = 大三、小寫 = 小三,° = 減、ø = 半減、+ = 增,後面可以接記號(V7、ii7、Imaj7、IVsus4);前面可以加 ♭ ♯(♭VII、♯iv°)。
@@ -4442,7 +4443,8 @@ function practiceParseCustom(text){
   return { steps, bad };
 }
 /* 進行存在這台裝置上:目前這一組(重新整理還在)+ 另外存起來的幾組(文字,跟文字框同一種寫法) */
-const PROG_KEY = "harmonymap.progs", PRCUR_KEY = "harmonymap.practice";
+const PROG_KEY = "harmonymap.progs", PRCUR_KEY = "harmonymap.practice", COUNTIN_KEY = "harmonymap.countin";
+try { PRACTICE.countIn = localStorage.getItem(COUNTIN_KEY) === "1"; } catch (e) {}
 function loadSavedProgs(){
   try { const a = JSON.parse(localStorage.getItem(PROG_KEY) || "[]"); return Array.isArray(a) ? a.filter(x => typeof x === "string" && x) : []; }
   catch (e) { return []; }
@@ -4536,7 +4538,7 @@ function practiceStart(){
   if (!PRACTICE.steps.length) return;
   ensureAudio();
   PRACTICE.running = true;
-  PRACTICE.count = 0;
+  PRACTICE.count = PRACTICE.countIn ? -PRACTICE.beats : 0;   // 預備小節:先數一小節的拍子,第一個和弦在下一小節
   PRACTICE.step = 0;
   PRACTICE.nextTime = audioCtx.currentTime + 0.12;
   const run = ++PRACTICE.runId;   // 停了又馬上開始時,上一輪還沒觸發的 setTimeout 認得出自己過期了
@@ -4546,8 +4548,14 @@ function practiceStart(){
     const spb = 60 / PRACTICE.bpm, lag = audioCtx.currentTime - 0.05 - PRACTICE.nextTime;
     if (lag > 0) { const missed = Math.ceil(lag / spb); PRACTICE.count += missed; PRACTICE.nextTime += missed * spb; }
     while (PRACTICE.nextTime < audioCtx.currentTime + 0.1) {
-      const n = PRACTICE.count++, beat = n % PRACTICE.beats, step = Math.floor(n / PRACTICE.beats) % PRACTICE.steps.length;
+      const n = PRACTICE.count++, B = PRACTICE.beats, beat = ((n % B) + B) % B, step = Math.max(0, Math.floor(n / B)) % PRACTICE.steps.length;
       practiceClick(PRACTICE.nextTime, beat === 0);
+      if (n < 0) {   // 預備小節:只有點擊聲和拍點,不彈和弦、不換圖
+        const delay = Math.max(0, (PRACTICE.nextTime - heardTime()) * 1000);
+        setTimeout(() => { if (PRACTICE.running && PRACTICE.runId === run) { PRACTICE.beat = beat; renderPracticeBeat(); } }, delay);
+        PRACTICE.nextTime += 60 / PRACTICE.bpm;
+        continue;
+      }
       // 和弦跟點擊聲排在同一個音訊時鐘的同一刻。原本等畫面的 setTimeout 觸發才彈,
       // 計時器常常晚幾十毫秒、playNotes 又再往後 60ms,和弦總是慢半拍(使用者回報過)
       if (beat === 0 && PRACTICE.accomp) {
@@ -4961,13 +4969,14 @@ function renderPractice(){
       '<select class="mini" id="prBeats" aria-label="' + t("practiceBeats") + '">' + beatOpts + '</select>' +
       '<span class="pr-bpm" role="group" aria-label="' + t("practiceTempo") + '">' +
         '<button class="kb-gear" id="prSlower" aria-label="-5 BPM">' + svg("M5 12h14") + '</button>' +
-        '<output id="prBpmOut">' + P.bpm + ' BPM</output>' +
+        '<output id="prBpmOut" title="' + t("practiceTapTempo") + '">' + P.bpm + ' BPM</output>' +
         '<button class="kb-gear" id="prFaster" aria-label="+5 BPM">' + svg("M12 5v14M5 12h14") + '</button></span>' +
       '<span class="pr-bpm" role="group" aria-label="' + t("practiceTranspose") + '">' +
         '<button class="kb-gear" id="prDown" aria-label="' + t("practiceTranspose") + ' -1"' + (P.steps.length ? "" : " disabled") + '>' + svg("M5 12h14") + '</button>' +
         '<output class="tr">' + t("practiceTranspose") + '</output>' +
         '<button class="kb-gear" id="prUp" aria-label="' + t("practiceTranspose") + ' +1"' + (P.steps.length ? "" : " disabled") + '>' + svg("M12 5v14M5 12h14") + '</button></span>' +
       '<button class="filter-chip" id="prAccomp" aria-pressed="' + P.accomp + '">' + t("practiceAccompShort") + '</button>' +
+      '<button class="filter-chip" id="prCountIn" aria-pressed="' + P.countIn + '" title="' + t("practiceCountInTitle") + '">' + t("practiceCountIn") + '</button>' +
     '</div>';
   // 選單的文字用 textContent 填(存的內容是使用者打的字,不直接拼進 HTML)
   if ($("prSaved")) [...$("prSaved").options].slice(1).forEach((o, i) => { o.textContent = saved[i]; });
@@ -5041,6 +5050,21 @@ function renderPractice(){
   $("prSlower").onclick = () => setBpm(-5);
   $("prFaster").onclick = () => setBpm(5);
   $("prAccomp").onclick = e => { P.accomp = !P.accomp; e.currentTarget.setAttribute("aria-pressed", String(P.accomp)); };
+  $("prCountIn").onclick = e => {
+    P.countIn = !P.countIn; e.currentTarget.setAttribute("aria-pressed", String(P.countIn));
+    try { localStorage.setItem(COUNTIN_KEY, P.countIn ? "1" : "0"); } catch (err) {}
+  };
+  /* 打拍子設定速度:連點 BPM 數字,取最近四下的平均間隔;停超過 2 秒重新算。播放中也能改(排程每一拍都讀 P.bpm) */
+  $("prBpmOut").onpointerdown = e => {
+    e.preventDefault();
+    const now = performance.now(), taps = P.taps = (P.taps || []).filter(x => now - x < 2000).concat(now).slice(-5);
+    if (taps.length < 2) return;
+    const avg = (taps[taps.length - 1] - taps[0]) / (taps.length - 1);
+    P.bpm = Math.max(40, Math.min(200, Math.round(60000 / avg)));
+    $("prBpmOut").textContent = P.bpm + " BPM";
+    $("practiceStage").style.setProperty("--beat", (60 / P.bpm).toFixed(3) + "s");
+    $("prSteps").style.setProperty("--beat", (60 / P.bpm).toFixed(3) + "s");
+  };
   const applyCustom = () => {
     const text = $("prCustom").value.trim();
     const r = practiceParseCustom(text);

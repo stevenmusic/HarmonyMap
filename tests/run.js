@@ -877,6 +877,28 @@ async function openPage(browser, opts = {}){
       ["I V", ""]
     ].map(([txt, want]) => { const r = practiceParseCustom(txt); const got = r.steps.map(stepName).join(" "); return got === want || (want === "" && r.bad.length) ? "" : txt + " → " + got + " ≠ " + want + " bad:" + r.bad.join(","); }).filter(Boolean));
     total++; if (rn.length) fails.push("級數輸入: " + rn.join(" | "));
+    // 預備拍:先數一小節的點擊,第一個和弦落在下一小節的第一拍
+    const ci = await q.evaluate(async () => {
+      practiceStop();
+      PRACTICE.steps = [{ letter: 0, acc: 0, id: "maj", bass: null }, { letter: 4, acc: 0, id: "maj", bass: null }];
+      PRACTICE.bpm = 120; PRACTICE.beats = 4; PRACTICE.countIn = true; PRACTICE.accomp = true;
+      const clicks = [], chords = [], oc = practiceClick, op = playCurrent;
+      practiceClick = t => clicks.push(t); playCurrent = at => chords.push(at);
+      practiceStart(); await new Promise(r => setTimeout(r, 2150));
+      practiceStop(); practiceClick = oc; playCurrent = op; PRACTICE.countIn = false;
+      return { firstChord: chords[0] != null ? +(chords[0] - clicks[0]).toFixed(3) : null, nClicksBefore: clicks.filter(t => chords[0] == null || t < chords[0] - 1e-6).length };
+    });
+    total++; if (ci.firstChord !== 2 || ci.nClicksBefore !== 4) fails.push("預備拍(第一個和弦要在 4 下點擊之後,120 BPM = 2 秒): " + JSON.stringify(ci));
+    // 打拍子設定速度:每 500ms 點一下 → 120 BPM
+    const tap = await q.evaluate(() => {
+      PRACTICE.open = true; STATE.tab = "chord"; render();
+      const out = $("prBpmOut"), t0 = performance.now(), realNow = performance.now.bind(performance);
+      let fake = t0; performance.now = () => fake;
+      for (let i = 0; i < 5; i++) { fake = t0 + i * 500; out.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true })); }
+      performance.now = realNow;
+      const bpm = PRACTICE.bpm; PRACTICE.bpm = 70; PRACTICE.open = false; render(); return bpm;
+    });
+    total++; if (tap !== 120) fails.push("打拍子設定速度: " + tap + " ≠ 120");
     report("換和弦練習", total, fails);
     await q.close();
   }
