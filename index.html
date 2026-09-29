@@ -524,9 +524,11 @@ html[data-lang="en"] .chip i{white-space:normal}
 /* 和弦圖跟著格子縮放,但最多放大到 1.4 倍(185×160px):圖裡的字(×、○、3fr)是 10~12 個單位,
    1.4 倍約 14~17px,跟旁邊介面的字一樣大。原本兩欄版面撐滿高度時放大到 2 倍以上,圖很大、其他字很小,
    比例不對(使用者回報)。格子照樣撐滿(兩欄對齊),圖在格子裡置中 */
-/* 標籤與圖是同一組,一起在格子裡垂直置中(圖那一列最高 160px,格子不夠高時照樣縮) */
-.gtr-dgs .gd{display:grid;grid-template-rows:auto minmax(0,160px);align-content:center;row-gap:2px;min-height:0}
-.gtr-dgs svg{display:block;width:100%;height:100%;max-width:185px;min-height:0;justify-self:center}
+/* 標籤與圖是同一組,一起在格子裡垂直置中。圖的寬高由 fitGallery 用量出來的像素設定:
+   原本靠 grid 裡的百分比高度,iPhone Safari 算得跟 Chrome 不一樣,手機橫向時圖被推到格子最底下(使用者回報) */
+.gtr-dgs .gd{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2px;min-height:0;overflow:hidden}
+.gtr-dgs .gd-lab{align-self:stretch}
+.gtr-dgs svg{display:block;flex:none}
 /* 撥弦時那條弦亮一下(根音金色、其他青色),0.9 秒淡掉;系統減少動態時 animation 會被縮成一瞬間 */
 .gtr-dgs line.str.ring{animation:strRing .9s ease-out}
 .gtr-dgs line.str.ring.root{animation-name:strRingRoot}
@@ -1868,6 +1870,7 @@ function resizeKeyboardCanvas(){
     const disp = avail || H;
     cv.style.height = Math.max(60, avail ? Math.min(disp - rowH, w * 0.42) : H - rowH) + "px";
     $("gtrDiagrams").style.height = disp + "px";
+    fitGallery();
   } else {
     // 鋼琴白鍵實際的長寬比約 6.4(寬 23.5mm、長 150mm);照抄的 WHITE_KEY_ASPECT 是 5.2,兩欄有空間時放寬到真實比例
     /* 白鍵最寬 56px:寬螢幕上一個八度只有 8 個白鍵,撐滿 1000px 會變成一塊塊方磚(1920 寬的音階分頁)。
@@ -4493,6 +4496,23 @@ function renderGuitarGallery(){
     });
     d.addEventListener("pointercancel", () => { last = null; });
     el.appendChild(d);
+  });
+  fitGallery();
+}
+/* 和弦圖的像素大小:寬最多 185px、高最多 160px(放大最多約 1.4 倍,圖裡的字才不會比介面大),
+   同時放得進格子(扣掉標籤),維持圖本身的比例。跟原本 CSS 算出來的大小一樣,只是不再靠瀏覽器算百分比 */
+function fitGallery(){
+  const el = $("gtrDiagrams");
+  if (!el || el.hidden) return;
+  el.querySelectorAll(".gd").forEach(c => {
+    const cs = getComputedStyle(c), lab = c.querySelector(".gd-lab"), svg = c.querySelector("svg");
+    if (!svg) return;
+    const boxW = c.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const boxH = c.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom) - (lab ? lab.offsetHeight : 0) - 2;
+    if (boxW <= 0 || boxH <= 0) return;
+    const k = Math.min(Math.min(boxW, 185) / VSVG.W, Math.min(boxH, 160) / VSVG.H);
+    svg.style.width = Math.floor(VSVG.W * k) + "px";
+    svg.style.height = Math.floor(VSVG.H * k) + "px";
   });
 }
 function galleryLabel(v, rp){
