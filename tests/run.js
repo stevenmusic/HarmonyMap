@@ -935,6 +935,19 @@ async function openPage(browser, opts = {}){
       const after = PRACTICE.bpm; PRACTICE.ramp = ""; PRACTICE.bpm = 70; return { during, after };
     });
     total++; if (!(rampR.during >= 192 && rampR.during <= 196) || rampR.after !== 190) fails.push("逐漸加速: " + JSON.stringify(rampR));
+    // 一小節兩個和弦:C*2 G*2 Am → 和弦落在第 0、2、4 拍;文字存回去時保留 *2
+    const dur = await q.evaluate(async () => {
+      practiceStop();
+      const r = practiceParseCustom("C*2 G*2 Am");
+      PRACTICE.steps = r.steps; PRACTICE.bpm = 200; PRACTICE.beats = 4; PRACTICE.countIn = false; PRACTICE.accomp = true;
+      const clicks = [], chords = [], oc = practiceClick, op = playCurrent;
+      practiceClick = t => clicks.push(t); playCurrent = at => chords.push(at);
+      practiceStart(); await new Promise(res => setTimeout(res, 2600));
+      practiceStop(); practiceClick = oc; playCurrent = op;
+      const beatOf = at => Math.round((at - clicks[0]) / 0.3);
+      return { at: chords.slice(0, 4).map(beatOf).join(","), text: r.steps.map(stepText).join(" ") };
+    });
+    total++; if (dur.at !== "0,2,4,8" || dur.text !== "C*2 G*2 Am") fails.push("半小節和弦: " + JSON.stringify(dur));
     // 打拍子設定速度:每 500ms 點一下 → 120 BPM
     const tap = await q.evaluate(() => {
       PRACTICE.open = true; STATE.tab = "chord"; render();
