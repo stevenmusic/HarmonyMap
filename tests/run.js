@@ -481,8 +481,9 @@ async function openPage(browser, opts = {}){
           const g = $("keyboardCanvas").getBoundingClientRect();
           for (const [fx, fy] of [[0.5, 0.5], [0.1, 0.2], [0.9, 0.8]]) {
             calls.length = 0; fire($("keyboardCanvas"), g.left + g.width * fx, g.top + g.height * fy); total++;
-            const c = calls[0], m = c && c.m, d = m ? m.slice(1).map((x, k) => x - m[k]).join(",") : "";
-            if (!c || c.mode !== "arp" || calls.length !== 1 || pcOf(m[0]) !== rootPc() || d !== steps) { fails.push("吉他 " + id + " 把位 " + i + " 點指板應該播上行音階,實際 " + JSON.stringify(calls)); break; }
+            const c = calls[0], m = c && c.m, gvv = guitarView();
+            const want = [...new Set(gvv.dots.map(x => x.midi).concat(gvv.markers.filter(x => x && x.type === "open").map(x => x.midi)))].sort((x, y) => x - y).join(",");
+            if (!c || c.mode !== "arp" || calls.length !== 1 || m.join(",") !== want || m.length < 7) { fails.push("吉他 " + id + " 把位 " + i + " 點指板應該播上行音階,實際 " + JSON.stringify(calls)); break; }
           }
         }
       }
@@ -615,10 +616,15 @@ async function openPage(browser, opts = {}){
     const sp = await q.evaluate(() => {
       STATE.tab = "scale"; STATE.letter = 0; STATE.acc = 0; STATE.scaleId = "ionian"; STATE.scalePos = 0; render();
       const maj = scalePositions().length, seen = [];
-      // 摘要列的 ‹ › 一圈走完:全部 + 7 個把位,按 8 下回到原位;‹ 反方向
-      for (let i = 0; i < 8; i++) { seen.push(STATE.scalePos + ":" + $("kbSummary").querySelector(".pos-nav .n").textContent); $("posNext").click(); }
-      const back = STATE.scalePos; $("posPrev").click(); const prev = STATE.scalePos; $("posNext").click();
-      const rows = new Set(seen).size === 8 && back === 0 && /★$/.test(seen[0]) && seen[0].startsWith("0:") && seen.includes("-1:" + t("scalePosAll")) && prev === seen[7].split(":")[0] * 1 ? 8 : JSON.stringify(seen);
+      // 摘要列的 ‹ ›:全部(最左,‹ 變暗)→ 1 → … → 7(最右,› 變暗),兩端不繞回
+      STATE.scalePos = -1; render();
+      const ends = [$("posPrev").disabled, $("posNext").disabled];
+      for (let i = 0; i < 10; i++) { seen.push(STATE.scalePos + ":" + $("kbSummary").querySelector(".pos-nav .n").textContent); if (!$("posNext").disabled) $("posNext").click(); }
+      const endR = [$("posPrev").disabled, $("posNext").disabled];
+      const atEnd = STATE.scalePos; $("posNext").click(); const stay = STATE.scalePos;
+      for (let i = 0; i < 10; i++) if (!$("posPrev").disabled) $("posPrev").click();
+      const rows = ends[0] && !ends[1] && !endR[0] && endR[1] && atEnd === stay && STATE.scalePos === -1 && seen.length === 10 && new Set(seen).size === 8 ? 8 : JSON.stringify({ ends, endR, seen, atEnd, stay });
+      STATE.scalePos = 0; render();
       const gv = guitarView();
       STATE.letter = 5; STATE.scaleId = SCALES.find(x => /pent/i.test(x.id) && x.t.length === 5 && x.t.includes("♭3")).id; render();
       const pent = scalePositions(), box1 = pent.find(p => p.k === 0);

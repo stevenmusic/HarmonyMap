@@ -617,7 +617,8 @@ html[data-lang="en"] .chip i{white-space:normal}
   background:transparent;border:1px solid var(--line);color:var(--muted-bright);cursor:pointer;
   width:26px;height:26px;border-radius:var(--radius-pill);display:inline-flex;align-items:center;justify-content:center;
 }
-.vc-nav button:hover{border-color:var(--gold);color:var(--gold)}
+.vc-nav button:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+.vc-nav button:disabled{opacity:.3;cursor:default}
 .vc-nav button svg{display:block}
 .bass-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:12px}
 .bass-row .filter-label{min-width:0;margin-right:4px}
@@ -3172,7 +3173,7 @@ function playNotes(midis, mode, at, downMidis){
   } else if (mode === "strum") { // 吉他的齊奏:由低音弦往高音弦刷下去,弦與弦之間差幾十毫秒
     seq = midis.map((m, i) => ({ midi: m, at: t0 + i * GTR_STRUM_GAP, dur: 2.6 }));
   } else if (mode === "arp") {
-    const gap = 0.16;
+    const gap = midis.length > 14 ? Math.max(0.07, 2.4 / midis.length) : 0.16;   // 吉他整個指板三十幾個音,照 0.16 秒要彈六秒,加快到約 2.4 秒
     seq = midis.map((m, i) => ({ midi: m, at: t0 + i * gap, dur: 2.6 - i * gap * 0.2 }));
   } else { // 逐音上下行:上去再下來,最後一顆是最高音的下行起點,不重複敲
     const gap = 0.30;
@@ -4881,9 +4882,9 @@ function renderSummary(){
   const posCur = posList && currentScalePos(), posIdx = posCur ? posList.findIndex(p => p.k === posCur.k) : -1;
   const posNav = posList && posList.length
     ? '<span class="vc-nav pos-nav" title="' + (posCur ? t("scalePosTitle", { f: posCur.lo }) : t("scalePosLabel")) + '">' +
-      '<button id="posPrev" aria-label="' + t("scalePosLabel") + ' −">' + chev("M15 18l-6-6 6-6") + '</button>' +
+      '<button id="posPrev" aria-label="' + t("scalePosLabel") + ' −"' + (posCur ? '' : ' disabled') + '>' + chev("M15 18l-6-6 6-6") + '</button>' +
       '<span class="n">' + (posCur ? (posIdx + 1) + (posCur.k === 0 ? '<small>★</small>' : '') : t("scalePosAll")) + '</span>' +
-      '<button id="posNext" aria-label="' + t("scalePosLabel") + ' +">' + chev("M9 18l6-6-6-6") + '</button></span>'
+      '<button id="posNext" aria-label="' + t("scalePosLabel") + ' +"' + (posIdx === posList.length - 1 ? ' disabled' : '') + '>' + chev("M9 18l6-6-6-6") + '</button></span>'
     : '';
   if (posNav) zh = "";   // 吉他音階的摘要列多了 ‹ ›,副標(英文原名)讓出來;清單與結果面板上都還有
   el.innerHTML = '<b></b>' + (zh ? '<span class="zh"></span>' : '') + '<span class="tones"></span>' + nav + posNav +
@@ -4923,7 +4924,7 @@ function renderSummary(){
   if (posNav) {
     const step = d => ev => {
       ev.stopPropagation();
-      const n = posList.length + 1, i = (posIdx + 1 + d + n) % n;   // 0 = 全部
+      const i = Math.max(0, Math.min(posList.length, posIdx + 1 + d));   // 0 = 全部(最左),最後一個把位在最右,兩端不繞回
       STATE.scalePos = i ? posList[i - 1].k : -1;
       render();
     };
@@ -5077,15 +5078,12 @@ function playScaleUp(){
   const ms = STATE.inst === "guitar" ? guitarScaleUpMidis() : displayNotes().map(n => n.midi).sort((a, b) => a - b);
   if (ms.length) playNotes(ms, "arp");
 }
-/* 吉他:彈「指板上現在畫出來的那一組」裡面最低、而且整個八度都在畫面上的那一圈(選了把位就是那個把位裡的),
-   播放時亮起來的正好是看得到的那些音點。找不到完整的一圈才退回固定八度 */
+/* 吉他:彈指板上現在畫出來的每一個音,由低到高(使用者要求:聲音要跟指板一樣,不是只有一個八度)。
+   選了把位就是那個把位裡的音,「全部」就是整個指板;同一個音高出現在不同弦上只彈一次 */
 function guitarScaleUpMidis(){
   const gv = guitarView();
-  const avail = new Set(gv.dots.map(d => d.midi).concat(gv.markers.filter(m => m && m.type === "open").map(m => m.midi)));
-  const semis = [...new Set(currentNotes().map(n => ((n.semi % 12) + 12) % 12))].sort((a, b) => a - b).concat(12);
-  const tonics = [...avail].filter(m => pcOf(m) === rootPc()).sort((a, b) => a - b);
-  for (const t of tonics) { const seq = semis.map(x => t + x); if (seq.every(m => avail.has(m))) return seq; }
-  return displayNotes().map(n => n.midi).sort((a, b) => a - b);
+  const ms = new Set(gv.dots.map(d => d.midi).concat(gv.markers.filter(m => m && m.type === "open").map(m => m.midi)));
+  return ms.size ? [...ms].sort((a, b) => a - b) : displayNotes().map(n => n.midi).sort((a, b) => a - b);
 }
 function syncFindFromFrets(){
   STATE.findSel = new Set(gtrFindFrets().map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null));
