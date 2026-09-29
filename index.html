@@ -506,7 +506,11 @@ html[data-lang="en"] .chip i{white-space:normal}
 .kb-gear:disabled{opacity:.4;cursor:default}
 .pr-edit .pr-steps span{flex:0 0 auto;white-space:nowrap}
 /* 高度由 JS 設成跟鋼琴鍵盤一樣(resizeKeyboardCanvas),和弦圖在格子裡等比例縮放塞滿 */
-.gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr);gap:6px;padding:6px 8px 0;box-sizing:border-box}
+.gtr-dgs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr) auto;gap:6px;padding:6px 8px 0;box-sizing:border-box}
+/* 指法圖例(圓點裡的 T 1 2 3 4 是哪根手指):手機沒有 hover,要寫出來(使用者要求)。
+   放在和弦圖這一格裡面,顯示區總高度不變,鋼琴/吉他照樣同高 */
+.gd-legend{grid-column:1 / -1;font-size:var(--fs-2xs);color:var(--muted);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
+.kb-stage .gd-legend{margin:-2px 0 8px}
 .gtr-dgs[hidden]{display:none}
 .pos-row{display:flex;flex-wrap:wrap;align-items:center;gap:5px;padding:6px 10px 0}
 .pos-row[hidden]{display:none}
@@ -1028,6 +1032,7 @@ const I18N = {
     voicingPrev: "上一個指法", voicingNext: "下一個指法",
     guitarTabTitle: "吉他指法", guitarTabNote: "由低音弦(6 弦)寫到高音弦(1 弦)· × = 不彈 · 0 = 空弦 · 數字 = 格數",
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
+    fingerLegend: "指法:T 拇指 · 1 食指 · 2 中指 · 3 無名指 · 4 小指",
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
@@ -1121,6 +1126,7 @@ const I18N = {
     voicingPrev: "Previous voicing", voicingNext: "Next voicing",
     guitarTabTitle: "Guitar voicing", guitarTabNote: "Low string (6th) to high string (1st) · × = muted · 0 = open · number = fret",
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
+    fingerLegend: "Fingers: T thumb · 1 index · 2 middle · 3 ring · 4 pinky",
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
@@ -4550,6 +4556,9 @@ function renderGuitarGallery(){
     d.addEventListener("pointercancel", () => { last = null; });
     el.appendChild(d);
   });
+  const lg = document.createElement("div");
+  lg.className = "gd-legend"; lg.textContent = t("fingerLegend");
+  el.appendChild(lg);
   fitGallery();
 }
 /* 和弦圖的像素大小:寬最多 185px、高最多 160px(放大最多約 1.4 倍,圖裡的字才不會比介面大),
@@ -4627,6 +4636,7 @@ function renderPractice(){
   const stageHTML = (a, b, ids) =>
     '<div class="pr-now"><div class="now" role="button" tabindex="0"><small>' + t("practiceNow") + '</small><b' + (ids ? ' id="prNow"' : '') + '>C</b>' + stepDiagram(a) + '</div>' +
       '<div class="next" role="button" tabindex="0"><small>' + t("practiceNext") + '</small><b' + (ids ? ' id="prNext"' : '') + '>C</b>' + stepDiagram(b) + '</div></div>' +
+    (STATE.inst === "guitar" ? '<div class="gd-legend">' + t("fingerLegend") + '</div>' : '') +
     '<div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div>' +
     '<button class="btn primary pr-go"' + (ids ? ' id="prGo"' : '') + ' title="' + t("practiceHint") + '">' + t(P.running ? "practiceStop" : "practiceStart") + '</button>';
   /* 空的時候照樣排一份看不見的「現在 / 下一個」撐住高度,提示疊在上面:
