@@ -2513,8 +2513,20 @@ function voicingMidis(v){
 /* 沒點的弦怎麼算:比「最低那條有點的弦」更高音的弦 = 空弦(照真實彈法,沒按的弦就是空弦音在響,
    不用每條都去點左邊的 ○);更低音的弦 = 不彈。想讓最低那幾條也響,點它的 ○(第 0 格)就好 */
 function gtrFindFrets(){
-  const low = STATE.findFrets.findIndex(f => f != null);
-  return STATE.findFrets.map((f, s) => f != null ? f : low >= 0 && s > low ? 0 : -1);
+  const raw = STATE.findFrets, low = raw.findIndex(f => f != null);
+  const build = from => raw.map((f, s) => f != null ? f : low >= 0 && (s > low || s >= from) ? 0 : -1);
+  const base = build(Infinity);
+  /* 只點高音弦時,「最低那條有點的弦」下面的空弦到底響不響是兩可的:點 1~3 弦的 2 格,不彈 4 弦是 F♯m/A,
+     連 4 弦空弦一起彈是 Dmaj7(xx0222)。照吉他的習慣,兩種讀法都行時偏向「以根音為低音」的和弦——
+     底下多算一、兩條空弦能讓低音就是根音的話就多算;本來就是根音位置(C = x32010)就不動 */
+  const rootPos = fr => {
+    const sel = fr.map((f, s) => f >= 0 ? GTR_OPEN[s] + f : null).filter(m => m != null).sort((x, y) => x - y);
+    const pcs = [...new Set(sel.map(pcOf))];
+    return pcs.length >= 3 && matchChords(pcOf(sel[0]), pcs).length > 0;
+  };
+  if (low > 0 && !rootPos(base))
+    for (let k = 1; k <= 2 && low - k >= 0; k++) { const c = build(low - k); if (rootPos(c)) return c; }
+  return base;
 }
 
 /* 交給 drawFretboard 的資料:指板上的點、琴頸左邊那一欄的 ○/×、淡淡的其他位置 */
