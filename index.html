@@ -1032,6 +1032,7 @@ const I18N = {
     voicingPrev: "上一個指法", voicingNext: "下一個指法",
     guitarTabTitle: "吉他指法", guitarTabNote: "由低音弦(6 弦)寫到高音弦(1 弦)· × = 不彈 · 0 = 空弦 · 數字 = 格數",
     guitarOmit: "省略", guitarNoVoicing: "標準調音下找不到四指按得到的指法",
+    strThick: "粗", strThin: "細",
     fingerLegend: "T 拇指 · 1 食指 · 2 中指 · 3 無名指 · 4 小指",
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
@@ -1126,6 +1127,7 @@ const I18N = {
     voicingPrev: "Previous voicing", voicingNext: "Next voicing",
     guitarTabTitle: "Guitar voicing", guitarTabNote: "Low string (6th) to high string (1st) · × = muted · 0 = open · number = fret",
     guitarOmit: "Omitted", guitarNoVoicing: "No four-finger voicing in standard tuning",
+    strThick: "low", strThin: "high",
     fingerLegend: "T thumb · 1 index · 2 middle · 3 ring · 4 pinky",
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
@@ -4468,6 +4470,11 @@ function voicingSVG(v, rp){
   g += '<line x1="' + (x0 - 0.9) + '" x2="' + (x0 + gap * 5 + 0.9) + '" y1="' + y0 + '" y2="' + y0 + '" stroke="var(--muted-bright)" stroke-width="' + (base === 1 ? 3.5 : 2.6) + '" stroke-linecap="square"/>';
   // 格數標在 1 弦右邊、避開 1 弦上的音點(半徑 7)
   if (base > 1) g += '<text x="' + (x0 + gap * 5 + 8) + '" y="' + (y0 + rowH * 0.5 + 4) + '" font-size="10" fill="var(--muted)">' + base + 'fr</text>';
+  // 弦的方向:左邊 6 弦(粗、低音)、右邊 1 弦(細、高音),標在指板左右兩側的空白、最下面那一格的高度(使用者要求),
+  // 跟右上的「3fr」錯開
+  const yLab = y0 + rowH * (rows - 0.5) + 3;
+  g += '<text x="' + (x0 - 5) + '" y="' + yLab + '" text-anchor="end" font-size="' + (LANG === "en" ? 7 : 9) + '" fill="var(--muted)">' + t("strThick") + '</text>' +
+       '<text x="' + (x0 + gap * 5 + 5) + '" y="' + yLab + '" font-size="' + (LANG === "en" ? 7 : 9) + '" fill="var(--muted)">' + t("strThin") + '</text>';
   if (v.barreShown) g += '<rect x="' + (xs(v.barreLo) - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (xs(v.barreHi) - xs(v.barreLo) + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>';
   const fing = gtrFingering(v.frets);
   v.frets.forEach((f, s) => {
