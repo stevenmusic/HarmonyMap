@@ -1953,7 +1953,49 @@ function drawKeyboardLive(){
   const view = currentView();
   drawKeyboard(ctx, 0, 0, cv._cssW, cv._cssH, view.activeMap);
   drawBlackKeyEdges(ctx, 0, 0, cv._cssW, cv._cssH);
-  if (STATE.label !== "off") drawKeyLabels(ctx, 0, 0, cv._cssW, cv._cssH, view.labelMap);
+  if (STATE.label !== "off") {
+    // 青色(和弦內音)的鍵上,原本的深色字看不清楚:那些鍵改由 drawTealKeyLabels 用白字加深色描邊另外畫,
+    // 原本的 drawKeyLabels 只畫其餘的鍵
+    const rest = new Map(), teal = new Map();
+    for (const [m, lab] of view.labelMap) {
+      const info = view.activeMap.get(m);
+      (info && info.staff === 2 && lab.text ? teal : rest).set(m, lab);
+    }
+    drawKeyLabels(ctx, 0, 0, cv._cssW, cv._cssH, rest);
+    drawTealKeyLabels(ctx, 0, 0, cv._cssW, cv._cssH, teal);
+  }
+}
+/* 疊在 drawKeyLabels 之上的一層(不動原本的函式):青色鍵上的字。位置與字級跟 drawKeyLabels 相同 */
+function drawTealKeyLabels(ctx, x, y, w, h, labelMap){
+  if (!labelMap.size) return;
+  const whiteW = w / KB_WHITE_KEYS.length;
+  const blackH = h * 0.6, blackW = whiteW * 0.62;
+  const fs = Math.max(9, Math.min(15, whiteW * 0.48));
+  const bfs = Math.max(7.5, Math.min(12, blackW * 0.55));
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  const put = (text, cx, cy, size) => {
+    ctx.font = "700 " + size + "px 'Noto Serif TC', serif";
+    ctx.lineWidth = Math.max(2.5, size * 0.28);
+    ctx.strokeStyle = "rgba(2,36,32,0.92)";
+    ctx.strokeText(text, cx, cy);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.fillText(text, cx, cy);
+  };
+  for (const [m, lab] of labelMap) {
+    if (isBlackKey(m)) {
+      let leftWhite = m - 1;
+      while (isBlackKey(leftWhite)) leftWhite--;
+      const li = KB_WHITE_IDX[leftWhite];
+      if (li === undefined) continue;
+      put(lab.text, x + (li + 1) * whiteW, y + blackH - bfs * 0.9, bfs);
+    } else {
+      const i = KB_WHITE_IDX[m];
+      if (i === undefined) continue;
+      put(lab.text, x + i * whiteW + (whiteW - 1) / 2, y + h - fs * 0.95, fs);
+    }
+  }
 }
 /* 把頂欄與釘住區塊的實際高度餵給 CSS。兩個高度都是會變的:頂欄隨字級與換行改變,
    釘住區塊的高度隨鍵盤音域(白鍵數)改變,寫死數字遲早會對不齊 */
