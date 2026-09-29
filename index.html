@@ -5018,6 +5018,16 @@ function pluckString(s){
   vibrateString(s, v.frets[s]);
   playSingle(GTR_OPEN[s] + v.frets[s]);
 }
+/* iOS Safari 快速連點指板(辨識模式一直點格子)時,即使有 touch-action:manipulation 也會被當成雙擊放大整頁。
+   畫布上的點擊全部走 pointerdown,不靠 click,所以在畫布上擋掉「兩下之間 < 350ms 的 touchend」不影響任何操作 */
+{
+  let lastTap = 0;
+  $("keyboardCanvas").addEventListener("touchend", ev => {
+    const now = Date.now();
+    if (now - lastTap < 350) ev.preventDefault();
+    lastTap = now;
+  }, { passive: false });
+}
 $("keyboardCanvas").addEventListener("pointermove", ev => {
   const cv = $("keyboardCanvas");
   if (cv._strum == null || STATE.inst !== "guitar" || STATE.tab !== "chord") return;
