@@ -2946,7 +2946,13 @@ function loadPianoSamples(){
     jobs.push(
       fetch(url).then(r => { if (!r.ok) throw new Error("404"); return r.arrayBuffer(); })
         .then(arr => audioCtx.decodeAudioData(arr))
-        .then(buf => { list.push({ midi, buffer: buf }); })
+        .then(buf => {
+          // mp3 解碼後開頭常留一小段空白(編碼器延遲),和弦每個音都晚這麼多才出聲。跟吉他一樣裁到起音前 5ms
+          const x = buf.getChannelData(0);
+          let peak = 0; for (let i = 0; i < x.length; i++) peak = Math.max(peak, Math.abs(x[i]));
+          let on = 0; while (on < x.length && Math.abs(x[on]) < peak * 0.1) on++;
+          list.push({ midi, buffer: buf, offset: Math.min(0.12, Math.max(0, on / buf.sampleRate - 0.005)) });
+        })
         .catch(() => {}) // 該取樣缺失就跳過,不影響其他音符
     );
   }
@@ -3071,7 +3077,7 @@ function playSampledPiano(midi, when, dur, chordAnchors){
   g.gain.exponentialRampToValueAtTime(0.0001, decayEnd + tail);
   src.connect(g);
   connectOut(g, midi);
-  src.start(when);
+  src.start(when, best.offset || 0);
   src.stop(when + sustain + tail + 0.1);
   src._g = g;
   scheduledNodes.push(src);
@@ -3182,7 +3188,7 @@ function playNotes(midis, mode, at, downMidis){
   ensureAudio();
   if (at == null) stopAllSound();
   else { for (const n of scheduledNodes) fadeStop(n, at); scheduledNodes = []; }
-  const t0 = at != null ? at : audioCtx.currentTime + 0.06;
+  const t0 = at != null ? at : audioCtx.currentTime + 0.02; // 提前量越小,按下到出聲越快(跟 playSingle 一致)
   let seq;
   if (mode === "block") {
     seq = midis.map(m => ({ midi: m, at: t0, dur: 2.6 }));
