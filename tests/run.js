@@ -1086,6 +1086,31 @@ async function openPage(browser, opts = {}){
       total++; if (!r.length || r.some(x => x !== want)) fails.push("和弦圖粗細標示(" + w + "×" + h + " " + lang + "): " + r.join(" ") + " ≠ " + want);
       await q.close();
     }
+    // 摘要列任何內容都不能被截成「…」:所有音階/和弦 × 鋼琴/吉他 × 中英文,高度固定不隨內容變
+    for (const [w, h] of [[320, 568], [390, 844], [1280, 860]]) for (const lang of ["zh", "en"]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      if (lang === "en") await q.click("#langToggle");
+      const r = await q.evaluate(() => {
+        const cut = e => e && getComputedStyle(e).display !== "none" && e.scrollWidth > e.clientWidth + 1;
+        const bad = new Set(), hs = new Set();
+        for (const inst of ["piano", "guitar"]) for (const tab of ["scale", "chord"]) {
+          STATE.inst = inst; STATE.tab = tab;
+          for (const d of tab === "scale" ? SCALES : CHORDS) {
+            if (tab === "scale") STATE.scaleId = d.id; else STATE.chordId = d.id;
+            for (const [L, A] of [[0, 0], [3, 1], [6, -1]]) {
+              STATE.letter = L; STATE.acc = A; render();
+              const s = $("kbSummary"), sr = s.getBoundingClientRect(); hs.add(s.offsetHeight);
+              for (const e of s.querySelectorAll("b, .zh, .tones, .nm span, .nmrow")) if (cut(e)) bad.add(inst + " " + d.id);
+              for (const e of s.querySelectorAll("b, .tones, .vc-nav, .kb-gear")) { const b = e.getBoundingClientRect(); if (b.right > sr.right + 0.5 || b.left < sr.left - 0.5) bad.add(inst + " " + d.id + " 超出"); }
+            }
+          }
+        }
+        STATE.inst = "piano"; STATE.tab = "chord"; render();
+        return { bad: [...bad].slice(0, 6), hs: [...hs] };
+      });
+      total++; if (r.bad.length || r.hs.length !== 1) fails.push("摘要列被截或高度會變(" + w + " " + lang + "): " + r.bad.join(", ") + " 高度 " + r.hs.join("/"));
+      await q.close();
+    }
     // 兩個名字的音階(Aeolian / Natural Minor)在摘要列疊兩行,整列高度跟一般音階一樣
     for (const [w, h] of [[390, 844], [1280, 860]]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });

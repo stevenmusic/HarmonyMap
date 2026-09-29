@@ -562,9 +562,8 @@ html[data-lang="en"] .chip i{white-space:normal}
     radial-gradient(ellipse 120% 80% at 50% 0%, var(--stage-glow) 0%, var(--bg) 60%);
 }
 #keyboardCanvas{display:block;width:100%;height:150px;background:transparent;touch-action:manipulation;cursor:pointer}
-/* 釘在鍵盤下方的一行摘要:和弦名 + 組成音。
-   刻意限制成「絕對只有一行」(nowrap + 超出用省略號),因為這一塊在手機上是釘住的,
-   高度只要會隨內容變化,底下整排和弦按鈕就會跟著上下跳 */
+/* 釘在鍵盤下方的摘要:和弦名 + 組成音。高度固定(寬版一行、手機兩列,見下面的 max-width:600),
+   因為這一塊在手機上是釘住的,高度只要會隨內容變化,底下整排和弦按鈕就會跟著上下跳 */
 .kb-summary{
   display:flex;align-items:center;gap:10px;
   padding:8px 10px;white-space:nowrap;overflow:hidden;
@@ -640,6 +639,30 @@ html[data-lang="en"] .chip i{white-space:normal}
 .kb-summary.has-pos b{font-size:var(--fs-md)}
 .kb-summary.has-pos .kb-gear{margin-left:-2px}
 .kb-summary.has-pos .tones{flex-shrink:0;letter-spacing:.02em}   /* 七個音要完整顯示:名稱讓,音名不讓 */
+.kb-summary .nmrow{display:contents}
+/* 手機直向:一行塞不下「名稱 + 副標 + 七個音名 + ‹ › + 齒輪」,一律變成省略號(使用者要求全部完整顯示)。
+   改成固定兩列:上列名稱(+ 副標,放不下就整個不顯示、不寫半截)、下列音名,‹ › 與齒輪在右邊跨兩列。
+   列高固定(不隨內容變),所有分頁、兩種樂器都用同一個版型,切換時照樣不移位 */
+@media (max-width:600px){
+  .kb-summary{display:grid;grid-template-columns:minmax(0,1fr) auto auto;grid-template-rows:22px 18px;
+    column-gap:6px;row-gap:0;padding:4px 8px 4px 10px}
+  .kb-summary.has-pos{row-gap:0;column-gap:6px}   /* .has-pos 的 gap:5px 會把列距撐大,高度就跟其他模式不一樣 */
+  /* 吉他音階:‹ 3★ › 放上列,下列整條給音名(八個音、半音階十二個音在 320px 也放得下) */
+  .kb-summary.has-pos .vc-nav{grid-area:1 / 2}
+  #kbSummary.has-pos .tones{grid-area:2 / 1 / 3 / 3}
+  .kb-summary .nmrow{display:flex;align-items:baseline;gap:8px;grid-area:1 / 1;min-width:0;overflow:hidden}
+  .kb-summary b,.kb-summary.has-pos b{font-size:var(--fs-lg);line-height:22px;flex:none;overflow:visible}
+  .kb-summary .zh{flex:none}
+  .kb-summary .zh.off{display:none}
+  .kb-summary .tones,.kb-summary.has-pos .tones{grid-area:2 / 1;text-align:left;line-height:18px;overflow:visible}
+  .kb-summary .vc-nav{grid-area:1 / 2 / 3 / 3}
+  .kb-summary .kb-gear,.kb-summary.has-pos .kb-gear{grid-area:1 / 3 / 3 / 4;margin-left:0}
+  /* 兩個名字的音階不必再疊兩行(已經有一整列):排成一行 C Aeolian (Natural Minor) */
+  .kb-summary b.stk{display:inline-flex;align-items:baseline;gap:.3em}
+  .kb-summary b.stk .rt{font-size:1em;line-height:inherit}
+  .kb-summary b.stk .nm{flex-direction:row;gap:.3em;font-size:1em;line-height:inherit}
+  .kb-summary b.stk .nm span.off{display:none}
+}
 .pos-nav small{color:var(--gold);margin-left:1px}
 .pos-nav .n i{font-style:normal;color:var(--muted)}
 .kb-gear:hover,.kb-gear[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
@@ -4901,7 +4924,29 @@ function renderPractice(){
   $("prCustom").onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); applyCustom(); } };
   $("prCustom").onchange = () => { if ($("prCustom").value.trim() !== P.custom) applyCustom(); };
 }
-/* 釘在鍵盤下的那一行:名稱 + 組成音,固定一行高度 */
+/* 手機兩列版型(max-width:600)的上列放不下時,不寫半截(不要「…」):先拿掉兩個名字音階的括號名,再拿掉副標。
+   寬版還是一行,不處理 */
+function fitSummary(el){
+  const row = el.querySelector(".nmrow");
+  if (!row || getComputedStyle(row).display === "contents") return;
+  const over = () => row.scrollWidth > row.clientWidth + 1;
+  const zhEl = row.querySelector(".zh");
+  if (zhEl && over()) zhEl.classList.add("off");
+  const second = row.querySelectorAll("b.stk .nm span")[1];
+  if (second && over()) second.classList.add("off");
+  // 還是放不下(320px 的長音階名、半音階的十二個音):字縮小一點,最小 12 / 11px,也不寫半截
+  const shrink = (box, target, min, isOver) => {
+    let fs = parseFloat(getComputedStyle(target).fontSize);
+    while (isOver() && fs > min) { fs = Math.max(min, fs - 0.5); target.style.fontSize = fs + "px"; }
+  };
+  shrink(row, row.querySelector("b"), 12, over);
+  const tn = el.querySelector(".tones");
+  if (tn && tn.scrollWidth > tn.clientWidth + 1) {
+    tn.style.letterSpacing = "0";
+    shrink(tn, tn, 11, () => tn.scrollWidth > tn.clientWidth + 1);
+  }
+}
+/* 釘在鍵盤下的摘要:名稱 + 組成音,高度固定(寬版一行、手機兩列) */
 function renderSummary(){
   const el = $("kbSummary");
   let name = "", zh = "", tones = [], stack = null;  // stack:音階名有「A / B」時分兩行排  // tones:[{text, midi}],每個音名自己是一顆按鈕
@@ -4964,7 +5009,7 @@ function renderSummary(){
     : '';
   el.classList.toggle("has-pos", !!posNav);
   if (posNav) zh = "";   // 吉他音階的摘要列多了 ‹ ›,副標(英文原名)讓出來;清單與結果面板上都還有
-  el.innerHTML = '<b></b>' + (zh ? '<span class="zh"></span>' : '') + '<span class="tones"></span>' + nav + posNav +
+  el.innerHTML = '<span class="nmrow"><b></b>' + (zh ? '<span class="zh"></span>' : '') + '</span><span class="tones"></span>' + nav + posNav +
     // 齒輪圖示照抄 ScrollScore 的設定鈕(同一組 24 格線稿、stroke-width 2、圓端點),
     // 兩個工具放在一起看要是同一個產品。原本用 ⚙ 字元,粗細與字型會隨系統跑掉
     '<button class="kb-gear" id="kbGear" aria-label="' + t("kbGearLabel") + '" title="' + t("kbGearTitle") + '">' +
@@ -4997,6 +5042,7 @@ function renderSummary(){
     };
     tw.appendChild(sp);
   });
+  fitSummary(el);
   el.querySelector("#kbGear").onclick = ev => { ev.stopPropagation(); toggleKbPopover(); };
   if (nav) {
     const step = d => ev => {
