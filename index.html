@@ -2503,7 +2503,12 @@ function voicingMidis(v){
   v.frets.forEach((f, s) => { if (f >= 0) out.push(GTR_OPEN[s] + f); });
   return out;
 }
-function gtrFindFrets(){ return STATE.findFrets.map(f => f == null ? -1 : f); }
+/* 沒點的弦怎麼算:比「最低那條有點的弦」更高音的弦 = 空弦(照真實彈法,沒按的弦就是空弦音在響,
+   不用每條都去點左邊的 ○);更低音的弦 = 不彈。想讓最低那幾條也響,點它的 ○(第 0 格)就好 */
+function gtrFindFrets(){
+  const low = STATE.findFrets.findIndex(f => f != null);
+  return STATE.findFrets.map((f, s) => f != null ? f : low >= 0 && s > low ? 0 : -1);
+}
 
 /* 交給 drawFretboard 的資料:指板上的點、琴頸左邊那一欄的 ○/×、淡淡的其他位置 */
 /* 吉他音階的把位。規則對每一種音階都一樣(不另外存每個音階的指型表):

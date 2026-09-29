@@ -533,6 +533,9 @@ async function openPage(browser, opts = {}){
     await q.evaluate(() => { STATE.letter = 0; STATE.acc = 0; STATE.chordId = "maj"; STATE.bassIv = null; render(); });
     const title = () => q.evaluate(() => chordTitle(chordById(STATE.chordId)));
     const L = x => q.locator("#letterRow .key-btn", { hasText: new RegExp("^" + x + "$") });
+    // 吉他反查:沒點的弦,比最低有點的弦高音的算空弦、更低的不彈(C 和弦只要點三個按弦)
+    total++; { const r = await q.evaluate(() => { const o = STATE.findFrets; STATE.findFrets = [null, 3, 2, null, 1, null]; const f = gtrFindFrets().join(","); STATE.findFrets = [null, null, null, null, null, null]; const n = gtrFindFrets().join(","); STATE.findFrets = o; return f + "|" + n; });
+      if (r !== "-1,3,2,0,1,0|-1,-1,-1,-1,-1,-1") fails.push("吉他反查沒點的弦: " + r); }
     await take(); // 前面換根音也會發聲(和弦分頁換根音 = 彈新和弦),先清掉
     await L("D").click(); await expect("和弦分頁 C 換成 D 的瞬間彈 D 大三和弦", "n62,66,69");
     await L("C").click(); await take();
