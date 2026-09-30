@@ -24,8 +24,18 @@
   --bg:#0C0A07;
   --panel:#161209;
   --panel-2:#201A0F;
-  --gold:#C9A24B;
+  /* 金色統一(使用者要求):介面的金色(按鈕、選中、光暈)跟和弦的根音(鍵盤、指板、和弦圖)同一個 #F2B94B。
+     原本介面是 #C9A24B、光暈與根音是 #F2B94B,並排時看得出兩種金 */
+  --gold:#F2B94B;
   --gold-bright:#EFD48A;
+  --brand-gold:#C9A24B;   /* 品牌名照 ScrollScore 原本的顏色(品牌名的 CSS 要跟 ScrollScore 逐項相同) */
+  /* 和弦音的顏色(根音金、其他組成音青):兩種主題都一樣,鍵盤、指板、和弦圖、小鍵盤全部用這一組 */
+  --note-gold:#F2B94B;
+  --note-teal:#3FBFAE;
+  /* 實心的「選中」底色(分頁、按下的鍵、開始鈕…):兩種主題都用和弦音同一組亮金、亮青,上面的字用深色 */
+  --gold-fill:#F2B94B;
+  --teal-fill:#3FBFAE;
+  --on-fill:#16110A;
   --teal:#3FBFAE;          /* 鍵盤上「和弦內音(非根音)」的顏色,沿用 ScrollScore 左右手的第二色 */
   --teal-bright:#8FFFF0;
   --ivory:#F4ECDA;
@@ -57,8 +67,9 @@ body.light{
   --bg:#FBF7EE;
   --panel:#F4EEE0;
   --panel-2:#EDE6D4;
-  --gold:#856418;
+  --gold:#856418;          /* 淺色主題的介面金色要深,字在淺底上才讀得到;和弦音照舊用 --note-gold */
   --gold-bright:#6B5115;
+  --brand-gold:#856418;
   --teal:#0F5F56;
   --teal-bright:#0B463F;
   --ivory:#241E12;
@@ -115,7 +126,7 @@ header h1{
   font-family:"Noto Serif TC",serif;
   font-size:clamp(12px, 3.7vw, var(--fs-lg));
   letter-spacing:clamp(.02em, .55vw, .12em);
-  font-weight:700;color:var(--gold);white-space:nowrap;
+  font-weight:700;color:var(--brand-gold);white-space:nowrap;
   flex:none;
 }
 header h1 span{color:var(--ivory);font-weight:600}
@@ -131,16 +142,16 @@ header h1 span{color:var(--ivory);font-weight:600}
   transition:background .2s,color .2s;white-space:nowrap;
 }
 .btn svg{flex:none}
-.btn:active{background:var(--gold);color:var(--bg)}
-.btn.primary{background:var(--gold);color:var(--bg);font-weight:700}
+.btn:active{background:var(--gold-fill);color:var(--on-fill)}
+.btn.primary{background:var(--gold-fill);color:var(--on-fill);font-weight:700}
 .btn.ghost{border-color:var(--line);color:var(--muted-bright)}
 .btn.small{height:32px;padding:0 12px;font-size:var(--fs-sm)}
-#themeToggle[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
+#themeToggle[aria-pressed="true"]{background:var(--gold-fill);color:var(--on-fill)}
 /* 語言切換鈕:跟主題/設定等圖示鈕一樣統一用正圓形(跟 ScrollScore/SightScore/LoudNorm
    同一套外觀),只顯示「EN」/「中」文字、不搭配圖示——四個專案不要有的用文字有的用圖示。
    aspect-ratio:1 讓寬度自動跟著當下 .btn 的高度走,不用每個斷點各寫一次寬度 */
 #langToggle{aspect-ratio:1;padding:0}
-#langToggle[aria-pressed="true"]{background:var(--gold);color:var(--bg)}
+#langToggle[aria-pressed="true"]{background:var(--gold-fill);color:var(--on-fill)}
 /* 頂欄的內距與間距同樣跟著寬度連續縮放,不用斷點硬切(照 ScrollScore 的值) */
 @media (max-width:600px){
   header{padding:8px clamp(6px, 2.2vw, 10px);gap:clamp(4px, 1.4vw, 6px);flex-wrap:nowrap}
@@ -200,7 +211,7 @@ main{
   font-family:inherit;font-size:var(--fs-md);font-weight:500;line-height:18px;   /* 行高寫死:中文字的行框比英文高 2px,換語言整頁會往上跳 */
   padding:9px 8px;border-radius:var(--radius-pill);cursor:pointer;transition:background .2s,color .2s;
 }
-.tabs button[aria-selected="true"]{background:var(--gold);color:var(--bg);font-weight:700}
+.tabs button[aria-selected="true"]{background:var(--gold-fill);color:var(--on-fill);font-weight:700}
 /* 樂器切換跟分頁同一列、同一種膠囊外框,但字小一階:它是「換顯示方式」,不是主要導覽 */
 .tab-row{display:flex;gap:6px;min-width:0}
 .tab-row .tabs{flex:1;min-width:0}
@@ -212,7 +223,7 @@ main{
   font-size:var(--fs-sm);padding:0;border-radius:var(--radius-pill);cursor:pointer;
   transition:background .2s,color .2s;
 }
-.inst-switch button[aria-pressed="true"]{background:var(--teal);color:var(--bg);font-weight:700}
+.inst-switch button[aria-pressed="true"]{background:var(--teal-fill);color:var(--on-fill);font-weight:700}
 @media (max-width:380px){
   .inst-switch button{width:48px} .tabs button{padding:9px 2px}
 }
@@ -229,9 +240,9 @@ main{
   height:44px;border-radius:var(--radius-sm);cursor:pointer;
   transition:background .15s,color .15s,border-color .15s;
 }
-.key-btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.key-btn[aria-pressed="true"]{background:var(--gold-fill);border-color:var(--gold-fill);color:var(--on-fill)}
 .key-btn.bass{border-color:var(--teal);color:var(--teal);box-shadow:inset 0 0 0 1px var(--teal)}
-.key-btn.bass[aria-pressed="true"]{background:var(--teal);border-color:var(--teal);color:var(--bg)}
+.key-btn.bass[aria-pressed="true"]{background:var(--teal-fill);border-color:var(--teal-fill);color:var(--on-fill)}
 .root-line{display:flex;gap:6px}
 .root-line .letters{flex:7 1 0;flex-wrap:nowrap;min-width:0}
 .root-line .letters .key-btn{min-width:0}
@@ -250,7 +261,7 @@ main{
   transition:background .15s,color .15s,border-color .15s;
 }
 .quick-btn:hover{border-color:var(--gold);color:var(--gold)}
-.quick-btn[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
+.quick-btn[aria-pressed="true"]{background:var(--gold-fill);border-color:var(--gold-fill);color:var(--on-fill);font-weight:700}
 /* 手機:根音卡片是釘住的,每省下一點高度就是清單多看到一排。
    「根音」這個標題可以省——底下就是 C D E F G A B 七顆按鈕,不會看不懂 */
 @media (max-width:900px){
@@ -291,7 +302,7 @@ main{
 .filter-summary[aria-expanded="true"] .chev{transform:rotate(90deg)}
 .filter-summary[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
 .filter-summary .badge{
-  background:var(--gold);color:var(--bg);border-radius:var(--radius-pill);
+  background:var(--gold-fill);color:var(--on-fill);border-radius:var(--radius-pill);
   padding:1px 7px;font-size:var(--fs-2xs);font-weight:700;
 }
 .filter-summary .badge:empty{display:none}
@@ -307,7 +318,7 @@ main{
   cursor:pointer;transition:border-color .15s,color .15s,background .15s;white-space:nowrap;
 }
 .filter-chip:hover{border-color:var(--gold);color:var(--gold)}
-.filter-chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
+.filter-chip[aria-pressed="true"]{background:var(--gold-fill);border-color:var(--gold-fill);color:var(--on-fill);font-weight:700}
 .filter-chip .cnt{opacity:.6;font-size:var(--fs-2xs);margin-left:4px}
 /* width→min-width:英文標籤(Style/Level/Enh.)比中文兩個字寬,固定寬度會截斷,
    改成最小寬度,超出時整個 label 連同後面的篩選晶片一起換行(.filter-row 本來就 flex-wrap) */
@@ -331,7 +342,7 @@ main{
   cursor:pointer;transition:border-color .15s,color .15s,background .15s;white-space:nowrap;
 }
 .group-tab:hover{border-color:var(--gold);color:var(--gold)}
-.group-tab[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg);font-weight:700}
+.group-tab[aria-pressed="true"]{background:var(--gold-fill);border-color:var(--gold-fill);color:var(--on-fill);font-weight:700}
 .group-tab .cnt{opacity:.6;font-size:var(--fs-2xs);margin-left:5px}
 .group-tab[aria-pressed="true"] .cnt{opacity:.66}
 /* 選了哪一組,就把那一組的定義寫在按鈕底下——原本這句話是掛在分組標題上的,
@@ -434,13 +445,13 @@ html[data-lang="en"] .chip i{white-space:normal}
 /* 音階的中文名稱長度差很多(「多利安」到「烏克蘭小調(多利安♯4)」),允許換行才不會被截掉 */
 .chips.wide .chip b,.chips.wide .chip i{white-space:normal}
 .chip:hover{border-color:var(--gold)}
-.chip[aria-pressed="true"]{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.chip[aria-pressed="true"]{background:var(--gold-fill);border-color:var(--gold-fill);color:var(--on-fill)}
 .chip[aria-pressed="true"] i{color:rgba(0,0,0,.62)}
 .empty-hint{color:var(--muted);font-size:var(--fs-sm);padding:10px 2px}
 .go-chip{width:100%;margin-bottom:12px;border-color:var(--gold)}
 #practiceOpen{border-color:var(--teal);color:var(--teal)}
 #practiceOpen[hidden]{display:none}
-#practiceOpen .badge{background:var(--teal)}
+#practiceOpen .badge{background:var(--teal-fill)}
 /* 使用說明卡片:從頂欄右上角掉下來,點外面或按 Esc 關掉 */
 .help-pop{position:fixed;z-index:60;top:calc(var(--header-h, 56px) + 6px);right:12px;width:min(360px, calc(100vw - 24px));
   max-height:calc(100vh - var(--header-h, 56px) - 24px);overflow:auto;
@@ -482,8 +493,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 @media (max-height:420px){ .pr-now .dg{max-height:26vh;width:auto;max-width:100%;margin:2px auto 0} .pr-now b{font-size:24px} .pr-now > div{padding:6px 10px} }   /* 手機橫向:圖不要把開始鈕擠出畫面 */   /* 鋼琴小鍵盤撐滿格子,兩張一樣寬 */
 .pr-beats{display:flex;gap:8px;justify-content:center;margin:0 0 8px}
 .pr-beats i{width:12px;height:12px;border-radius:50%;background:var(--line)}
-.pr-beats i.on{background:var(--teal)}
-.pr-beats i.on.one{background:var(--gold)}
+.pr-beats i.on{background:var(--teal-fill)}
+.pr-beats i.on.one{background:var(--gold-fill)}
 .pr-steps{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .pr-steps span{border:1px solid var(--line);border-radius:var(--radius-sm);padding:3px 10px;font-size:var(--fs-sm);font-variant-numeric:tabular-nums;
   min-height:30px;display:inline-flex;align-items:center}   /* 點一下切換半小節:至少 30px 高才點得準 */
@@ -538,8 +549,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 /* 撥弦時那條弦亮一下(根音金色、其他青色),0.9 秒淡掉;系統減少動態時 animation 會被縮成一瞬間 */
 .gtr-dgs line.str.ring{animation:strRing .9s ease-out}
 .gtr-dgs line.str.ring.root{animation-name:strRingRoot}
-@keyframes strRing{0%{stroke:var(--teal);stroke-width:4;filter:drop-shadow(0 0 4px var(--teal))}100%{}}
-@keyframes strRingRoot{0%{stroke:var(--gold);stroke-width:4;filter:drop-shadow(0 0 4px var(--gold))}100%{}}
+@keyframes strRing{0%{stroke:var(--note-teal);stroke-width:4;filter:drop-shadow(0 0 4px var(--note-teal))}100%{}}
+@keyframes strRingRoot{0%{stroke:var(--note-gold);stroke-width:4;filter:drop-shadow(0 0 4px var(--note-gold))}100%{}}
 .kb-stage{border:1px solid var(--line);border-radius:var(--radius-md);padding:10px;background:var(--panel);position:relative}
 .kb-stage .pr-ghost{visibility:hidden}
 .kb-stage > .pr-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px 24px}
@@ -567,7 +578,7 @@ body.pr-fs-on{overflow:hidden}
 .pr-empty{color:var(--muted);font-size:var(--fs-sm);text-align:center;padding:18px 8px}
 .pr-steps-empty{color:var(--muted);font-size:var(--fs-xs)}
 .pr-steps span.new{animation:prFlash 1s ease-out}
-@keyframes prFlash{0%{background:var(--gold);color:var(--bg)}100%{background:transparent}}
+@keyframes prFlash{0%{background:var(--gold-fill);color:var(--on-fill)}100%{background:transparent}}
 .pr-custom{display:flex;gap:6px;margin-bottom:6px;align-items:center}
 .pr-custom .filter-chip{flex:none}
 .pr-custom select{flex:none;max-width:38%}
@@ -732,7 +743,7 @@ select.mini:focus{outline:none;border-color:var(--gold)}
 /* ── 結果面板 ── */
 .rt-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
 .rt-head .rt-add{margin-left:auto;align-self:center;border-color:var(--teal);color:var(--teal)}
-.rt-head .rt-add.done{background:var(--teal);color:var(--bg)}
+.rt-head .rt-add.done{background:var(--teal-fill);color:var(--on-fill)}
 .rt-name{font-family:"Noto Serif TC",serif;font-size:var(--fs-2xl);font-weight:700;color:var(--gold-bright);line-height:1.1}
 .rt-sub{font-size:var(--fs-sm);color:var(--muted-bright)}
 /* align-items:stretch(預設值,寫出來提醒別動它):有的音要標八度、有的不用,
@@ -747,7 +758,7 @@ select.mini:focus{outline:none;border-color:var(--gold)}
 }
 .note-cell .deg{font-size:var(--fs-2xs);color:var(--muted);letter-spacing:.04em}
 .note-cell .nm{font-family:"Noto Serif TC",serif;font-size:var(--fs-md);font-weight:700;color:var(--ivory);line-height:1.3}
-.note-cell.is-root{border-color:var(--gold);background:rgba(201,162,75,.12)}
+.note-cell.is-root{border-color:var(--gold);background:rgba(242,185,75,.12)}
 .note-cell.is-root .nm{color:var(--gold-bright)}
 .meta-row{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:12px;font-size:var(--fs-sm);color:var(--muted-bright)}
 .meta-row b{color:var(--ivory);font-weight:500;font-variant-numeric:tabular-nums}
@@ -2827,7 +2838,7 @@ function drawFretboard(ctx, w, h, gv){
      透出 .kb-wrap 的主題背景,文字與記號也改讀主題色,淺色模式才不會是一塊黑框 */
   const cs = getComputedStyle(document.body);
   const cv = n => cs.getPropertyValue(n).trim();
-  const TH = { muted: cv("--muted-bright") || "#B6A576", gold: cv("--gold") || "#C9A24B", teal: cv("--teal") || "#3FBFAE" };
+  const TH = { muted: cv("--muted-bright") || "#B6A576", gold: cv("--note-gold") || "#F2B94B", teal: cv("--note-teal") || "#3FBFAE" };
   const wood = ctx.createLinearGradient(0, top, 0, bottom);
   wood.addColorStop(0, "#3A2717"); wood.addColorStop(1, "#24170C");
   ctx.fillStyle = wood;
@@ -5004,7 +5015,7 @@ function voicingSVG(v, rp){
     g += '<rect class="brr" data-x1="' + bx1 + '" data-x2="' + bx2 + '" data-cy="' + yOf(v.minF) + '" x="' + (bx1 - 7) + '" y="' + (yOf(v.minF) - 7) + '" width="' + (bx2 - bx1 + 14) + '" height="14" rx="7" fill="var(--muted-bright)" opacity=".6"/>'; }
   const fing = gtrFingering(v.frets);
   v.frets.forEach((f, s) => {
-    const col = f >= 0 && pcOf(gm(s, f)) === rp ? "var(--gold)" : "var(--teal)";
+    const col = f >= 0 && pcOf(gm(s, f)) === rp ? "var(--note-gold)" : "var(--note-teal)";
     if (f < 0) g += '<text class="mx" x="' + xs(s) + '" y="' + (y0 - 9) + '" data-cy="' + (y0 - 13) + '" text-anchor="middle" font-size="12" fill="var(--muted)">×</text>';
     else if (f === 0) g += '<circle cx="' + xs(s) + '" cy="' + (y0 - 13) + '" r="5" fill="none" stroke="' + col + '" stroke-width="1.8"/>';
     else {
@@ -5039,7 +5050,7 @@ function pianoDiagramSVG(){
     if (!isBlackKey(m)) continue;
     const i = whites.indexOf(m - 1);
     if (i < 0) continue;
-    const fill = on.has(m) ? (on.get(m) ? "#C4901A" : "#22887A") : "#1C1A16";
+    const fill = on.has(m) ? (on.get(m) ? "#BC8A1C" : "#2FA897") : "#1C1A16";   // 跟大鍵盤黑鍵底部同色
     g += '<rect x="' + ((i + 1) * ww - bw / 2 - 0.4) + '" y="0" width="' + bw + '" height="' + bh + '" rx="1" fill="' + fill + '"/>';
   }
   return '<svg class="dg kb" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + notes.map(n => n.name).join(" ") + '">' + g + '</svg>';
