@@ -1606,6 +1606,9 @@ async function openPage(browser, opts = {}){
         if (inst === "guitar" && !r.fn) fails.push("吉他和弦表沒有指法數字");
         if (lang === "en" && r.cjk) fails.push("英文和弦表有中文");
       }
+      // 樂器切換鈕與和弦表的樂器選項同一個順序:吉他在左、鋼琴在右
+      total++;
+      if (await q.evaluate(() => [...document.querySelectorAll(".inst-switch button")].map(b => b.id).join() !== "instGuitar,instPiano")) fails.push("樂器切換鈕應該吉他在左、鋼琴在右");
       // 只有目前的根音、基本 7 種:照「大三 小三 maj7 m7 7 m7♭5 dim7」排
       await q.click('#printPop [data-g="set"][data-v="core"]'); await q.click('#printPop [data-g="roots"][data-v="cur"]'); await q.click("#printGo");
       await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
