@@ -1889,8 +1889,8 @@ function drawKeyboard(ctx, x, y, w, h, activeMap){
     const info = activeMap.get(m);
     const staff = info && info.staff;
     const attack = info && info.attack;
-    // 黑鍵的青色也有漸層,底部 #2FA897(對深色字 6.5)
-    let baseColor = staff === 2 ? ["#5FD8C6", "#2FA897"] : staff === 1 ? ["#F2B94B", "#8A6410"] : ["#3a3a3a", "#0a0a0a"];
+    // 黑鍵的青色也有漸層,底部 #2FA897(對深色字 6.5);金色黑鍵底部原本 #8A6410 只有 3.7,根音在黑鍵時(B♭、F♯)音名難讀,調亮到 #BC8A1C(6.5)
+    let baseColor = staff === 2 ? ["#5FD8C6", "#2FA897"] : staff === 1 ? ["#F2B94B", "#BC8A1C"] : ["#3a3a3a", "#0a0a0a"];
     if (attack) baseColor = staff === 2 ? ["#8FFFF0", "#3FBFAE"] : staff === 1 ? ["#FFE39A", "#C4901A"] : baseColor;
     // 黑鍵投影到白鍵上
     ctx.fillStyle = "rgba(0,0,0,0.45)";
