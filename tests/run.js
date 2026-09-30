@@ -137,7 +137,7 @@ async function openPage(browser, opts = {}){
     const r = await p.evaluate(() => {
       const want = {
         "C|maj":"× 3 2 0 1 0", "G|maj":"3 2 0 0 0 3", "D|maj":"× × 0 2 3 2", "A|maj":"× 0 2 2 2 0", "E|maj":"0 2 2 1 0 0",
-        "A|min":"× 0 2 2 1 0", "E|min":"0 2 2 0 0 0", "D|min":"× × 0 2 3 1", "F|maj":"1 3 3 2 1 1", "E|7":"0 2 0 1 0 0",
+        "A|min":"× 0 2 2 1 0", "E|min":"0 2 2 0 0 0", "D|min":"× × 0 2 3 1", "F|maj":"× × 3 2 1 1", "E|7":"0 2 0 1 0 0",
         "C|maj7":"× 3 2 0 0 0", "B|7":"× 2 1 2 0 2", "A|7":"× 0 2 0 2 0", "D|7":"× × 0 2 1 2", "G|7":"3 2 0 0 0 1",
         "C|7":"× 3 2 3 1 0", "F|maj7":"× × 3 2 1 0", "B|maj":"× 2 4 4 4 2", "C|min":"× 3 5 5 4 3", "G|min":"3 5 5 3 3 3",
         "B|min":"× 2 4 4 3 2", "F|min":"1 3 3 1 1 1", "F|7":"1 3 1 2 1 1", "C|m7":"× 3 5 3 4 3", "Bb|maj":"× 1 3 3 3 1"
@@ -1645,6 +1645,10 @@ async function openPage(browser, opts = {}){
             if ([...set].some(x => !set.has((x + p) % 12))) o.push(id); }
           return o; });
         if (bad.length) fails.push("梅湘模式不對稱: " + bad.join(", ")); }
+      // F 大三和弦第一個是小 F(× × 3 2 1 1),橫按 F 排後面(使用者要求開放把位優先)
+      total++;
+      { const f = await q.evaluate(() => { const vs = chordVoicingsFor(5, chordById("maj")); return vs.list.map(v => gtrTabText(v.frets)); });
+        if (f[0] !== "× × 3 2 1 1" || !f.includes("1 3 3 2 1 1")) fails.push("F 的按法順序: " + f.join(" | ")); }
       // 樂器切換鈕與和弦表的樂器選項同一個順序:吉他在左、鋼琴在右
       total++;
       if (await q.evaluate(() => [...document.querySelectorAll(".inst-switch button")].map(b => b.id).join() !== "instGuitar,instPiano")) fails.push("樂器切換鈕應該吉他在左、鋼琴在右");
