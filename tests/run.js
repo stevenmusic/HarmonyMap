@@ -1606,6 +1606,11 @@ async function openPage(browser, opts = {}){
         if (inst === "guitar" && !r.fn) fails.push("吉他和弦表沒有指法數字");
         if (lang === "en" && r.cjk) fails.push("英文和弦表有中文");
       }
+      // 和弦表入口要看得出來是「下載和弦表」:有字、不是只有圖示(使用者反映原本的印表機圖示找不到)
+      total++;
+      // 窄手機(≤380px)只留下載圖示(搜尋框才不會被擠到 49px),其他寬度要有字
+      if (!(await q.evaluate(w => { const s = $("printOpen").querySelector("span"), ic = $("printOpen").querySelector("svg");
+        return w <= 380 ? ic.getBoundingClientRect().width > 0 : s && s.offsetWidth > 0 && /和弦表|Chart/.test(s.textContent); }, w))) fails.push("和弦表下載鈕沒有顯示文字(" + w + "px)");
       // 樂器切換鈕與和弦表的樂器選項同一個順序:吉他在左、鋼琴在右
       total++;
       if (await q.evaluate(() => [...document.querySelectorAll(".inst-switch button")].map(b => b.id).join() !== "instGuitar,instPiano")) fails.push("樂器切換鈕應該吉他在左、鋼琴在右");
