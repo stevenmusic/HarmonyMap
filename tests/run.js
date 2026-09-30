@@ -1528,6 +1528,45 @@ async function openPage(browser, opts = {}){
     report("分享連結", total, fails);
   }
 
+  /* ── 和弦表(列印 / 存成 PDF):張數、每張都有圖、英文沒有中文、只有和弦分頁有按鈕、320 寬不擠壞、列印時只印和弦表 ── */
+  {
+    const fails = []; let total = 0;
+    for (const [w, h, lang] of [[320, 568, "zh"], [390, 844, "en"], [1280, 860, "zh"]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      if (lang === "en") await q.click("#langToggle");
+      await q.evaluate(() => { window.__noPrint = true; });
+      const vis = await q.evaluate(() => { const r = {}; for (const tb of ["Chord", "Scale", "Find"]) { $("tab" + tb).click(); r[tb] = !!$("printOpen").offsetParent; } $("tabChord").click(); return r; });
+      total++; if (!vis.Chord || vis.Scale || vis.Find) fails.push("列印鈕只該在和弦分頁(" + w + "): " + JSON.stringify(vis));
+      const row = await q.evaluate(() => { const r = document.querySelector(".find-row").getBoundingClientRect(), s = document.querySelector(".search-wrap").getBoundingClientRect(), b = $("printOpen").getBoundingClientRect();
+        return { over: b.right > r.right + 1, search: Math.round(s.width), h: Math.round(r.height) }; });
+      total++; if (row.over || row.search < 90 || row.h > 44) fails.push("清單上方那排擠壞了(" + w + "): " + JSON.stringify(row));
+      await q.click("#printOpen");
+      for (const [inst, lv, want] of [["guitar", "3", 84], ["piano", "2", 33 * 12], ["guitar", "1", 80 * 12]]) {
+        await q.click('#printPop [data-g="inst"][data-v="' + inst + '"]'); await q.click('#printPop [data-g="lv"][data-v="' + lv + '"]');
+        await q.click('#printPop [data-g="roots"][data-v="all"]');
+        await q.click("#printGo"); await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
+        const r = await q.evaluate(() => ({ cells: document.querySelectorAll("#printSheet .ps-cell").length, svg: document.querySelectorAll("#printSheet .ps-cell svg").length,
+          fn: document.querySelectorAll("#printSheet svg text.fn").length, cjk: /[\u3400-\u9fff]/.test($("printSheet").textContent + $("printPop").textContent), inst: STATE.inst }));
+        total++;
+        if (r.cells !== want || r.svg !== want) fails.push("和弦表張數(" + w + " " + inst + " lv" + lv + "): " + r.cells + " 張、" + r.svg + " 張圖,應該 " + want);
+        if (inst === "guitar" && !r.fn) fails.push("吉他和弦表沒有指法數字");
+        if (lang === "en" && r.cjk) fails.push("英文和弦表有中文");
+      }
+      // 只有目前的根音:C 大三 → 7 張(必學)
+      await q.click('#printPop [data-g="lv"][data-v="3"]'); await q.click('#printPop [data-g="roots"][data-v="cur"]'); await q.click("#printGo");
+      await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
+      total++; if (await q.evaluate(() => document.querySelectorAll("#printSheet .ps-cell").length) !== 7) fails.push("只印目前根音應該 7 張");
+      // 列印樣式:只看得到和弦表
+      await q.emulateMedia({ media: "print" }); await q.evaluate(() => document.body.classList.add("printing"));
+      const pr = await q.evaluate(() => ({ sheet: $("printSheet").getBoundingClientRect().height > 100, main: getComputedStyle(document.querySelector("main")).display, hdr: getComputedStyle(document.querySelector("header")).display }));
+      total++; if (!pr.sheet || pr.main !== "none" || pr.hdr !== "none") fails.push("列印時應該只有和弦表: " + JSON.stringify(pr));
+      await q.emulateMedia({ media: "screen" }); await q.evaluate(() => document.body.classList.remove("printing"));
+      if (q._errors.length) fails.push("和弦表頁面錯誤 " + q._errors.join("; "));
+      await q.close();
+    }
+    report("和弦表", total, fails);
+  }
+
   /* ── 7. 音訊生命週期與穩定性:儲存空間被停用、iOS 打斷後叫醒、節拍器補拍與停止、單音不累積 ── */
   {
     const fails = []; let total = 0;

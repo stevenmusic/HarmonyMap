@@ -868,6 +868,45 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
   }
 }
 
+/* ── 和弦表(列印 / 存成 PDF)── */
+#printOpen{flex:none;align-self:center;margin:0}
+#printOpen[hidden]{display:none}
+.print-pop{width:min(380px, calc(100vw - 24px))}
+.print-pop h3{margin:0}
+.print-pop .pr-head{margin-bottom:12px}
+.pp-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
+.pp-row .filter-label{min-width:4.2em;font-size:var(--fs-xs);color:var(--muted)}
+.pp-hint{font-size:var(--fs-xs);color:var(--muted-bright);line-height:1.6;margin:4px 0 12px}
+.pp-go{width:100%;height:42px}
+.pp-go:disabled{opacity:.7;cursor:progress}
+#printSheet{display:none}
+/* 列印:只印和弦表,其他全部藏起來;白底、深色線條(SVG 用的是 CSS 變數,在這裡換成淺色的一組) */
+@media print{
+  @page{size:A4 portrait;margin:11mm 10mm}
+  body.printing{background:#fff !important;display:block}
+  body.printing > *:not(#printSheet){display:none !important}
+  body.printing #printSheet{display:block}
+  *{animation:none !important;transition:none !important}
+}
+#printSheet{--surface-inset:#fff;--muted-bright:#3a3428;--muted:#6f6450;--note-gold:#E3A52E;--note-teal:#2FA897;
+  color:#16130D;background:#fff;font-family:"Noto Sans TC",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.ps-head{border-bottom:1.5px solid #16130D;padding-bottom:6px;margin-bottom:8px}
+.ps-head .ps-title{font-weight:700;font-family:"Noto Serif TC",serif;font-size:20px;letter-spacing:.04em}
+.ps-head p{font-size:11px;color:#3a3428;margin-top:2px}
+.ps-head .ps-legend{color:#6f6450}
+.ps-root{margin-top:8px}
+.ps-root h2{font-family:"Noto Serif TC",serif;font-size:16px;margin:0 0 4px;padding-left:6px;border-left:4px solid #E3A52E;break-after:avoid;page-break-after:avoid}
+.ps-grid{display:grid;gap:4px 6px}
+.ps-grid.guitar{grid-template-columns:repeat(7,minmax(0,1fr))}
+.ps-grid.piano{grid-template-columns:repeat(4,minmax(0,1fr))}
+.ps-cell{break-inside:avoid;page-break-inside:avoid;border:.6px solid #d8cdb2;border-radius:6px;padding:4px 3px 3px;text-align:center;min-width:0}
+.ps-cell b{display:block;font-family:"Noto Serif TC",serif;font-size:13px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-cell svg{display:block;width:100%;height:auto;margin:2px auto}
+.ps-grid.piano .ps-cell svg{width:92%}
+.ps-cell small{display:block;font-size:9px;color:#6f6450;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-none{font-size:9px;color:#6f6450;padding:20px 0}
+.ps-foot{margin-top:10px;font-size:9px;color:#6f6450;text-align:center}
+
 /* ── 動態與質感(使用者要求:多一點特效/動畫)──────────────────────
    都只動外觀:transform / opacity / 陰影 / 背景,不改任何元素的尺寸與位置(點下去的東西不能移位)。
    系統開了「減少動態」時,上面那段 prefers-reduced-motion 會把動畫縮成一瞬間 */
@@ -999,6 +1038,8 @@ body.light{background:
 </header>
 
 <div class="help-pop" id="helpPop" hidden role="dialog" aria-modal="false" aria-labelledby="helpPopTitle"></div>
+<div class="help-pop print-pop" id="printPop" hidden role="dialog" aria-modal="false" aria-labelledby="printPopTitle"></div>
+<div id="printSheet" aria-hidden="true"></div>
 
 <main>
   <!-- ══ 釘在上方的區塊:分頁 / 鍵盤 / 根音,捲動時不會離開畫面 ══ -->
@@ -1095,6 +1136,8 @@ body.light{background:
           <span class="chev">›</span><span data-i18n="filterToggleText">篩選</span><span class="badge" id="filterBadge"></span>
         </button>
         <button class="filter-summary" id="practiceOpen"><span data-i18n="practiceBtn">練習</span><span class="badge" id="practiceCount"></span></button>
+        <!-- 和弦表:印出來 / 存成 PDF(瀏覽器的列印視窗就能存成 PDF,不用內嵌 PDF 檔或函式庫,單檔不變大,永遠跟字典一致) -->
+        <button class="kb-gear" id="printOpen" aria-expanded="false" data-i18n-attr="aria-label:printBtn,title:printBtn" aria-label="列印和弦表 / 存成 PDF" title="列印和弦表 / 存成 PDF"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg></button>
       </div>
       <div class="filter-rows" id="filterRows" hidden>
         <div class="filter-row" id="styleRow"></div>
@@ -1225,7 +1268,7 @@ const I18N = {
     practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceVoice: "就近轉位", practiceVoiceTitle: "每個和弦用跟前一個最接近的轉位(手幾乎不用移動);關掉 = 照名稱的原位", practiceFullscreen: "全螢幕(一次看四到八個和弦)", practiceFullscreenExit: "離開全螢幕", practiceBeatsShort: "{n}拍", practiceHalfBar: "點一下換拍數:整小節 → 1 拍 → 2 拍 → …(沒設拍數的和弦會自動填滿到小節線)", practiceBars: "共 {n} 小節", practiceRamp: "逐漸加速", practiceRampOff: "固定速度", practiceRampOpt: "每 {k} 輪 +{n}", practiceRampOpt1: "每輪 +{n}", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
-    practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
+    practiceBtn: "練習", printBtn: "列印和弦表 / 存成 PDF", printTitle: "和弦表(列印 / 存成 PDF)", printInst: "樂器", printLevel: "範圍", printLv3: "★必學", printLv2: "必學 + 常用", printLvAll: "全部", printRoots: "根音", printRoots12: "12 個根音", printRootsCur: "只有 {x}", printGo: "列印 / 存成 PDF", printBusy: "製作中… {n}/{m}", printHint: "在列印視窗的「目的地 / 印表機」選「存成 PDF」就能下載。每種和弦只列一個按法(最推薦的那個)。", printCount: "{n} 張圖", printSheetTitle: "HarmonyMap 和弦表", printColors: "金 = 根音、青 = 其他組成音", printNone: "(沒有好按的指法)", practiceTitle: "換和弦練習", practiceClose: "結束練習",
     practiceKey: "調", practiceTempo: "速度", practiceBeats: "每個和弦", practiceBeatsUnit: "拍",
     practiceAccomp: "換和弦時彈出和弦", practiceStart: "開始", practiceStop: "停止",
     practiceNow: "現在", practiceNext: "下一個", practiceCustom: "自訂進行",
@@ -1321,7 +1364,7 @@ const I18N = {
     practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceVoice: "Voice leading", practiceVoiceTitle: "Play each chord in the inversion closest to the previous one; off = root position as written", practiceFullscreen: "Full screen (four to eight chords at a time)", practiceFullscreenExit: "Exit full screen", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to change the length: whole bar → 1 beat → 2 beats → … (chords without a length fill up to the bar line)", practiceBars: "{n} bars total", practiceRamp: "Speed up gradually", practiceRampOff: "Steady tempo", practiceRampOpt: "+{n} every {k} loops", practiceRampOpt1: "+{n} every loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
-    practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
+    practiceBtn: "Practice", printBtn: "Print chord chart / save as PDF", printTitle: "Chord chart (print / PDF)", printInst: "Instrument", printLevel: "Range", printLv3: "★ Essential", printLv2: "Essential + common", printLvAll: "All", printRoots: "Roots", printRoots12: "All 12 roots", printRootsCur: "Only {x}", printGo: "Print / save as PDF", printBusy: "Building… {n}/{m}", printHint: "In the print dialog choose \"Save as PDF\" as the destination to download it. One shape per chord (the recommended one).", printCount: "{n} diagrams", printSheetTitle: "HarmonyMap Chord Chart", printColors: "gold = root, teal = other chord tones", printNone: "(no playable shape)", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
     practiceKey: "Key", practiceTempo: "Tempo", practiceBeats: "Each chord", practiceBeatsUnit: "beats",
     practiceAccomp: "Play the chord on each change", practiceStart: "Start", practiceStop: "Stop",
     practiceNow: "Now", practiceNext: "Next", practiceCustom: "Custom progression",
@@ -4670,6 +4713,7 @@ function renderCore(){
   document.querySelector(".lower").classList.toggle("practicing", practicing);
   document.querySelector(".lower").classList.toggle("finding", findMode);
   $("practiceOpen").hidden = STATE.tab !== "chord";
+  $("printOpen").hidden = STATE.tab !== "chord";
   // 練習按鈕上標出進行裡已經排了幾個和弦(從結果面板「加入練習」時看得到有加進去)
   $("practiceCount").textContent = PRACTICE.steps.length ? String(PRACTICE.steps.length) : "";
   if (practicing) renderPractice();
@@ -6172,6 +6216,88 @@ document.addEventListener("pointerdown", ev => {
   if (!pop.hidden && !pop.contains(ev.target) && !$("helpToggle").contains(ev.target)) toggleHelp(false);
 });
 document.addEventListener("keydown", ev => { if (ev.key === "Escape") toggleHelp(false); });
+
+/* ── 和弦表(列印 / 存成 PDF)──
+   設定卡片選樂器、範圍、根音,按下去在 #printSheet 產生 A4 版面,再叫瀏覽器的列印視窗(可以選「存成 PDF」)。
+   每種和弦只列一個按法:吉他 = 指法挑選的第一名(含指法數字),鋼琴 = 小鍵盤(同一個根音共用同一段鍵盤)。
+   沒有下載次數:靜態網頁沒有伺服器可以記,接外部計數服務又違反單檔、離線、隱私 */
+const PRINT_ROOTS = [[0, 0], [1, -1], [1, 0], [2, -1], [2, 0], [3, 0], [3, 1], [4, 0], [5, -1], [5, 0], [6, -1], [6, 0]];   // C D♭ D E♭ E F F♯ G A♭ A B♭ B
+const PRINT = { inst: "", lv: 3, roots: "all", busy: false };
+function printChords(){ return CHORDS.filter(c => PRINT.lv === 3 ? c.lv === 3 : PRINT.lv === 2 ? c.lv >= 2 : true); }
+function printRootList(){ return PRINT.roots === "all" ? PRINT_ROOTS : [[STATE.letter, STATE.acc]]; }
+function renderPrintPop(){
+  const pop = $("printPop"), inst = PRINT.inst || STATE.inst;
+  const chip = (grp, val, on, label) => '<button class="filter-chip" data-g="' + grp + '" data-v="' + val + '" aria-pressed="' + on + '">' + label + '</button>';
+  const n = printChords().length * printRootList().length;
+  pop.innerHTML = '<div class="pr-head"><h3 id="printPopTitle">' + t("printTitle") + '</h3>' +
+      '<button class="kb-gear" id="printClose" aria-label="' + t("practiceClose") + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+    '<div class="pp-row"><span class="filter-label">' + t("printInst") + '</span>' + chip("inst", "guitar", inst === "guitar", t("instGuitar")) + chip("inst", "piano", inst === "piano", t("instPiano")) + '</div>' +
+    '<div class="pp-row"><span class="filter-label">' + t("printLevel") + '</span>' + chip("lv", 3, PRINT.lv === 3, t("printLv3")) + chip("lv", 2, PRINT.lv === 2, t("printLv2")) + chip("lv", 1, PRINT.lv === 1, t("printLvAll")) + '</div>' +
+    '<div class="pp-row"><span class="filter-label">' + t("printRoots") + '</span>' + chip("roots", "all", PRINT.roots === "all", t("printRoots12")) + chip("roots", "cur", PRINT.roots === "cur", t("printRootsCur", { x: rootName() })) + '</div>' +
+    '<p class="pp-hint">' + t("printHint") + '</p>' +
+    '<button class="btn primary pp-go" id="printGo"' + (PRINT.busy ? " disabled" : "") + '>' + t("printGo") + ' · ' + t("printCount", { n }) + '</button>';
+  pop.querySelectorAll("[data-g]").forEach(b => { b.onclick = () => {
+    const g = b.dataset.g, v = b.dataset.v;
+    if (g === "inst") PRINT.inst = v; else if (g === "lv") PRINT.lv = +v; else PRINT.roots = v;
+    renderPrintPop();
+  }; });
+  $("printClose").onclick = () => togglePrintPop(false);
+  $("printGo").onclick = () => buildPrintSheet().then(() => { if (!window.__noPrint) window.print(); });
+}
+function togglePrintPop(force){
+  const pop = $("printPop"), open = force !== undefined ? force : pop.hidden;
+  if (open) { toggleHelp(false); PRINT.inst = STATE.inst; renderPrintPop(); }
+  pop.hidden = !open;
+  $("printOpen").setAttribute("aria-expanded", String(open));
+}
+$("printOpen").onclick = ev => { ev.stopPropagation(); togglePrintPop(); };
+document.addEventListener("pointerdown", ev => {
+  const pop = $("printPop");
+  if (!pop.hidden && !pop.contains(ev.target) && !$("printOpen").contains(ev.target)) togglePrintPop(false);
+});
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("printPop").hidden) togglePrintPop(false); });
+/* 產生列印版面。吉他指法要窮舉(全部 80 種 × 12 根音要幾秒),每個根音做完讓出一次主執行緒、按鈕上顯示進度 */
+async function buildPrintSheet(){
+  if (PRINT.busy) return;
+  PRINT.busy = true;
+  const inst = PRINT.inst || STATE.inst, defs = printChords(), roots = printRootList(), el = $("printSheet");
+  const savedInst = STATE.inst, savedCapo = STATE.capo, savedLefty = STATE.lefty;
+  let html = "", k = 0;
+  try {
+    for (const [letter, acc] of roots) {
+      const go = $("printGo"); if (go) { go.disabled = true; go.textContent = t("printBusy", { n: ++k, m: roots.length }); }
+      await new Promise(r => setTimeout(r, 0));
+      Object.assign(STATE, { inst, capo: 0, lefty: false });
+      const steps = defs.map(d => ({ letter, acc, id: d.id, bass: null }));
+      let win = null;
+      if (inst === "piano") {   // 同一個根音的和弦共用同一段鍵盤(8 / 11 / 15 個白鍵,放不下畫到最高音)
+        const all = [];
+        steps.forEach(st => withStep(st, () => displayNotes().forEach(n => all.push(n.midi))));
+        const lo = kbWindowLo(all.map(m => ({ midi: m }))), top = Math.max(...all), n = KB_PRACTICE_SIZES.find(x => kbWindowHi(lo, x) >= top);
+        let hi = n ? kbWindowHi(lo, n) : top; while (!n && ![4, 11].includes(pcOf(hi))) hi++;
+        win = { lo, hi };
+      }
+      const cells = steps.map(st => withStep(st, () => {
+        const def = chordById(st.id), name = chordTitle(def), tones = currentNotes().map(n => n.name).join(" ");
+        let dg;
+        if (inst === "guitar") {
+          const vs = chordVoicingsFor(rootPc(), def, null), v = vs.list[vs.best];
+          dg = v ? voicingSVG(v, rootPc()) : '<div class="ps-none">' + t("printNone") + '</div>';
+        } else dg = pianoDiagramSVG(win);
+        return '<div class="ps-cell"><b>' + escapeHTML(name) + '</b>' + dg + '<small>' + escapeHTML(tones) + '</small></div>';
+      })).join("");
+      html += '<section class="ps-root"><h2>' + escapeHTML(stepName(steps[0])) + '</h2><div class="ps-grid ' + inst + '">' + cells + '</div></section>';
+    }
+  } finally { Object.assign(STATE, { inst: savedInst, capo: savedCapo, lefty: savedLefty }); PRINT.busy = false; }
+  const lvName = t(PRINT.lv === 3 ? "printLv3" : PRINT.lv === 2 ? "printLv2" : "printLvAll");
+  el.innerHTML = '<div class="ps-head"><div class="ps-title">' + t("printSheetTitle") + '</div><p>' + [t(inst === "guitar" ? "instGuitar" : "instPiano"), lvName, roots.length === 12 ? t("printRoots12") : escapeHTML(stepName({ letter: roots[0][0], acc: roots[0][1], id: "maj", bass: null }))].join(" · ") +
+    '</p><p class="ps-legend">' + (inst === "guitar" ? t("fingerLegend") + " · " : "") + t("printColors") + '</p></div>' + html +
+    '<div class="ps-foot">HarmonyMap</div>';
+  if ($("printGo")) renderPrintPop();
+}
+const escapeHTML = x => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+addEventListener("beforeprint", () => { if ($("printSheet").innerHTML) document.body.classList.add("printing"); });
+addEventListener("afterprint", () => { document.body.classList.remove("printing"); });
 
 /* 鍵盤設定面板的開關。點面板外面或按 Esc 就關掉 */
 function toggleKbPopover(force){
