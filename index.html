@@ -1040,7 +1040,7 @@ const I18N = {
     help3: "吉他和弦圖:<b>點一下</b>刷整個和弦,手指<b>左右滑過</b>弦就一條一條撥",
     help4: "搜尋框可以直接打<b>和弦名稱</b>:Bbmaj7、D/F#、Am/G,按 Enter 就跳過去",
     help5: "<b>練習</b>:排一組和弦跟著節拍器換;點進行裡的和弦可以改成<b>半小節</b>,也能打級數(<b>G: I V vi IV</b>)",
-    help6: "桌機快捷鍵:<b>空白鍵</b>播放、<b>↑↓</b>換和弦、<b>←→</b>換根音、<b>字母鍵</b>選根音、<b>/</b>斜線和弦",
+    help6: "桌機快捷鍵:<b>空白鍵</b>播放、<b>↑↓</b>換和弦、<b>←→</b>換根音、<b>字母鍵</b>選根音(辨識時是選音,Shift = 升)、<b>/</b>斜線和弦",
     help7: "iPhone:Safari 的<b>分享 → 加入主畫面</b>,之後就像 App 一樣從主畫面打開",
     help8: "<b>網址就是這一頁</b>:和弦、音階、練習的進行都記在網址裡,複製傳給學生,打開就是同一頁",
     tabChord: "和弦", tabScale: "音階", tabFind: "辨識",
@@ -1136,7 +1136,7 @@ const I18N = {
     help3: "Guitar diagrams: <b>tap</b> to strum the whole chord, <b>swipe across</b> the strings to pluck them one by one",
     help4: "Type a <b>chord name</b> in the search box — Bbmaj7, D/F#, Am/G — and press Enter to jump to it",
     help5: "<b>Practice</b>: build a progression and change chords with the metronome; tap a chord in it for a <b>half bar</b>, or type numerals (<b>G: I V vi IV</b>)",
-    help6: "Desktop keys: <b>Space</b> play, <b>↑↓</b> chord, <b>←→</b> root, <b>letter keys</b> pick the root, <b>/</b> slash chord",
+    help6: "Desktop keys: <b>Space</b> play, <b>↑↓</b> chord, <b>←→</b> root, <b>letter keys</b> pick the root (in Identify they pick notes, Shift = sharp), <b>/</b> slash chord",
     help7: "iPhone: in Safari tap <b>Share → Add to Home Screen</b> to open it like an app",
     help8: "<b>The link is the page</b>: the chord, scale or practice progression is kept in the URL — send it to a student and it opens the same view",
     tabChord: "Chord", tabScale: "Scale", tabFind: "Identify",
@@ -5707,6 +5707,15 @@ document.addEventListener("keydown", ev => {
     if (ev.key === "/") { ev.preventDefault(); padSlash(); return; }
   }
   const li = "CDEFGAB".indexOf(ev.key.toUpperCase());
+  /* 辨識(鋼琴):字母鍵 = 在起始八度裡選/取消那個音,Shift + 字母 = 升半音(C# = Shift+C)。
+     沒有這個的話,只用鍵盤的人完全沒辦法用辨識(畫布不能聚焦) */
+  if (li >= 0 && ev.key.length === 1 && STATE.tab === "find" && STATE.inst === "piano") {
+    ev.preventDefault();
+    const m = 12 * (STATE.octave + 1) + LETTER_PC[li] + (ev.shiftKey ? 1 : 0);
+    if (STATE.findSel.has(m)) STATE.findSel.delete(m); else { STATE.findSel.add(m); playSingle(m); }
+    render();
+    return;
+  }
   if (li >= 0 && ev.key.length === 1 && STATE.tab !== "find") {
     ev.preventDefault();
     if (P.open && STATE.tab === "chord") padLetter(li);

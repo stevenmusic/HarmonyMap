@@ -1414,6 +1414,10 @@ async function openPage(browser, opts = {}){
       const f = await z.evaluate(() => { const a = document.activeElement; return a && a.closest && a.closest("#letterRow") ? a.textContent : (a && a.tagName); });
       await z.click("#langToggle");
       const en = await z.evaluate(() => { STATE.tab = "scale"; STATE.scaleId = "dorian"; render(); const s = $("kbSummary"); return (s.querySelector("b").textContent + "|" + ((s.querySelector(".zh") || {}).textContent || "")); });
+      await z.evaluate(() => { document.activeElement.blur(); STATE.tab = "find"; STATE.inst = "piano"; STATE.findSel = new Set(); render(); });
+      for (const k of ["c", "e", "g", "Shift+A"]) await z.keyboard.press(k);
+      const fsel = await z.evaluate(() => { const an = findAnalysis(); const r = an.results[0]; const n = r ? findChordName(r.rootPc, r.chord, an.bassPc, spellPrefFor(r.rootPc, r.chord)) : "?"; STATE.findSel = new Set(); STATE.tab = "chord"; render(); return n; });
+      total++; if (fsel !== "C7") fails.push("辨識用鍵盤打 C E G Shift+A 應該是 C7: " + fsel);
       total++; if (tab !== "scale") fails.push("焦點在分頁鈕上按空白鍵沒有切換: " + tab);
       total++; if (f !== "D") fails.push("按根音鈕後焦點掉了: " + f);
       total++; if (/Dorian\|.*Dorian/.test(en)) fails.push("英文音階摘要名稱重複: " + en);
