@@ -1645,6 +1645,9 @@ async function openPage(browser, opts = {}){
             if ([...set].some(x => !set.has((x + p) % 12))) o.push(id); }
           return o; });
         if (bad.length) fails.push("梅湘模式不對稱: " + bad.join(", ")); }
+      // 「sus4(no5)」只有兩個音、不是和弦,不能當 7sus4(no5) 的別名(使用者決定)
+      total++;
+      if (await q.evaluate(() => CHORDS.some(c => (c.alias || []).some(a => /^sus4\(no5\)$/.test(a))))) fails.push("還有 sus4(no5) 這個別名");
       // F 大三和弦第一個是小 F(× × 3 2 1 1),橫按 F 排後面(使用者要求開放把位優先)
       total++;
       { const f = await q.evaluate(() => { const vs = chordVoicingsFor(5, chordById("maj")); return vs.list.map(v => gtrTabText(v.frets)); });
