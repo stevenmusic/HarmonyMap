@@ -619,6 +619,18 @@ async function openPage(browser, opts = {}){
       if (r.length) fails.push("吉他反查常見和弦: " + r.join(" | ")); }
     await take(); // 前面換根音也會發聲(和弦分頁換根音 = 彈新和弦),先清掉
     await L("D").click(); await expect("和弦分頁 C 換成 D 的瞬間彈 D 大三和弦", "n62,66,69");
+    // 音階分頁換根音也要馬上播上行音階(鋼琴、吉他都一樣)
+    for (const inst of ["piano", "guitar"]) {
+      await q.evaluate(i => { STATE.inst = i; STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; STATE.acc = 0; render(); window._log.splice(0); }, inst);
+      await L("D").click();
+      const got = await take();
+      // 鋼琴:D4 起一個八度;吉他:跟點指板一樣播目前把位裡的音(從把位最低的 D 開始,只有 D 大調的音)
+      const ms = /^n/.test(got) ? got.slice(1).split(",").map(Number) : [];
+      const ok = inst === "piano" ? /^n62,64,66,67,69,71,73,74/.test(got)
+        : ms.length >= 7 && ms[0] % 12 === 2 && ms.every(m => [2, 4, 6, 7, 9, 11, 1].includes(((m % 12) + 12) % 12));
+      total++; if (!ok) fails.push("音階分頁(" + inst + ")換到 D 要播 D 大調上行: " + (got || "(沒聲音)"));
+    }
+    await q.evaluate(() => { STATE.inst = "piano"; STATE.tab = "chord"; STATE.letter = 1; render(); window._log.splice(0); });
     await L("C").click(); await take();
     await q.click("#rootSlash"); await L("E").click();
     total++; if ((await title()) !== "C/E") fails.push("根音卡片 / + E: " + await title());
@@ -692,7 +704,12 @@ async function openPage(browser, opts = {}){
     // 吉他斜線和弦:摘要列要列出低音、排最前面(C/B 原本只寫 C E G)
     await q.evaluate(() => { STATE.chordId = "maj"; STATE.bassIv = 11; STATE.bassFor = "maj"; render(); });
     const gs = await q.evaluate(() => [...document.querySelectorAll("#kbSummary .tn")].map(x => x.textContent).join(" "));
-    total++; if (gs !== "B E G C") fails.push("吉他 C/B 摘要列要照實際的音由低到高(× 2 2 0 1 0 = B E G C): " + gs);
+    total++; if (gs !== "B C E G") fails.push("吉他 C/B 摘要列:低音排第一、其餘照公式(B C E G): " + gs);
+    const bm = await q.evaluate(() => { const k = { letter: STATE.letter, acc: STATE.acc, chordId: STATE.chordId, bassIv: STATE.bassIv };
+      Object.assign(STATE, { letter: 6, acc: 0, chordId: "maj7", bassIv: null }); render();
+      const r = [...document.querySelectorAll("#kbSummary .tn")].map(x => x.textContent).join(" "); Object.assign(STATE, k); render(); return r; });
+    total++; if (bm !== "B D♯ F♯ A♯") fails.push("吉他 Bmaj7 摘要列要照公式: " + bm);
+    await take();
     // 每一個斜線和弦指法(不只第一個)最低的弦都要是名稱寫的低音
     const lowBad = await q.evaluate(() => { const bad = [];
       for (const def of CHORDS) for (let rp = 0; rp < 12; rp++) for (let iv = 1; iv < 12; iv++) {

@@ -3606,7 +3606,8 @@ function rootSlashState(){
   return sl && STATE.tab === "chord" && sl.for === STATE.chordId ? sl : null;
 }
 /* 和弦分頁換根音(C → D、加升降記號)的瞬間就發出新和弦的聲音,跟點和弦名稱一樣 */
-function playAfterRootChange(){ if (STATE.tab === "chord") playCurrent(); }
+// 音階分頁換根音也一樣:馬上播上行音階(跟點鍵盤/指板一樣),不用再點上面的顯示區(使用者要求)
+function playAfterRootChange(){ if (STATE.tab === "chord") playCurrent(); else if (STATE.tab === "scale") playScaleUp(); }
 function rootLetter(i){
   const sl = rootSlashState();
   // 「/」之後的第一個字母是低音;選好之後再按字母就是換根音(離開斜線模式)
@@ -5535,9 +5536,9 @@ function renderSummary(){
       if (v) v.frets.forEach((f, si) => { if (str < 0 && f >= 0 && pcOf(gm(si, f)) === pcOf(n.midi)) { str = si; midi = gm(si, f); } });
       return { text: STATE.label === "do" ? toSolfege(n.name) : n.name, midi, str };
     });
-    // 吉他照指法實際的音由低到高排(C/B 開放 = B E G C),不是照公式排:
-    // 名稱寫的低音一定排第一,後面是真的彈出來的順序。指法沒彈到的音(省略的五音)放最後
-    if (v) tones.sort((x, y) => (x.str < 0) - (y.str < 0) || x.midi - y.midi);
+    // 吉他也照和弦公式排(Bmaj7 = B D♯ F♯ A♯),斜線和弦低音排第一(C/B = B C E G),跟鋼琴一致(使用者要求)。
+    // 原本照指法實際的音由低到高排:三張和弦圖的順序各不相同,換一張就跟著變;由低到高的順序看和弦圖就有。
+    // 點音名照樣撥「指法裡那個音所在的弦」(上面的 str / midi)
   }
   // 摘要列是 flex + gap,空的 .zh 會白白撐出一段間距(英文介面的音階就沒有對照名稱),
   // 所以沒有內容時連 span 都不要產生
