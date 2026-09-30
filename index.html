@@ -882,7 +882,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 #printSheet{display:none}
 /* 列印:只印和弦表,其他全部藏起來;白底、深色線條(SVG 用的是 CSS 變數,在這裡換成淺色的一組) */
 @media print{
-  @page{size:A4 portrait;margin:10mm}
+  @page{size:A4 portrait;margin:0}   /* 頁邊 0:瀏覽器就沒有空間印自己的網址、日期、時間(使用者要求不要);留白放在每頁框裡 */
   :root,body.light{color-scheme:light !important}   /* 深色主題的 color-scheme:dark 會讓 Chrome 把頁邊塗成 #121212 */
   html,body.printing{background:#fff !important}
   body.printing{display:block}
@@ -896,22 +896,30 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
    字級照印出來的 pt 定(量過實際 PDF):名稱 12pt、指法數字約 8pt、組成音 8.5pt、頁尾 7.5pt */
 #printSheet{--surface-inset:#fff;--muted-bright:#2b261c;--muted:#6f6450;--note-gold:#E3A52E;--note-teal:#2FA897;
   color:#16130D;background:#fff;font-family:"Noto Sans TC",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.ps-page{width:190mm;height:277mm;display:flex;flex-direction:column;overflow:hidden;break-after:page;page-break-after:always}
+.ps-page{width:100%;height:100vh;padding:10mm 9mm 7mm;box-sizing:border-box;display:flex;flex-direction:column;overflow:hidden;break-after:page;page-break-after:always}
+/* 每頁框的高度 = 紙張可列印的高度(列印時 100vh 就是一頁)。原本寫死 277mm,瀏覽器保留自己的頁邊時超出一截,
+   頁尾被擠到下一張、每隔一頁就是只有頁尾的白紙(使用者回報)。內容照最保守的 245mm 排(PS.pageH),任何瀏覽器的頁邊都放得下,
+   頁尾 margin-top:auto 貼在每頁最下面 */
 .ps-page:last-child{break-after:auto;page-break-after:auto}
 .ps-head{height:15mm;flex:none;display:flex;align-items:flex-start;justify-content:space-between;gap:6mm;box-sizing:border-box}
 .ps-title{font-family:"Noto Serif TC",serif;font-weight:700;font-size:17pt;letter-spacing:.04em;line-height:1.1;white-space:nowrap}
 .ps-meta{text-align:right;font-size:8pt;line-height:1.55;color:#3a3428}
 .ps-meta .ps-legend{color:#6f6450}
-.ps-row{display:grid;column-gap:1.5mm;flex:none}
-.ps-row.guitar{grid-template-columns:10mm repeat(7,minmax(0,1fr));height:41mm}
-.ps-row.piano{grid-template-columns:10mm repeat(4,minmax(0,1fr));height:27mm}
-.ps-lab{font-family:"Noto Serif TC",serif;font-weight:700;font-size:17pt;line-height:1;color:#B8861B;padding-top:1.2mm;white-space:nowrap}
+.ps-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+.ps-body.full{justify-content:space-evenly}   /* 滿頁:多出來的高度平均分到每一列之間,不要全部堆在最下面(使用者要求) */
+.ps-row{display:grid;column-gap:3mm;flex:none}   /* 圖與圖之間 3mm:格數標示「4fr」不會貼到隔壁的圖 */
+.ps-row.guitar{grid-template-columns:8mm repeat(7,minmax(0,1fr));height:37mm}
+.ps-row.piano{grid-template-columns:8mm repeat(4,minmax(0,1fr));height:27mm}
+.ps-lab{font-family:"Noto Serif TC",serif;font-weight:700;font-size:15pt;line-height:1;color:#B8861B;padding-top:1.2mm;white-space:nowrap}
 .ps-lab.more{visibility:hidden}   /* 同一個根音的第二列以後不重複寫 */
 .ps-cell{height:100%;min-width:0;overflow:hidden;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;padding:.8mm 0 1.6mm;text-align:center}
-.ps-cell b{display:block;max-width:100%;font-family:"Noto Serif TC",serif;font-size:12pt;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-cell b{display:block;max-width:100%;font-family:"Noto Serif TC",serif;font-size:12pt;line-height:1.15;white-space:nowrap}
+/* 名稱與組成音不截成「…」(使用者要求):照字數縮字級,一定放得下 */
+.ps-cell b.l2{font-size:10.5pt} .ps-cell b.l3{font-size:9pt}
 .ps-cell svg{display:block;flex:none;height:auto;width:100%;max-width:100%;margin:.6mm auto .4mm}   /* 高度跟著寬度,名稱、圖、組成音靠在一起,空白留在列與列之間 */
 .ps-row.piano .ps-cell svg{height:14mm;width:auto;max-width:96%}   /* 小鍵盤固定高度(8 鍵的會比較窄),不然 8 個白鍵的會長得很高、把名稱擠掉 */
-.ps-cell small{display:block;max-width:100%;font-size:8.5pt;color:#4a4232;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-cell small{display:block;max-width:100%;font-size:8.5pt;color:#4a4232;letter-spacing:.02em;white-space:nowrap}
+.ps-cell small.l2{font-size:7.5pt;letter-spacing:0} .ps-cell small.l3{font-size:6.6pt;letter-spacing:0}
 /* 圖裡的小字照紙本放大(CSS 蓋過 SVG 的 font-size 屬性):指法數字要放得進圓點(直徑 14 單位) */
 #printSheet svg text.fn{font-size:13px}
 #printSheet svg circle.fd{r:8.3px}   /* 圓點放大(弦距 18,相鄰的點不會碰到),數字才放得大 */
@@ -2450,20 +2458,67 @@ const OPEN_CANON = {
   pow:  { E: "022xxx", A: "x022xx", D: "xx023x" }
 };
 const OPEN_CANON_PC = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-/* 教材首選(不限開放把位):資料庫的排名跟教學實務不一致、而且使用者逐一確認過的才放這裡。鍵是根音音高 0~11。
-   m7♭5(使用者要求「重新檢查哪一個最常用,有打叉也沒關係,注意實用性」):第 7 格以內,三種教材形狀——
-   5 弦根音 × R ♭5 ♭7 ♭3 ×(Bm7♭5 的 × 2 3 2 3 ×)、6 弦根音爵士 R × ♭7 ♭3 ♭5 ×(Gm7♭5 的 3 × 3 3 2 ×,
-   5 弦用按 6 弦的手指順便悶)、能用開放就用開放(Dm7♭5 × × 0 1 1 1)。每一個都在資料庫裡 */
+/* 教材首選(不限開放把位):使用者要求「所有和弦都要確認,允許任何按法,實用性優先」,960 組逐一核對後的結果。鍵是根音音高 0~11,
+   指法 6 弦 → 1 弦、x = 不彈、10 格以上用 36 進位字母。原則:低把位優先(第 7 格以內)、教材標準形狀
+   (開放和弦、E / A 形橫按、5 / 6 弦根音的爵士殼音,中間打叉也可以)、手指少、不大撐開。
+   - m7♭5:5 弦根音 × R ♭5 ♭7 ♭3 ×、6 弦根音 R × ♭7 ♭3 ♭5 ×、能用開放就開放(使用者逐一確認過)
+   - 13、13♭9、13♯9、13♯11、7alt、7♯5♯9…等變化屬和弦、m13、mMaj11、mMaj13、m9♭5、m11♭5、m7♯5、7sus4♭9:
+     同一個殼音換上面兩條弦的延伸音,6 弦根音 / 5 弦根音兩種取把位低的;只有比原本的推薦更低(或原本在第 8 格以上)才取代
+   - 其他是逐一挑的:原本在第 8~12 格(Dadd9 × × 12 11 10 12)、大撐開(C7♯5 × 3 6 3 5 4)、
+     高把位混空弦(C13♭9 8 0 8 6 8 0)、或有更常用的開放按法(Csus4 × 3 3 0 1 1、Am11 × 0 0 0 1 0) */
 const TEACH_CANON = {
   m7b5: { 0: "x3434x", 1: "x4545x", 2: "xx0111", 3: "x6767x", 4: "012333", 5: "1x110x",
           6: "202210", 7: "3x332x", 8: "4x443x", 9: "x0101x", 10: "x1212x", 11: "x2323x" },
-  // 資料庫的按法都被「按得到」的規則擋掉、窮舉出來的形狀又不自然(4 2 0 4 0 4、× × 6 3 4 4)的,改用資料庫第一名
-  dim:  { 8: "4564xx" },
-  sus2: { 8: "xx6896" }
+  add9: { 1: "x43141", 2: "x54252" },
+  sus4: { 0: "x33011", 1: "x46674" },
+  aug: { 1: "x4322x", 8: "43211x" },
+  maj9: { 1: "x4354x", 2: "x5465x" },
+  "9": { 3: "x65666", 9: "x02423" },
+  "7b9": { 2: "x54545", 3: "x65656", 6: "xx4353", 8: "xx6575" },
+  "7s9": { 1: "x4345x", 3: "x6567x" },
+  m6: { 0: "x3x243", 1: "x4x354", 7: "3x2333", 8: "4x344x", 10: "x13x23", 11: "x20102" },
+  m11: { 1: "x42442", 2: "x53553", 9: "x00010", 10: "x11121" },
+  dim: { 4: "0120xx", 5: "1231xx", 6: "2342xx", 7: "3453xx", 8: "4564xx" },
+  dim7: { 6: "2x121x", 7: "3x232x", 8: "4x343x" },
+  sus2: { 0: "x30033", 5: "xx3011", 6: "xx4674", 7: "300233", 8: "xx6896" },
+  "7sus4": { 11: "x22200" },
+  maj7s5: { 1: "x43211", 3: "x65433", 6: "2x333x" },
+  "7s5": { 0: "x323x4", 1: "x434x5", 6: "2x233x", 8: "4x455x", 10: "x101x2" },
+  "7b5": { 1: "x4546x", 6: "2x231x", 7: "3x342x", 8: "4x453x" },
+  "7b13": { 1: "x46465", 5: "1x122x", 6: "2x233x", 7: "3x344x", 8: "4x455x" },
+  "9s11": { 1: "x43443", 8: "434334" },
+  maj13: { 0: "x3x455", 1: "x4x566", 2: "x5x677", 3: "x6x788", 9: "x0x122", 10: "x1x233", 11: "x2x344" },
+  m69: { 1: "x42344", 2: "x53455" },
+  mMaj9: { 1: "x4254x", 2: "x5365x" },
+  mb6: { 0: "x3111x", 1: "x4222x", 2: "x5333x" },
+  dimMaj7: { 1: "x4555x" },
+  "6sus4": { 6: "224442" },
+  "7sus2": { 6: "xx4654" },
+  "13": { 0: "x3x355", 1: "x4x466", 2: "x5x577", 3: "x6x688", 4: "0x012x", 5: "1x123x", 8: "4x456x", 9: "x0x022", 10: "x1x133", 11: "x2x244" },
+  "13b9": { 0: "x32325", 2: "x54547", 3: "x65658", 4: "0x0121", 5: "1x1232", 10: "x10103", 11: "x21214" },
+  "7alt": { 2: "x54566", 3: "x65677", 4: "0x0111", 5: "1x1222", 6: "2x2333", 7: "3x3444", 10: "x10122", 11: "x21233" },
+  "7s5s9": { 0: "x32344", 2: "x54566", 4: "0x0113", 10: "x10122", 11: "x21233" },
+  "7s9b13": { 0: "x32344", 2: "x54566", 4: "0x0113", 10: "x10122", 11: "x21233" },
+  "7s5b9": { 0: "x32324", 2: "x54546", 3: "x65657", 4: "0x0111", 5: "1x1222", 6: "2x2333", 7: "3x3444", 10: "x10102", 11: "x21213" },
+  "7b9b13": { 0: "x32324", 1: "x43435", 2: "x54546", 3: "x65657", 4: "0x0111", 5: "1x1222", 10: "x10102", 11: "x21213" },
+  "7b5b9": { 0: "x32322", 1: "x43433", 2: "x54544", 3: "x65655", 5: "1x1202", 10: "x10100", 11: "x21211" },
+  "7b9s11": { 0: "x32322", 1: "x43433", 2: "x54544", 3: "x65655", 5: "1x1202", 10: "x10100", 11: "x21211" },
+  "7b5s9": { 0: "x32342", 2: "x54564", 3: "x65675", 5: "10110x", 6: "21221x", 7: "32332x", 8: "43443x", 9: "54554x", 10: "x10120", 11: "x21231" },
+  "7s9s11": { 0: "x32342", 2: "x54564", 3: "x65675", 5: "10110x", 6: "21221x", 7: "32332x", 8: "43443x", 9: "54554x", 10: "x10120", 11: "x21231" },
+  "7b9s9": { 3: "babbxc", 5: "1011x2", 6: "2122x3", 9: "5455x6" },
+  "13s11": { 0: "x34355", 1: "x45466", 2: "x56577", 3: "x67688", 4: "010122", 5: "121233", 8: "454566", 9: "x01022", 10: "x12133", 11: "x23244" },
+  "13s9": { 0: "8x89ab", 4: "0x0123", 10: "x10123", 11: "7x789a" },
+  m13: { 0: "x3x345", 2: "x5x567", 3: "x6x678", 4: "0x002x", 5: "1x113x", 7: "3x335x", 8: "4x446x", 9: "5x557x", 10: "6x668x", 11: "x20224" },
+  mMaj11: { 0: "x33443", 1: "x44554", 2: "x55665", 3: "x66776", 4: "001002", 5: "112113", 6: "223224", 7: "334335", 8: "445446", 9: "x00110", 10: "x11221", 11: "x22332" },
+  mMaj13: { 0: "x3x445", 1: "x4x556", 2: "x5x667", 3: "x6x778", 4: "001022", 5: "112133", 6: "223244", 7: "334355", 8: "445466", 9: "x0x112", 10: "x1x223", 11: "x2x334" },
+  m9b5: { 0: "x31332", 1: "x42443", 2: "x53554", 3: "x64665", 11: "x20221" },
+  m7s5: { 0: "x3x344", 5: "1x112x", 7: "3x334x", 10: "x1x122" },
+  m11b5: { 0: "x33342", 1: "x44453", 2: "x55564", 5: "11110x", 6: "22221x", 7: "33332x", 8: "44443x", 9: "55554x", 10: "x11120", 11: "x22231" },
+  "7sus4b9": { 0: "x3332x", 1: "x4443x", 10: "x1110x", 11: "x2221x" },
 };
 function teachCanon(rPc, id){
   const s = TEACH_CANON[id] && TEACH_CANON[id][rPc];
-  return s ? s.split("").map(c => c === "x" ? -1 : +c) : null;
+  return s ? s.split("").map(c => c === "x" ? -1 : parseInt(c, 36)) : null;
 }
 
 /* 公開和弦資料庫的指法(交叉比對過),依「幾個來源都有」→「是來源的預設指法」排序。
@@ -2642,7 +2697,9 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     // 資料庫第一名一定排第一(即使中間悶掉兩條弦,例如 Gm7♭5 的 3 × × 3 2 1——爵士的 drop 3 指法,
     // 評分會因為「中間夾不彈的弦」扣很多分);第二名以後只加一點,跟窮舉的指法一起照評分排
     if (v.ref && !(canon === null && openPos(v))) v.bonus -= v.ref === 1 ? 100 : 30;
-    if (v.slashCanon || v.teach) { v.bonus -= 150; v.canon = true; }
+    if (v.slashCanon) { v.bonus -= 150; v.canon = true; }
+    // 教材首選一定排第一:爵士殼音省略 5 音、9 音會被扣分,-150 還是可能輸給資料庫第一名(-100),所以給大一點
+    if (v.teach) { v.bonus -= 500; v.canon = true; }
     v.cost += v.bonus;
   }
   if (!noShapes) {
@@ -2661,7 +2718,9 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
   // (voicingComplete),一個都沒有才退回。順序反過來的話,D7♭9♯9 會為了完整而挑到低音是 C 的按法
   const rootPool = bassPc == null && all.some(v => v.bassIsRoot) ? all.filter(v => v.bassIsRoot) : all;
   const full = rootPool.filter(v => voicingComplete(def, v.missing));
-  const pool = full.length ? full : rootPool;
+  const pool = (full.length ? full : rootPool).slice();
+  // 教材首選(爵士殼音常刻意省略 5 音、9 音,例如 C13 的 × 3 × 3 5 5)不受「組成音要彈齊」的篩選
+  for (const v of all) if (v.teach && !pool.includes(v)) pool.push(v);
   /* 中間夾著打叉的弦(要另外悶):不能當推薦按法(和弦表、練習、預設選中的都是它),排在所有不用悶弦的後面,
      當進階備選(使用者決定:Fm7♭5 原本被選成 1 × 1 1 0 ×)。標籤會寫「需悶 5 弦」 */
   const midMute = v => { if (v.canon) return 0; const f = v.frets, lo = f.findIndex(x => x >= 0), hi = 5 - [...f].reverse().findIndex(x => x >= 0);
@@ -2702,11 +2761,11 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     // 中間夾著不彈的弦要另外悶,只有「根音在 6 弦、5 弦不彈」的爵士按法是常用的(9 × 10 10 9 ×)
     const innerMute = v => { const lo = lowStr(v), hi = 5 - [...v.frets].reverse().findIndex(f => f >= 0);
       for (let s = lo + 1; s < hi; s++) if (v.frets[s] < 0 && !(s === 1 && lo === 0 && v.frets[0] > 0)) return true; return false; };
-    const usable = v => maxFret(v) <= GTR_MAX_USE_FRET && coversTop(v) && handFingers(v) <= 4 &&
+    const usable = v => v.teach || maxFret(v) <= GTR_MAX_USE_FRET && coversTop(v) && handFingers(v) <= 4 &&
       (v.canon || played(v) >= 4) && openOnlyBass(v) && (v.canon || (topRings(v) && !innerMute(v))) &&
       (v.shape || v.canon || !(v.barreShown && v.span >= 3)) &&
       // 表裡有這種和弦、這個根音卻沒有標準開放和弦(Cm):低把位帶空弦的一律不列(× 3 1 0 1 × 沒人這樣教)
-      !(canon === null && isOpenPos(v));
+      (v.canon || !(canon === null && isOpenPos(v)));
     const score = v => v.cost + Math.max(0, v.minF - 7) * 4;
     /* 資料庫有收錄這個和弦時,推薦按法一定從資料庫收錄的(或標準開放和弦表)裡選(使用者要求逐一核對過:
        原本有 10 個和弦推薦了三個資料庫都沒有的按法,例如 Gmaj7♯5 的 3 2 1 0 0 2);資料庫沒收的罕用和弦才用窮舉的 */
@@ -6332,12 +6391,12 @@ document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("prin
    固定在底部又會壓到最後一排;@page 的頁邊文字 iPhone Safari 不支援(實際產生 PDF 逐頁檢查過)。
    這樣做每個瀏覽器印出來都一樣,頁數也算得準(按鈕上寫「共 N 頁」,不會把「84 張圖」看成 84 頁)。
    一個根音跨頁時,下一頁開頭再寫一次根音(續) */
-const PS = { pageH: 277, footH: 8, headH: 15, guitar: { cols: 7, rowH: 41 }, piano: { cols: 4, rowH: 27 } };
+const PS = { pageH: 245, footH: 8, headH: 15, guitar: { cols: 7, rowH: 37 }, piano: { cols: 4, rowH: 27 } };
 function printPlan(inst, nRoots, nDefs){
   const L = PS[inst], rows = Math.ceil(nDefs / L.cols), pages = [[]];
   let used = 0;
   for (let r = 0; r < nRoots; r++) for (let i = 0; i < rows; i++) {
-    const avail = PS.pageH - PS.footH - (pages.length === 1 ? PS.headH : 0);
+    const avail = PS.pageH - PS.footH - PS.headH;   // 每一頁都有頁首(使用者要求)
     if (used + L.rowH > avail && pages[pages.length - 1].length) { pages.push([]); used = 0; }
     // 換頁後的第一列一定寫根音(不然那一頁看不出是哪個根音)
     pages[pages.length - 1].push({ root: r, row: i, cont: i > 0 && pages[pages.length - 1].length > 0 }); used += L.rowH;
@@ -6375,7 +6434,9 @@ async function buildPrintSheet(){
           // 裁掉左邊留給「粗」的空白(紙本不畫粗/細,頁首圖例說明),指板放大
           dg = v ? voicingSVG(v, rootPc()).replace('viewBox="0 0 ' + VSVG.W + ' ', 'viewBox="9 0 ' + (VSVG.W - 9) + ' ') : '<div class="ps-none">' + t("printNone") + '</div>';
         } else dg = pianoDiagramSVG(win);
-        return '<div class="ps-cell"><b>' + escapeHTML(name) + '</b>' + dg + '<small>' + escapeHTML(tones) + '</small></div>';
+        const lb = name.length > 9 ? ' class="l3"' : name.length > 7 ? ' class="l2"' : '';
+        const lt = tones.length > 15 ? ' class="l3"' : tones.length > 12 ? ' class="l2"' : '';
+        return '<div class="ps-cell"><b' + lb + '>' + escapeHTML(name) + '</b>' + dg + '<small' + lt + '>' + escapeHTML(tones) + '</small></div>';
       })));
     }
   } finally { Object.assign(STATE, { inst: savedInst, capo: savedCapo, lefty: savedLefty }); PRINT.busy = false; }
@@ -6389,7 +6450,9 @@ async function buildPrintSheet(){
   // 每一列:最左一欄是根音(同一個根音的第二列以後不重複),右邊 cols 張
   const row = it => '<div class="ps-row ' + inst + '"><div class="ps-lab' + (it.cont ? " more" : "") + '">' + escapeHTML(rootNames[it.root]) + '</div>' +
     rootCells[it.root].slice(it.row * cols, (it.row + 1) * cols).join("") + '</div>';
-  el.innerHTML = plan.map((items, pi) => '<div class="ps-page">' + (pi ? "" : head) + items.map(row).join("") + foot(pi) + '</div>').join("");
+  // 滿頁(跟最多的那一頁一樣多列)才把多的高度平均分到列之間;最後一頁只有幾列就從上面排
+  const most = Math.max(...plan.map(p => p.length));
+  el.innerHTML = plan.map((items, pi) => '<div class="ps-page">' + head + '<div class="ps-body' + (items.length >= most ? " full" : "") + '">' + items.map(row).join("") + '</div>' + foot(pi) + '</div>').join("");
   if ($("printGo")) renderPrintPop();
 }
 const escapeHTML = x => String(x).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);

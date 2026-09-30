@@ -296,9 +296,11 @@ async function openPage(browser, opts = {}){
       // (原本 C13 會列出沒有 ♭7 的按法,那是 6/9)。整個和弦都沒有完整按法的(D7♭9♯9 等 3 組)才准退回
       let incomplete = 0;
       for (const d of CHORDS) for (let rp = 0; rp < 12; rp++) {
-        const L = chordVoicingsFor(rp, d).list, ok = L.map(v => voicingComplete(d, v.missing || []));
+        // 教材首選(爵士殼音刻意省略音,使用者決定實用性優先)算完整
+        const L = chordVoicingsFor(rp, d).list, real = L.map(v => voicingComplete(d, v.missing || [])), ok = L.map((v, i) => v.teach || real[i]);
         total++;
-        if (ok.some(Boolean) && !ok.every(Boolean)) fails.push(d.id + "@" + rp + ": 有完整的按法卻也列了缺音的 " + L.filter((v, i) => !ok[i]).map(v => gtrTabText(v.frets)).join(" / "));
+        // 「有完整的按法」只看教材首選以外的:整個和弦都沒有完整按法時(Gm11♭5),備選缺音是正常的
+        if (real.some((x, i) => x && !L[i].teach) && !ok.every(Boolean)) fails.push(d.id + "@" + rp + ": 有完整的按法卻也列了缺音的 " + L.filter((v, i) => !ok[i]).map(v => gtrTabText(v.frets)).join(" / "));
         if (!ok.some(Boolean)) incomplete++;
       }
       total++; if (incomplete > 3) fails.push("沒有完整按法的和弦 × 根音變多了:" + incomplete + "(原本 3)");
@@ -367,6 +369,12 @@ async function openPage(browser, opts = {}){
         for (const [pc, id, w] of [[7, "sus4", "330013"], [7, "7sus4", "330011"], [4, "sus2", "024400"], [8, "dim", "4564xx"], [8, "sus2", "xx6896"]]) {
           const vs = chordVoicingsFor(pc, chordById(id), null), got = tabS(vs.list[vs.best].frets);
           if (got !== w) fails.push(id + "(根音 " + pc + ")的推薦: " + got + ",應該 " + w);
+        } }
+      // 教材首選表(960 組逐一核對後的結果)裡的每一條都要是推薦按法,而且按法本身要通過樂理檢查
+      { let n = 0;
+        for (const id in TEACH_CANON) for (const p in TEACH_CANON[id]) {
+          const pc = +p, def = chordById(id), want = teachCanon(pc, id), vs = chordVoicingsFor(pc, def, null), got = vs.list[vs.best] && vs.list[vs.best].frets;
+          if ((!got || got.join() !== want.join()) && n++ < 5) fails.push("教材首選沒有生效: " + id + "@" + pc + " 要 " + want.join(" ") + " 得 " + (got ? got.join(" ") : "-"));
         } }
       // 資料庫有收錄這個和弦時,網頁列出的每一個按法都要來自資料庫或標準表(使用者要求核對實用性)
       { let n = 0;
@@ -1591,7 +1599,7 @@ async function openPage(browser, opts = {}){
         await q.click('#printPop [data-g="inst"][data-v="' + inst + '"]'); await q.click('#printPop [data-g="set"][data-v="' + set + '"]'); await q.click('#printPop [data-g="roots"][data-v="all"]');
         const label = +(await q.evaluate(() => $("printGo").textContent)).replace(/\D+/g, " ").trim().split(" ").pop();
         await q.click("#printGo"); await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
-        const dom = await q.evaluate(() => ({ pages: document.querySelectorAll(".ps-page").length, feet: [...document.querySelectorAll(".ps-page")].filter(p => /Steven Tsai/.test(p.textContent) && /HarmonyMap/.test(p.lastElementChild.textContent)).length }));
+        const dom = await q.evaluate(() => ({ pages: document.querySelectorAll(".ps-page").length, feet: [...document.querySelectorAll(".ps-page")].filter(p => /Steven Tsai/.test(p.textContent) && /HarmonyMap/.test(p.lastElementChild.textContent) && p.querySelector(".ps-head .ps-title")).length }));   // 每一頁都有頁首與頁尾
         await q.evaluate(() => document.body.classList.add("printing"));
         const pdf = ((await q.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })).toString("latin1").match(/\/Type\s*\/Page[^s]/g) || []).length;
         await q.evaluate(() => document.body.classList.remove("printing"));
