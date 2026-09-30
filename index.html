@@ -1853,8 +1853,9 @@ function drawKeyboard(ctx, x, y, w, h, activeMap){
     const info = activeMap.get(m);
     const staff = info && info.staff;
     const attack = info && info.attack;
-    let baseColor = staff === 2 ? ["#3FBFAE", "#3FBFAE"] : staff === 1 ? ["#FFDA7A", "#C4901A"] : ["#FFFDF6", "#DDD6C4"];
-    if (attack) baseColor = staff === 2 ? ["#8FFFF0", "#8FFFF0"] : ["#FFF3CC", "#F2B94B"];
+    // 青色跟金色一樣上亮下深;底部(寫字的地方)#34AE9C 對深色字的對比 7.0,跟金色底部 6.7 同一級(原本 #22887A 只有 4.4,字看不清楚)
+    let baseColor = staff === 2 ? ["#6FE3D2", "#34AE9C"] : staff === 1 ? ["#FFDA7A", "#C4901A"] : ["#FFFDF6", "#DDD6C4"];
+    if (attack) baseColor = staff === 2 ? ["#B6FFF4", "#5FD8C6"] : ["#FFF3CC", "#F2B94B"];
     const g = ctx.createLinearGradient(kx, y, kx, y + h);
     g.addColorStop(0, baseColor[0]);
     g.addColorStop(0.85, baseColor[1]);
@@ -1888,8 +1889,9 @@ function drawKeyboard(ctx, x, y, w, h, activeMap){
     const info = activeMap.get(m);
     const staff = info && info.staff;
     const attack = info && info.attack;
-    let baseColor = staff === 2 ? ["#3FBFAE", "#3FBFAE"] : staff === 1 ? ["#F2B94B", "#8A6410"] : ["#3a3a3a", "#0a0a0a"];
-    if (attack) baseColor = staff === 2 ? ["#8FFFF0", "#8FFFF0"] : staff === 1 ? ["#FFE39A", "#C4901A"] : baseColor;
+    // 黑鍵的青色也有漸層,底部 #2FA897(對深色字 6.5)
+    let baseColor = staff === 2 ? ["#5FD8C6", "#2FA897"] : staff === 1 ? ["#F2B94B", "#8A6410"] : ["#3a3a3a", "#0a0a0a"];
+    if (attack) baseColor = staff === 2 ? ["#8FFFF0", "#3FBFAE"] : staff === 1 ? ["#FFE39A", "#C4901A"] : baseColor;
     // 黑鍵投影到白鍵上
     ctx.fillStyle = "rgba(0,0,0,0.45)";
     ctx.fillRect(kx - 1, y + blackH, blackW + 2, 6);
