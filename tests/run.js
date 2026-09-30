@@ -1423,6 +1423,19 @@ async function openPage(browser, opts = {}){
       total++; if (/Dorian\|.*Dorian/.test(en)) fails.push("英文音階摘要名稱重複: " + en);
       await z.close(); }
     await q.close();
+    // 全螢幕練習:橫式才有按鈕;按下去一次四個和弦(現在 + 後面三個,循環),離開鈕、轉直向都會關
+    { const z = await openPage(browser, { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
+      await z.click("#practiceOpen");
+      await z.evaluate(() => { PRACTICE.steps = practiceParseCustom("Fm C Am G Dm7").steps; PRACTICE.step = 3; render(); scrollTo(0, 0); });
+      await z.click("#prFs");
+      const r = await z.evaluate(() => ({ open: !$("prFull").hidden, names: [...document.querySelectorAll(".pf-card b")].map(x => x.textContent).join(" "), now: document.querySelector(".pf-card.now b").textContent }));
+      total++; if (!r.open || r.names !== "G Dm7 Fm C" || r.now !== "G") fails.push("全螢幕四個和弦: " + JSON.stringify(r));
+      await z.setViewportSize({ width: 390, height: 844 }); await z.waitForTimeout(200);
+      const closed = await z.evaluate(() => $("prFull").hidden && !PRACTICE.fs);
+      const hidden = await z.evaluate(() => getComputedStyle($("prFs")).display === "none");
+      total++; if (!closed || !hidden) fails.push("轉直向要離開全螢幕、按鈕要藏起來: " + closed + "/" + hidden);
+      if (z._errors.length) fails.push("全螢幕頁面錯誤 " + z._errors.join("; "));
+      await z.close(); }
     report("分享連結", total, fails);
   }
 

@@ -544,6 +544,25 @@ html[data-lang="en"] .chip i{white-space:normal}
 .kb-stage .pr-ghost{visibility:hidden}
 .kb-stage > .pr-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px 24px}
 .kb-stage[hidden],.kb-wrap[hidden]{display:none}
+/* 全螢幕鈕:右上角,只有橫式畫面才出現(使用者要求) */
+.kb-stage .pr-fs{position:absolute;top:6px;right:6px;z-index:2;margin:0;background:var(--panel)}
+@media (orientation: portrait){ .kb-stage .pr-fs{display:none} }
+.pr-full{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;flex-direction:column;
+  padding:max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left))}
+.pr-full[hidden]{display:none}
+body.pr-fs-on{overflow:hidden}
+.pf-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.pf-card{min-width:0;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;
+  background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-md);padding:10px}
+.pf-card.now{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 18px 3px rgba(242,185,75,.35)}
+.pf-card b{font-family:"Noto Serif TC",serif;font-size:clamp(26px, 9vh, 72px);line-height:1.1;color:var(--muted-bright);white-space:nowrap}
+.pf-card.now b{color:var(--gold-bright)}
+.pf-card .dg{display:block;flex:0 1 auto;min-height:0;width:auto;max-width:100%;max-height:calc(100vh - 9vh - 130px)}
+.pf-card .dg.kb{width:100%;height:auto}
+.pf-bar{display:flex;justify-content:center;padding-top:8px}
+.pf-bar .pr-beats{margin:0}
+.pf-tools{position:absolute;top:max(8px, env(safe-area-inset-top));right:max(8px, env(safe-area-inset-right));display:flex;gap:8px}
+.pf-tools .kb-gear{margin:0;width:38px;height:38px;background:var(--panel)}
 .kb-stage .pr-now > div{cursor:pointer}
 .pr-empty{color:var(--muted);font-size:var(--fs-sm);text-align:center;padding:18px 8px}
 .pr-steps-empty{color:var(--muted);font-size:var(--fs-xs)}
@@ -1119,7 +1138,7 @@ const I18N = {
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
-    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceBeatsShort: "{n}拍", practiceHalfBar: "點一下切換整小節/半小節", practiceRamp: "逐漸加速", practiceRampOff: "固定速度", practiceRampOpt: "每 {k} 輪 +{n}", practiceRampOpt1: "每輪 +{n}", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceFullscreen: "全螢幕(一次看四個和弦)", practiceFullscreenExit: "離開全螢幕", practiceBeatsShort: "{n}拍", practiceHalfBar: "點一下切換整小節/半小節", practiceRamp: "逐漸加速", practiceRampOff: "固定速度", practiceRampOpt: "每 {k} 輪 +{n}", practiceRampOpt1: "每輪 +{n}", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
     practiceBtn: "練習", practiceTitle: "換和弦練習", practiceClose: "結束練習",
@@ -1215,7 +1234,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to switch between a whole bar and half a bar", practiceRamp: "Speed up gradually", practiceRampOff: "Steady tempo", practiceRampOpt: "+{n} every {k} loops", practiceRampOpt1: "+{n} every loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceFullscreen: "Full screen (four chords at a time)", practiceFullscreenExit: "Exit full screen", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to switch between a whole bar and half a bar", practiceRamp: "Speed up gradually", practiceRampOff: "Steady tempo", practiceRampOpt: "+{n} every {k} loops", practiceRampOpt1: "+{n} every loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
     practiceBtn: "Practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
@@ -4579,7 +4598,7 @@ function renderCore(){
    沒有內建範例進行(使用者要求拿掉,省版面)。
    節拍用 Web Audio 的時鐘排程(提前 0.1 秒排好點擊聲),畫面在那一刻用 setTimeout 跟上
    ══════════════════════════════════════════════════════════════ */
-const PRACTICE = { runId: 0, clicks: [], countIn: false, taps: [], ramp: "", baseBpm: 0, pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
+const PRACTICE = { fs: false, runId: 0, clicks: [], countIn: false, taps: [], ramp: "", baseBpm: 0, pad: { letter: 0, acc: 0 }, open: false, bpm: 70, beats: 4, accomp: true, custom: "", bad: [],
                    steps: [], step: 0, beat: -1, slash: null, padFresh: false, running: false, timer: 0, nextTime: 0, count: 0, flash: -1 };
 /* 級數輸入(老師的寫法):先寫調「G:」「Bb:」「Am:」,後面的羅馬數字照那個調換成和弦。
    大寫 = 大三、小寫 = 小三,° = 減、ø = 半減、+ = 增,後面可以接記號(V7、ii7、Imaj7、IVsus4);前面可以加 ♭ ♯(♭VII、♯iv°)。
@@ -4837,6 +4856,8 @@ function practiceBeatVar(){
   for (const id of ["practiceStage", "prSteps"]) if ($(id)) $(id).style.setProperty("--beat", v);
 }
 function renderPracticeBeat(){
+  const fb = document.querySelector("#prFull .pr-beats");
+  if (fb) [...fb.children].forEach((d, i) => { d.className = (i === PRACTICE.beat ? "on" : "") + (i === 0 ? " one" : ""); });
   const el = document.querySelector("#practiceStage .pr-beats");
   if (!el) return;
   [...el.children].forEach((d, i) => { d.className = (i === PRACTICE.beat ? "on" : "") + (i === 0 ? " one" : ""); });
@@ -5149,6 +5170,60 @@ function bindPracticeNow(cur, nxt){
     el.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); el.click(); } };
   }
 }
+/* ── 全螢幕練習(使用者要求,只在橫式):畫面只剩和弦,一次四個(現在 + 後面三個),現在那一個發亮。
+   iPhone Safari 不支援一般元素的 requestFullscreen,所以是蓋滿整個視窗的一層;支援的瀏覽器(平板、桌機、Android)
+   另外請瀏覽器進入真正的全螢幕。右上角同一個位置是離開鈕;Esc、轉回直向也會離開 ── */
+const FS_ICON_IN = "M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3";
+const FS_ICON_OUT = "M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3";
+const PORTRAIT = window.matchMedia("(orientation: portrait)");
+function practiceFullscreen(on){
+  const P = PRACTICE;
+  if (on === P.fs) return;
+  P.fs = on;
+  let el = $("prFull");
+  if (on) {
+    if (!el) { el = document.createElement("div"); el.id = "prFull"; el.className = "pr-full"; el.setAttribute("role", "dialog"); document.body.appendChild(el); }
+    el.hidden = false;
+    document.body.classList.add("pr-fs-on");
+    renderPracticeFull();
+    const de = document.documentElement;
+    try { const r = de.requestFullscreen && de.requestFullscreen(); if (r && r.catch) r.catch(() => {}); } catch (e) {}
+  } else {
+    if (el) el.hidden = true;
+    document.body.classList.remove("pr-fs-on");
+    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch (e) {}
+    const b = $("prFs"); if (b) b.focus({ preventScroll: true });
+  }
+}
+function renderPracticeFull(){
+  const P = PRACTICE, el = $("prFull");
+  if (!el || !P.fs) return;
+  const n = P.steps.length;
+  if (!n) { practiceFullscreen(false); return; }
+  const svg = d => '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
+  const cards = [0, 1, 2, 3].map(k => {
+    const i = (P.step + k) % n, st = P.steps[i];
+    return '<div class="pf-card' + (k === 0 ? " now" : "") + '" role="button" tabindex="0" data-i="' + i + '"><b></b>' + stepDiagram(st) + '</div>';
+  }).join("");
+  el.innerHTML = '<div class="pf-grid">' + cards + '</div>' +
+    '<div class="pf-bar"><div class="pr-beats">' + Array.from({ length: P.beats }, (_, i) => '<i class="' + (i === P.beat ? "on" : "") + (i === 0 ? " one" : "") + '"></i>').join("") + '</div></div>' +
+    '<div class="pf-tools"><button class="kb-gear" id="pfGo" aria-label="' + t(P.running ? "practiceStop" : "practiceStart") + '" title="' + t(P.running ? "practiceStop" : "practiceStart") + '">' +
+      svg(P.running ? "M6 5h4v14H6zM14 5h4v14h-4z" : "M7 4l13 8-13 8z") + '</button>' +
+    '<button class="kb-gear" id="pfExit" aria-label="' + t("practiceFullscreenExit") + '" title="' + t("practiceFullscreenExit") + '">' + svg(FS_ICON_OUT) + '</button></div>';
+  el.querySelectorAll(".pf-card").forEach(c => {
+    const st = P.steps[+c.dataset.i];
+    c.querySelector("b").textContent = stepName(st);
+    c.onclick = () => withStep(st, () => playCurrent());
+    c.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); c.click(); } };
+  });
+  $("pfExit").onclick = () => practiceFullscreen(false);
+  $("pfGo").onclick = () => { if (P.running) { practiceStop(); render(); } else practiceStart(); renderPracticeFull(); };
+}
+// 轉回直向、瀏覽器自己退出全螢幕(按 Esc 或系統手勢)、按 Esc 都離開
+if (PORTRAIT.addEventListener) PORTRAIT.addEventListener("change", () => { if (PORTRAIT.matches) practiceFullscreen(false); });
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && PRACTICE.fs) practiceFullscreen(false); });
+document.addEventListener("keydown", ev => { if (ev.key === "Escape" && PRACTICE.fs) practiceFullscreen(false); });
+
 /* 播放中每小節換和弦:只換「現在 / 下一個」、進行裡亮的那格與拍點。
    原本整個 render():開始/停止鈕、文字框、輸入板每小節都被重建——剛好在換小節時按停止會點空,
    iPhone 上正在打字的文字框每小節被收掉鍵盤(規劃審查時抓到) */
@@ -5165,6 +5240,7 @@ function practiceTick(){
     if (focus && ss.scrollWidth > ss.clientWidth) ss.scrollLeft = Math.max(0, focus.offsetLeft - ss.offsetLeft - (ss.clientWidth - focus.offsetWidth) / 2);
   }
   renderPracticeBeat();
+  if (P.fs) renderPracticeFull();
 }
 function renderPractice(){
   const c = $("practiceCard"), stage = $("practiceStage");
@@ -5190,7 +5266,11 @@ function renderPractice(){
   if (P.steps.length) {
     bindPracticeNow(cur, nxt);
     $("prGo").onclick = () => { if (P.running) { practiceStop(); render(); } else practiceStart(); };
+    // 右上角的全螢幕鈕(只有橫式畫面顯示,見 CSS):一次放大顯示四個和弦
+    stage.insertAdjacentHTML("beforeend", '<button class="kb-gear pr-fs" id="prFs" aria-label="' + t("practiceFullscreen") + '" title="' + t("practiceFullscreen") + '">' + svg(FS_ICON_IN) + '</button>');
+    $("prFs").onclick = ev => { ev.stopPropagation(); practiceFullscreen(true); };
   }
+  if (P.fs) renderPracticeFull();
 
   /* 下方卡片:輸入板 → 進行(刪除/清除)→ 文字框 → 一列設定。沒有範例進行、沒有調性選單 */
   c.innerHTML =
@@ -5303,7 +5383,7 @@ function renderPractice(){
     applyCustom();
   };
   $("prClearSteps").onclick = () => { P.steps = []; P.shift = 0; afterEdit(); };
-  $("prClose").onclick = () => { practiceStop(); P.open = false; render(); scrollTo({ top: 0 }); };   // 捲在下面時關掉,鍵盤會躲在頂欄底下
+  $("prClose").onclick = () => { practiceStop(); practiceFullscreen(false); P.open = false; render(); scrollTo({ top: 0 }); };   // 捲在下面時關掉,鍵盤會躲在頂欄底下
   $("prBeats").onchange = e => { P.beats = +e.target.value; render(); };
   const setBpm = d => { P.bpm = Math.max(40, Math.min(200, P.bpm + d)); P.baseBpm = P.bpm; $("prBpmOut").textContent = P.bpm + " BPM"; practiceBeatVar(); };
   $("prSlower").onclick = () => setBpm(-5);
