@@ -1539,7 +1539,7 @@ async function openPage(browser, opts = {}){
     }
     const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
     const h = await q.evaluate(() => { STATE.tab = "scale"; STATE.letter = 6; STATE.acc = -1; STATE.scaleId = "lydian"; render(); return decodeURIComponent(location.hash); });
-    total++; if (h !== "#scale=Bb-lydian&inst=piano") fails.push("換頁後網址沒跟著變: " + h);
+    total++; if (h !== "#scale=Bb-lydian&inst=guitar") fails.push("換頁後網址沒跟著變: " + h);   // 預設樂器是吉他
     // 沒寫樂器的舊連結用鋼琴開,不是收到的人上次用的樂器
     { const z = await openPage(browser, { viewport: { width: 390, height: 844 } });
       await z.evaluate(() => { try { localStorage.setItem("harmonymap.inst", "guitar"); } catch (e) {} });
@@ -1611,6 +1611,20 @@ async function openPage(browser, opts = {}){
       // 窄手機(≤380px)只留下載圖示(搜尋框才不會被擠到 49px),其他寬度要有字
       if (!(await q.evaluate(w => { const s = $("printOpen").querySelector("span"), ic = $("printOpen").querySelector("svg");
         return w <= 380 ? ic.getBoundingClientRect().width > 0 : s && s.offsetWidth > 0 && /和弦表|Chart/.test(s.textContent); }, w))) fails.push("和弦表下載鈕沒有顯示文字(" + w + "px)");
+      // 第一次打開(沒有存過樂器)預設是吉他(使用者要求)
+      total++;
+      { const z = await openPage(browser, { viewport: { width: 390, height: 844 } });
+        if (!(await z.evaluate(() => STATE.inst === "guitar" && $("instGuitar").getAttribute("aria-pressed") === "true"))) fails.push("第一次打開應該預設吉他");
+        await z.close(); }
+      // 使用者指正過的指法(和弦表與網頁用同一個 gtrFingering)
+      total++;
+      { const bad = [];
+        for (const [fr, want] of [["2,-1,1,2,1,-1", "2-131-"], ["3,2,0,0,0,2", "32---1"], ["-1,1,3,1,3,1", "-13141"], ["1,3,1,1,1,1", "131111"],
+                                  ["1,3,3,1,1,1", "134111"], ["1,3,3,-1,-1,-1", "134---"], ["-1,0,2,2,2,2", "--1111"], ["1,3,1,0,1,-1", "141-2-"]]) {
+          const got = await q.evaluate(f => gtrFingering(f.split(",").map(Number)).map(x => x || "-").join(""), fr);
+          if (got !== want) bad.push(fr + " → " + got + "(應為 " + want + ")");
+        }
+        if (bad.length) fails.push("指法: " + bad.join("; ")); }
       // 樂器切換鈕與和弦表的樂器選項同一個順序:吉他在左、鋼琴在右
       total++;
       if (await q.evaluate(() => [...document.querySelectorAll(".inst-switch button")].map(b => b.id).join() !== "instGuitar,instPiano")) fails.push("樂器切換鈕應該吉他在左、鋼琴在右");
