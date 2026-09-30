@@ -2091,6 +2091,12 @@ function twoColumnAvail(){
      多出來的高度留在上面(琴鍵貼齊底下的摘要列),不會變成又細又長的怪鍵盤
    不動照抄的 rebuildKeyboardRange,跟音階分頁的 scaleOctaveRange 一樣在後面重設音域 */
 const CHORD_KB_KEYS = 11, KB_ASPECT_MAX = 7.2;
+/* 單欄(手機、平板直向)的和弦與音階分頁:顯示區同一個高度(使用者要求:換分頁時 Cmaj7 / C 大調那一列不能上下跳)。
+   以 11 個白鍵、長寬比 5.2 × 滿版倍數算,上限照原本。音階的鍵數隨根音變(C 大調 8 個、B 大調 13 個),
+   畫出來的琴鍵最多到長寬比 7.2(_kbH,多的高度留在上面),畫布本身不變高 */
+function singleColKbH(w, maxH, fac){
+  return Math.max(KB_MIN_H, Math.round(Math.min(maxH * fac, (w / CHORD_KB_KEYS) * WHITE_KEY_ASPECT * fac)));
+}
 function chordKeyboardFit(cv, w, maxH, fac){
   const ms = keyboardNotes().map(n => n.midi);
   if (!ms.length) return Math.round(computeKeyboardHeight(w, KB_MIN_H, maxH) * fac);
@@ -2100,8 +2106,8 @@ function chordKeyboardFit(cv, w, maxH, fac){
   const whites = (a, b) => { let c = 0; for (let m = a; m <= b; m++) if (!isBlackKey(m)) c++; return c; };
   const hCap = maxH * fac;
   const A = WHITE_KEY_ASPECT * fac;   // 目標長寬比:5.2(矮螢幕)~ 6.4(真實鋼琴)
-  const n = Math.max(CHORD_KB_KEYS, Math.ceil(w * A / hCap - 0.05));
-  const H = Math.max(KB_MIN_H, Math.round(Math.min(hCap, (w / n) * A)));
+  const H = singleColKbH(w, maxH, fac);
+  const n = Math.max(CHORD_KB_KEYS, Math.ceil(w * A / H - 0.05));
   // 音域:從 C/F 起,不夠 n 個白鍵就往上補;和弦本身更寬就照和弦
   while (whites(lo, hi) < n) { hi++; while (isBlackKey(hi)) hi++; }
   KB_LOW = lo; KB_HIGH = hi;
@@ -2138,6 +2144,11 @@ function resizeKeyboardCanvas(){
   // 單欄的和弦分頁:鍵盤不再固定兩個八度(見 chordKeyboardFit),高度照「11 個白鍵」算、每個和弦都一樣高
   cv._kbH = 0;
   if (!TWO_COL.matches && STATE.tab === "chord") H = chordKeyboardFit(cv, w, Math.max(KB_MIN_H, maxH), fac);
+  else if (!TWO_COL.matches && STATE.tab === "scale") {
+    H = singleColKbH(w, Math.max(KB_MIN_H, maxH), fac);
+    const kh = Math.round((w / Math.max(KB_WHITE_KEYS.length, 1)) * KB_ASPECT_MAX);
+    cv._kbH = kh < H ? kh : 0;
+  }
   // 轉成兩欄(手機轉橫向)時,上一次單欄算的音域還留著:照原本的規則重算,不然高度跟直接橫向打開的不一樣
   else if (STATE.tab === "chord") rebuildKeyboardRange(keyboardNotes().map(n => n.midi));
   /* 兩欄版面(≥900px,含大手機橫向 932×430):右邊的顯示區撐滿左欄(分頁 + 根音卡片)的高度,兩欄底部對齊。

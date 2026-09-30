@@ -1165,6 +1165,18 @@ async function openPage(browser, opts = {}){
       }
       await q.close();
     }
+    // 單欄的和弦與音階分頁顯示區同高(使用者要求:換分頁時 Cmaj7 / C 大調那一列不跳);音階換成 B 大調(13 個白鍵)也一樣
+    for (const [w, h] of [[320, 568], [390, 844], [430, 932], [768, 1024], [844, 390]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h } });
+      const got = [];
+      for (const inst of ["Piano", "Guitar"]) for (const tab of ["Chord", "Scale", "ScaleB"]) {
+        got.push(await q.evaluate(([t, i]) => { if (t === "ScaleB") { $("tabScale").click(); STATE.letter = 6; STATE.acc = 0; render(); } else $("tab" + t).click();
+          $("inst" + i).click(); scrollTo(0, 0);
+          return Math.round($("kbSummary").getBoundingClientRect().top - document.querySelector(".kb-wrap").getBoundingClientRect().top); }, [tab, inst]));
+      }
+      total++; if (new Set(got).size !== 1) fails.push("和弦/音階顯示區不同高(" + w + "×" + h + "): " + got.join(","));
+      await q.close();
+    }
     // 兩欄版面(≥900px,含大手機橫向 932×430):右邊顯示區的底部要跟左欄卡片對齊,不能空一大段(使用者回報);
     // 換樂器時兩邊與下面的清單都不能動
     for (const [w, h] of [[932, 430], [1024, 768], [1280, 860]]) {
