@@ -1234,6 +1234,24 @@ async function openPage(browser, opts = {}){
       total++; if (!r.length || r.some(x => x !== want)) fails.push("和弦圖粗細標示(" + w + "×" + h + " " + lang + "): " + r.join(" ") + " ≠ " + want);
       await q.close();
     }
+    // 和弦分頁的鋼琴(單欄):不再固定兩個八度。每個和弦同一個高度;白鍵長寬比維持 5~7.3(不會矮胖、也不會又細又長);
+    // 必學和弦在 390px 只畫 11 個白鍵
+    for (const [w, h] of [[320, 568], [390, 844], [430, 932], [768, 1024]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
+      const r = await q.evaluate(() => {
+        const hs = new Set(), bad = []; let n390 = 0;
+        for (const id of ["maj", "min", "7", "maj7", "m7", "13", "m11", "7s9", "dim7", "add9"]) for (const L of [0, 4, 6]) {
+          STATE.tab = "chord"; STATE.inst = "piano"; STATE.chordId = id; STATE.letter = L; STATE.acc = 0; render();
+          const cv = $("keyboardCanvas"), ww = cv._cssW / KB_WHITE_KEYS.length, kh = cv._kbH || cv._cssH;
+          hs.add(cv._cssH); const a = kh / ww; if (a < 5 || a > 7.3) bad.push(id + "@" + L + " " + a.toFixed(1));
+          if (id === "maj" && L === 0) n390 = KB_WHITE_KEYS.length;
+        }
+        STATE.chordId = "maj7"; STATE.letter = 0; render();
+        return { hs: [...hs], bad, n390 };
+      });
+      total++; if (r.hs.length !== 1 || r.bad.length || (w === 390 && r.n390 !== 11)) fails.push("和弦鍵盤比例(" + w + "): " + JSON.stringify(r));
+      await q.close();
+    }
     // 摘要列任何內容都不能被截成「…」:所有音階/和弦 × 鋼琴/吉他 × 中英文,高度固定不隨內容變
     // 最窄(320)與寬版(1280)兩端;根音用最長的拼法(C 與 B♭)。390 夾在中間,320 放得下的它一定放得下
     for (const [w, h] of [[320, 568], [1280, 860]]) for (const lang of ["zh", "en"]) {

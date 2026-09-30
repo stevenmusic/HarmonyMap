@@ -1995,6 +1995,38 @@ function twoColumnAvail(){
     (parseFloat(cc.paddingBottom) || 0) + (parseFloat(cc.borderBottomWidth) || 0) : card.offsetHeight;
   return Math.floor(tabs.offsetHeight + gap + natural - chrome);
 }
+/* 和弦分頁(手機、平板直向)的鍵盤音域與高度。
+   原本照抄的規則是「至少兩個八度」:八成的和弦畫 15 個白鍵、兩成畫到 22 個,手機上每個白鍵只剩 16~24px。
+   實際統計 80 種和弦 × 7 個根音,必學和弦 96% 在 11 個白鍵(一個半八度,從 C 或 F 起)以內。
+   規則(使用者要求:鍵盤看起來不能太怪):
+   - 高度只看螢幕寬度:以 11 個白鍵算(白鍵長寬比 5.2 × 儘量滿版的倍數,最多 6.4 = 真實鋼琴),每個和弦一樣高,換和弦、換樂器都不跳
+   - 寬螢幕高度到上限時,改多畫幾個鍵讓白鍵維持原本的比例,不會變成矮胖的方塊
+   - 超過 11 個白鍵的和弦(13、11、部分斜線)多畫幾個鍵;白鍵變窄時畫出來的高度最多到長寬比 7.2,
+     多出來的高度留在上面(琴鍵貼齊底下的摘要列),不會變成又細又長的怪鍵盤
+   不動照抄的 rebuildKeyboardRange,跟音階分頁的 scaleOctaveRange 一樣在後面重設音域 */
+const CHORD_KB_KEYS = 11, KB_ASPECT_MAX = 7.2;
+function chordKeyboardFit(cv, w, maxH, fac){
+  const ms = keyboardNotes().map(n => n.midi);
+  if (!ms.length) return Math.round(computeKeyboardHeight(w, KB_MIN_H, maxH) * fac);
+  let lo = Math.min(...ms), hi = Math.max(...ms);
+  while (![0, 5].includes(pcOf(lo))) lo--;
+  while (isBlackKey(hi)) hi++;
+  const whites = (a, b) => { let c = 0; for (let m = a; m <= b; m++) if (!isBlackKey(m)) c++; return c; };
+  const hCap = maxH * fac;
+  const A = WHITE_KEY_ASPECT * fac;   // 目標長寬比:5.2(矮螢幕)~ 6.4(真實鋼琴)
+  const n = Math.max(CHORD_KB_KEYS, Math.ceil(w * A / hCap - 0.05));
+  const H = Math.max(KB_MIN_H, Math.round(Math.min(hCap, (w / n) * A)));
+  // 音域:從 C/F 起,不夠 n 個白鍵就往上補;和弦本身更寬就照和弦
+  while (whites(lo, hi) < n) { hi++; while (isBlackKey(hi)) hi++; }
+  KB_LOW = lo; KB_HIGH = hi;
+  KB_WHITE_KEYS = [];
+  for (let m = KB_LOW; m <= KB_HIGH; m++) if (!isBlackKey(m)) KB_WHITE_KEYS.push(m);
+  KB_WHITE_IDX = {};
+  KB_WHITE_KEYS.forEach((m, i) => KB_WHITE_IDX[m] = i);
+  const kh = Math.min(H, Math.round((w / KB_WHITE_KEYS.length) * KB_ASPECT_MAX));
+  cv._kbH = kh < H ? kh : 0;
+  return H;
+}
 function resizeKeyboardCanvas(){
   const cv = $("keyboardCanvas");
   if (!cv) return;
@@ -2015,8 +2047,13 @@ function resizeKeyboardCanvas(){
   /* 儘量滿版(使用者要求:空位還很多,指板與按鈕都可以再大):螢幕越高、顯示區就越高,連續變化不開斷點。
      單欄(手機、平板直向)最多放大到 1.23 倍(鋼琴白鍵長寬比 5.2 → 真實的 6.4),矮螢幕(≤640px 高)維持原本,
      釘住區塊才不會擠掉清單;兩欄(桌機、手機橫向)右邊放大到寬度的 26%、視窗高度的 30%,取比原本大的 */
-  const H = TWO_COL.matches ? Math.max(H0, Math.min(w * 0.26, window.innerHeight * 0.30))
-                            : Math.round(H0 * Math.max(1, Math.min(1.23, 1 + (window.innerHeight - 640) / 800)));
+  const fac = Math.max(1, Math.min(1.23, 1 + (window.innerHeight - 640) / 800));
+  let H = TWO_COL.matches ? Math.max(H0, Math.min(w * 0.26, window.innerHeight * 0.30)) : Math.round(H0 * fac);
+  // 單欄的和弦分頁:鍵盤不再固定兩個八度(見 chordKeyboardFit),高度照「11 個白鍵」算、每個和弦都一樣高
+  cv._kbH = 0;
+  if (!TWO_COL.matches && STATE.tab === "chord") H = chordKeyboardFit(cv, w, Math.max(KB_MIN_H, maxH), fac);
+  // 轉成兩欄(手機轉橫向)時,上一次單欄算的音域還留著:照原本的規則重算,不然高度跟直接橫向打開的不一樣
+  else if (STATE.tab === "chord") rebuildKeyboardRange(keyboardNotes().map(n => n.midi));
   /* 兩欄版面(≥900px,含大手機橫向 932×430):右邊的顯示區撐滿左欄(分頁 + 根音卡片)的高度,兩欄底部對齊。
      原本右邊只有 170px(或視窗高度的 22%),左欄的根音卡片比它高很多,右邊空一大段(使用者回報)。
      左欄的高度跟顯示區無關,所以換樂器時照樣不會移位;外框兩種樂器一樣高(CSS 的 align-self:stretch)。
@@ -2065,9 +2102,11 @@ function drawKeyboardLive(){
     return;
   }
   const view = currentView();
-  drawKeyboard(ctx, 0, 0, cv._cssW, cv._cssH, view.activeMap);
-  drawBlackKeyEdges(ctx, 0, 0, cv._cssW, cv._cssH);
-  if (STATE.label !== "off") drawKeyLabels(ctx, 0, 0, cv._cssW, cv._cssH, view.labelMap);
+  // 和弦很寬、白鍵變窄時,琴鍵畫矮一點(長寬比最多 7.2),貼齊底部(chordKeyboardFit)
+  const kh = cv._kbH && cv._kbH < cv._cssH ? cv._kbH : cv._cssH, y0 = cv._cssH - kh;
+  drawKeyboard(ctx, 0, y0, cv._cssW, kh, view.activeMap);
+  drawBlackKeyEdges(ctx, 0, y0, cv._cssW, kh);
+  if (STATE.label !== "off") drawKeyLabels(ctx, 0, y0, cv._cssW, kh, view.labelMap);
 }
 /* 把頂欄與釘住區塊的實際高度餵給 CSS。兩個高度都是會變的:頂欄隨字級與換行改變,
    釘住區塊的高度隨鍵盤音域(白鍵數)改變,寫死數字遲早會對不齊 */
