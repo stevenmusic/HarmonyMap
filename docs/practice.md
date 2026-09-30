@@ -65,3 +65,6 @@
   排程照累計拍數換和弦(`practiceTimeline`),拍點與重音照小節格線;存檔/文字框用 `stepText`(保留 *n),畫面上的名稱用 `stepName`
 - 吉他練習時設定列多一個移調夾選單(`#prCapo`;鍵盤設定面板練習時收起來了)。★ 標在這組進行開放和弦指型最多的格數
   (`practiceCapoBest`:夾 0~7 格各算一次最好指法是不是開放和弦,同分取低格;E♭ B♭ Cm A♭ → 夾 1 或 3)
+- 兩欄版面(≥ 900px,橫式平板/桌機)練習時:練習卡片搬到上半部左欄(`placePracticeCard`,原本根音卡片的位置),
+  右邊「現在/下一個」sticky 停在畫面上;圖高照視窗高度收(矮的 460px 也看得到開始鈕)、最寬 260px。
+  `.topbar .kb-wrap{display:flex}` 會蓋過 hidden,要另外寫 `[hidden]{display:none}`,不然練習時一般鍵盤會露在下面

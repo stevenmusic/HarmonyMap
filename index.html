@@ -828,6 +828,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
   /* 顯示區撐滿左欄高度(高度由 resizeKeyboardCanvas 的 twoColumnAvail 算);內容比較矮時(鋼琴維持琴鍵比例)
      在摘要列上方置中,不是全部擠在最上面、下面留一塊空白 */
   .topbar .kb-wrap{align-self:stretch;display:flex;flex-direction:column}
+  .topbar .kb-wrap[hidden]{display:none}   /* 上面的 display:flex 會蓋過 hidden:練習時一般鍵盤會露在「現在/下一個」底下 */
   .topbar #rootCard,.topbar #findCard{align-self:stretch}
   .topbar .kb-wrap > #keyboardCanvas{align-self:center}
   .topbar .kb-wrap > #keyboardCanvas{margin-top:auto}
@@ -851,6 +852,17 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
      右半邊就整片空著。--topbar-h 由 JS 量出來(鍵盤高度會隨音域變,寫死會對不齊) */
   .info{position:sticky;top:calc(var(--header-h, 60px) + var(--topbar-h, 250px) + 10px)}
   .lower.practicing{grid-template-columns:minmax(0,760px)}
+  /* 兩欄時練習:練習卡片(輸入板、進行、設定)搬到左欄分頁下面(原本根音卡片的位置,練習時是空的),
+     右邊「現在/下一個」跟著捲動停在畫面上(sticky)。原本左欄整片空、練習卡片被擠到畫面下面(使用者回報橫式平板) */
+  .topbar > #practiceCard{grid-column:1;grid-row:2;align-self:start;min-width:0}
+  .topbar #practiceCard .root-line{flex-wrap:wrap}
+  .topbar #practiceCard .root-line .letters,.topbar #practiceCard .acc-row{flex:1 1 100%;margin-left:0}
+  .topbar #practiceCard .quick-grid{grid-template-columns:repeat(5,1fr)}
+  .topbar .kb-stage{align-self:start;position:sticky;top:calc(var(--header-h, 60px) + 8px)}
+  /* 圖的高度照視窗高度收:矮的橫式平板(460px 高)也要看得到開始/停止鈕 */
+  .topbar .kb-stage .pr-now b{font-size:clamp(26px, 6vh, 40px)}
+  .topbar .kb-stage .pr-now .dg{max-height:max(90px, calc(100vh - var(--header-h, 60px) - 260px));width:auto;max-width:min(100%, 260px);margin-left:auto;margin-right:auto}
+  .topbar .kb-stage .pr-now .dg.kb{max-width:100%}   /* 鋼琴小鍵盤照舊撐滿 */
 }
 </style>
 </head>
@@ -4471,6 +4483,13 @@ function render(){
     if (el && el.offsetParent) el.focus({ preventScroll: true });
   }
 }
+/* 兩欄版面練習時,練習卡片搬進上半部左欄(見 CSS min-width:900);其他時候放回下半部最前面 */
+function placePracticeCard(inTop){
+  const c = $("practiceCard"), top = document.querySelector(".topbar"), lower = document.querySelector(".lower");
+  if (inTop && c.parentElement !== top) top.appendChild(c);
+  else if (!inTop && c.parentElement !== lower) lower.insertBefore(c, lower.firstChild);
+}
+if (TWO_COL.addEventListener) TWO_COL.addEventListener("change", () => { if (PRACTICE.open) render(); });
 function renderCore(){
   // 分頁狀態
   $("tabChord").setAttribute("aria-selected", String(STATE.tab === "chord"));
@@ -4487,6 +4506,7 @@ function renderCore(){
   $("gtrDiagrams").hidden = !gallery;
   if (gallery) renderGuitarGallery();
   $("practiceStage").hidden = !practicing;
+  placePracticeCard(practicing && TWO_COL.matches);
   // 練習時結果面板(公式、組成音、低音、音階)用不到,收起來;桌機讓練習卡片佔滿兩欄
   document.querySelector(".info").hidden = practicing;
   document.querySelector(".lower").classList.toggle("practicing", practicing);
