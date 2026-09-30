@@ -410,9 +410,9 @@ async function openPage(browser, opts = {}){
       const fails = [];
       let total = 0;
       const std = { "x32010": "x32010", "x02220": "x01230", "320003": "210003", "022100": "023100", "xx0232": "xx0132", "x02210": "x02310",
-        "022000": "012000", "xx0231": "xx0231", "133211": "134211", "x24432": "x13421", "x21202": "x21304", "x35453": "x13241",
+        "022000": "023000", "xx0231": "xx0231", "133211": "134211", "x24432": "x13421", "x21202": "x21304", "x35453": "x13241",
         "200232": "T00132", "x02010": "x02010", "320001": "320001", "x32310": "x32410", "xx3211": "xx3211", "xx0211": "xx0211",
-        "xx0212": "xx0213", "xx3210": "xx3210", "x02020": "x01020", "320033": "210034", "x33211": "x34211" };
+        "xx0212": "xx0213", "xx3210": "xx3210", "x02020": "x02030", "320033": "210034", "x33211": "x34211" };
       const show = (f, g) => g.map((x, i) => f[i] < 0 ? "x" : f[i] === 0 ? "0" : x).join("");
       for (const [fr, want] of Object.entries(std)) {
         total++;
@@ -1620,11 +1620,22 @@ async function openPage(browser, opts = {}){
       total++;
       { const bad = [];
         for (const [fr, want] of [["2,-1,1,2,1,-1", "2-131-"], ["3,2,0,0,0,2", "32---1"], ["-1,1,3,1,3,1", "-13141"], ["1,3,1,1,1,1", "131111"],
-                                  ["1,3,3,1,1,1", "134111"], ["1,3,3,-1,-1,-1", "134---"], ["-1,0,2,2,2,2", "--1111"], ["1,3,1,0,1,-1", "141-2-"]]) {
+                                  ["1,3,3,1,1,1", "134111"], ["1,3,3,-1,-1,-1", "134---"], ["-1,0,2,2,2,2", "--1111"], ["1,3,1,0,1,-1", "131-2-"],
+                                  ["-1,4,2,4,4,4", "-21344"], ["-1,3,1,3,3,3", "-21344"], ["-1,3,2,2,1,0", "-4231-"], ["3,-1,2,3,2,0", "2-131-"],
+                                  ["-1,3,4,3,4,-1", "-1324-"], ["1,-1,1,2,3,2", "T-1243"]]) {
           const got = await q.evaluate(f => gtrFingering(f.split(",").map(Number)).map(x => x || "-").join(""), fr);
           if (got !== want) bad.push(fr + " → " + got + "(應為 " + want + ")");
         }
         if (bad.length) fails.push("指法: " + bad.join("; ")); }
+      // 每個列出來的按法:指法不能有 0 號手指、最多 4 根手指(拇指另計)
+      total++;
+      { const bad = await q.evaluate(() => { const o = [];
+          for (const def of CHORDS) for (let pc = 0; pc < 12; pc++) for (const v of chordVoicingsFor(pc, def).list) {
+            const fg = gtrFingering(v.frets);
+            if (fg.some(x => x === "0") || new Set(fg.filter(x => x && x !== "T")).size > 4 || fg.some((x, i) => (v.frets[i] > 0) !== !!x)) o.push(pc + def.sym + " " + gtrTabText(v.frets) + " " + fg.map(x => x || "-").join(""));
+          }
+          return o; });
+        if (bad.length) fails.push("指法不合理: " + bad.slice(0, 5).join(", ")); }
       // 樂器切換鈕與和弦表的樂器選項同一個順序:吉他在左、鋼琴在右
       total++;
       if (await q.evaluate(() => [...document.querySelectorAll(".inst-switch button")].map(b => b.id).join() !== "instGuitar,instPiano")) fails.push("樂器切換鈕應該吉他在左、鋼琴在右");
