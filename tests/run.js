@@ -929,7 +929,7 @@ async function openPage(browser, opts = {}){
           const tops = [...new Set(cs.map(c => Math.round(c.getBoundingClientRect().top)))].length;
           const r = [cs.length, tops, g.classList.contains("two"), cs.findIndex(c => c.classList.contains("now"))].join(); practiceFullscreen(false); return r; };
         const r = { six: one("C G Am F Dm Em"), four: one("C G Am F") }; PRACTICE.steps = saved; PRACTICE.step = 0; render(); return r; });
-      check(r.six === "6,2,true,1" && r.four === "4,1,false,0", "全螢幕兩排: " + JSON.stringify(r)); }
+      check(r.six === "6,2,true,1" && r.four === "4,1,false,1", "全螢幕兩排 / 位置固定只換亮框: " + JSON.stringify(r)); }
     // 速度/拍子:上方「現在/下一個」與全螢幕也能調,三處同步(使用者要求)
     { const r = await q.evaluate(() => { const b0 = PRACTICE.bpm, beats0 = PRACTICE.beats;
         document.querySelector("#practiceStage .pt-faster").click(); const a = PRACTICE.bpm - b0;
@@ -1554,7 +1554,7 @@ async function openPage(browser, opts = {}){
       await z.evaluate(() => { PRACTICE.steps = practiceParseCustom("Fm C Am G").steps; PRACTICE.step = 3; render(); scrollTo(0, 0); });
       await z.click("#prFs");
       const r = await z.evaluate(() => ({ open: !$("prFull").hidden, names: [...document.querySelectorAll(".pf-card b")].map(x => x.textContent).join(" "), now: document.querySelector(".pf-card.now b").textContent }));
-      total++; if (!r.open || r.names !== "G Fm C Am" || r.now !== "G") fails.push("全螢幕四個和弦: " + JSON.stringify(r));
+      total++; if (!r.open || r.names !== "Fm C Am G" || r.now !== "G") fails.push("全螢幕四個和弦: " + JSON.stringify(r));
       await z.setViewportSize({ width: 390, height: 844 }); await z.waitForTimeout(200);
       const closed = await z.evaluate(() => $("prFull").hidden && !PRACTICE.fs);
       const hidden = await z.evaluate(() => getComputedStyle($("prFs")).display === "none");
@@ -1604,6 +1604,19 @@ async function openPage(browser, opts = {}){
         const pdf = ((await q.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })).toString("latin1").match(/\/Type\s*\/Page[^s]/g) || []).length;
         await q.evaluate(() => document.body.classList.remove("printing"));
         total++; if (!(label === dom.pages && dom.pages === pdf && dom.feet === pdf)) fails.push("和弦表頁數(" + inst + " " + set + "): 按鈕 " + label + "、產生 " + dom.pages + "、PDF " + pdf + "、有頁尾 " + dom.feet);
+      }
+      // 下載 PDF(網頁自己寫 PDF,不經過列印):頁數 = 按鈕寫的、A4、沒有直接列印鈕
+      if (w === 390) {
+        await q.click('#printPop [data-g="inst"][data-v="guitar"]'); await q.click('#printPop [data-g="set"][data-v="core"]'); await q.click('#printPop [data-g="roots"][data-v="all"]');
+        const r = await q.evaluate(async () => {
+          const want = +$("printGo").textContent.replace(/\D+/g, " ").trim().split(" ").pop();
+          await buildPrintSheet();
+          const blob = await new Promise(res => { window.__pdfCapture = res; exportPdf(); });
+          window.__pdfCapture = null;
+          const txt = new TextDecoder("latin1").decode(await blob.arrayBuffer());
+          return { want, pages: (txt.match(/\/Type \/Page /g) || []).length, a4: txt.includes("/MediaBox [0 0 595.28 841.89]"), direct: !!$("printDirect"), kb: Math.round(blob.size / 1024) };
+        });
+        total++; if (r.pages !== r.want || !r.a4 || r.direct) fails.push("下載 PDF: " + JSON.stringify(r));
       }
       // 列印樣式:只看得到和弦表
       await q.emulateMedia({ media: "print" }); await q.evaluate(() => document.body.classList.add("printing"));
