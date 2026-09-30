@@ -82,6 +82,10 @@
 (MIT © 2019 Jared Williams)。每個指法都先用本工具的樂理規則重驗,錯的(多了非和弦音、低音不對、
 升記號調的資料其實是 C 調…)不收;再依幾個來源都有、是不是來源的預設指法排序。
 必學和弦全部有資料或標準開放和弦表背書;資料庫沒收的罕用和弦才由演算法計算。
+圓點裡的左手指法(1 食指 ~ 4 小指)照和弦書:以 chords-db 的指法為主,它沒有的形狀再用
+[guitar-chords-viewer](https://github.com/ivosdc/guitar-chords)(MIT © Ivo Bozic)與
+[gpra-chord-charts](https://github.com/slshults/gpra-chord-charts-mcp)(MIT © Steven Shults)補;
+三個來源都沒有的罕用和弦才由規則推算(規則對照書上 3000 多個按法吻合 98%)。
 
 **換和弦練習** — 和弦分頁的「練習」:用根音 + 和弦按鈕(或直接打 `C G Am F`、`D/F#`)排一組進行,
 跟著節拍器輪流換和弦。上方換成「現在 / 下一個」兩張和弦圖,換和弦前就能先準備;

@@ -1636,6 +1636,15 @@ async function openPage(browser, opts = {}){
           }
           return o; });
         if (bad.length) fails.push("指法不合理: " + bad.slice(0, 5).join(", ")); }
+      // 梅湘有限移調模式:移一個週期要回到同一組音(第三、四模式曾經各錯一個音:該是 ♯5 / ♭6 卻寫成 6,對照 tonal.js 找到)
+      total++;
+      { const bad = await q.evaluate(() => {
+          const per = { messiaen3: 4, messiaen4: 6, messiaen5: 6, messiaen6: 6, messiaen7: 6 }, o = [];
+          for (const [id, p] of Object.entries(per)) { const sc = SCALES.find(x => x.id === id); if (!sc) { o.push(id + " 不見了"); continue; }
+            const set = new Set(sc.t.map(x => ((tokenSemi(x) % 12) + 12) % 12));
+            if ([...set].some(x => !set.has((x + p) % 12))) o.push(id); }
+          return o; });
+        if (bad.length) fails.push("梅湘模式不對稱: " + bad.join(", ")); }
       // 樂器切換鈕與和弦表的樂器選項同一個順序:吉他在左、鋼琴在右
       total++;
       if (await q.evaluate(() => [...document.querySelectorAll(".inst-switch button")].map(b => b.id).join() !== "instGuitar,instPiano")) fails.push("樂器切換鈕應該吉他在左、鋼琴在右");
