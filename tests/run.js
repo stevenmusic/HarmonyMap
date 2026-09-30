@@ -232,6 +232,10 @@ async function openPage(browser, opts = {}){
           // (第一名是 4 弦根音或高把位混空弦的指法時不在三種裡,不檢查)
           let exp = canon || (vs.list.some(v => v.frets.join(",") === ref[0].join(",")) ? ref[0] : null);
           if (!canon && canon === null && openPos(ref[0])) exp = null;   // Cm 規則:不檢查
+          // 教材首選(TEACH_CANON,使用者逐一確認過)優先於資料庫;資料庫第一名中間打叉的不當推薦(使用者決定),不檢查
+          const mid = f => { const lo = f.findIndex(x => x >= 0), hi = 5 - [...f].reverse().findIndex(x => x >= 0); for (let k = lo + 1; k < hi; k++) if (f[k] < 0) return true; return false; };
+          if (teachCanon(+key, id)) exp = teachCanon(+key, id);
+          else if (!canon && exp && mid(ref[0])) exp = null;
           if (exp) { total++; if (exp.join(",") !== got.join(",")) fails.push(tag + ": " + gtrTabText(got) + " ≠ " + gtrTabText(exp) + (canon ? "(開放和弦表)" : "(資料庫第一名)")); }
         } else {
           total++;
@@ -345,7 +349,31 @@ async function openPage(browser, opts = {}){
         if (!evalVoicing([-1, 4, 0, 2, 2, 2], tones, 2, 1, 1)) fails.push("D/C♯ 的 × 4 0 2 2 2 應該可以(低音在上面重複)"); }
       if (!has(0, "69", null, "× 3 2 2 3 3")) fails.push("C6/9 的 × 3 2 2 3 3 是常見按法,不該被刪");
       if (!has(0, "9s5", null, "8 7 8 7 9 ×")) fails.push("C9♯5 的 8 7 8 7 9 × 按得到,不該被刪");
-      return { total: total + 4, fails };
+      // 中間夾著打叉的弦(要另外悶):不能當推薦按法,清單裡一定排在不用悶弦的後面(使用者決定);Fm7♭5 的推薦不能是 1 × 1 1 0 ×
+      let mid = 0;
+      const mm = f => { const lo = f.findIndex(x => x >= 0), hi = 5 - [...f].reverse().findIndex(x => x >= 0); for (let k = lo + 1; k < hi; k++) if (f[k] < 0) return 1; return 0; };
+      for (const def of CHORDS) for (let pc = 0; pc < 12; pc++) for (const bass of [null, ...[...Array(12).keys()]]) {
+        if (bass != null && (pc + def.id.length) % 4) continue;   // 斜線和弦取樣四分之一,時間才不會太久
+        const vs = chordVoicingsFor(pc, def, bass), L = vs.list.map(v => v.canon ? 0 : mm(v.frets));   // 標準 / 教材首選的可以打叉
+        if (!L.length) continue;
+        const bad = (L[vs.best] && L.some(x => !x)) || L.some((x, i) => i && L[i - 1] > x);
+        if (bad && mid++ < 5) fails.push("中間打叉的指法當推薦或排在前面: " + def.id + "@" + pc + (bass != null ? "/" + bass : "") + " " + vs.list.map(v => v.frets.join(" ")).join(" | "));
+      }
+      // 教材首選(使用者確認過):m7♭5 的 12 個根音、Gsus4 / G7sus4 / Esus2 的開放按法、A♭dim / A♭sus2
+      { const want = { m7b5: ["x3434x","x4545x","xx0111","x6767x","012333","1x110x","202210","3x332x","4x443x","x0101x","x1212x","x2323x"] };
+        const tabS = f => f.map(x => x < 0 ? "x" : x.toString(36)).join("");
+        want.m7b5.forEach((w, pc) => { const vs = chordVoicingsFor(pc, chordById("m7b5"), null), got = tabS(vs.list[vs.best].frets);
+          if (got !== w) fails.push("m7♭5 的推薦(根音 " + pc + "): " + got + ",應該 " + w); });
+        for (const [pc, id, w] of [[7, "sus4", "330013"], [7, "7sus4", "330011"], [4, "sus2", "024400"], [8, "dim", "4564xx"], [8, "sus2", "xx6896"]]) {
+          const vs = chordVoicingsFor(pc, chordById(id), null), got = tabS(vs.list[vs.best].frets);
+          if (got !== w) fails.push(id + "(根音 " + pc + ")的推薦: " + got + ",應該 " + w);
+        } }
+      // 資料庫有收錄這個和弦時,網頁列出的每一個按法都要來自資料庫或標準表(使用者要求核對實用性)
+      { let n = 0;
+        for (const def of CHORDS) for (let pc = 0; pc < 12; pc++) { if (!gtrRef(pc, def.id, null).length) continue;
+          const vs = chordVoicingsFor(pc, def, null), src = vs.list.filter(v => v.ref || v.canon);
+          if (src.length && vs.list.some(v => !v.ref && !v.canon) && n++ < 5) fails.push("列了資料庫沒有的按法: " + def.id + "@" + pc + " " + vs.list.map(v => v.frets.join(" ")).join(" | ")); } }
+      return { total: total + 6, fails };
     });
     report("指法都按得到", r.total, r.fails);
   }
@@ -1541,8 +1569,8 @@ async function openPage(browser, opts = {}){
         return { over: b.right > r.right + 1, search: Math.round(s.width), h: Math.round(r.height) }; });
       total++; if (row.over || row.search < 90 || row.h > 44) fails.push("清單上方那排擠壞了(" + w + "): " + JSON.stringify(row));
       await q.click("#printOpen");
-      for (const [inst, lv, want] of [["guitar", "3", 84], ["piano", "2", 33 * 12], ["guitar", "1", 80 * 12]]) {
-        await q.click('#printPop [data-g="inst"][data-v="' + inst + '"]'); await q.click('#printPop [data-g="lv"][data-v="' + lv + '"]');
+      for (const [inst, lv, want] of [["guitar", "core", 84], ["piano", "other", 73 * 12], ["guitar", "all", 80 * 12]]) {
+        await q.click('#printPop [data-g="inst"][data-v="' + inst + '"]'); await q.click('#printPop [data-g="set"][data-v="' + lv + '"]');
         await q.click('#printPop [data-g="roots"][data-v="all"]');
         await q.click("#printGo"); await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
         const r = await q.evaluate(() => ({ cells: document.querySelectorAll("#printSheet .ps-cell").length, svg: document.querySelectorAll("#printSheet .ps-cell svg").length,
@@ -1552,10 +1580,23 @@ async function openPage(browser, opts = {}){
         if (inst === "guitar" && !r.fn) fails.push("吉他和弦表沒有指法數字");
         if (lang === "en" && r.cjk) fails.push("英文和弦表有中文");
       }
-      // 只有目前的根音:C 大三 → 7 張(必學)
-      await q.click('#printPop [data-g="lv"][data-v="3"]'); await q.click('#printPop [data-g="roots"][data-v="cur"]'); await q.click("#printGo");
+      // 只有目前的根音、基本 7 種:照「大三 小三 maj7 m7 7 m7♭5 dim7」排
+      await q.click('#printPop [data-g="set"][data-v="core"]'); await q.click('#printPop [data-g="roots"][data-v="cur"]'); await q.click("#printGo");
       await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
-      total++; if (await q.evaluate(() => document.querySelectorAll("#printSheet .ps-cell").length) !== 7) fails.push("只印目前根音應該 7 張");
+      const names = await q.evaluate(() => [...document.querySelectorAll("#printSheet .ps-cell b")].map(b => b.textContent).join(" "));
+      total++; if (names !== "C Cm Cmaj7 Cm7 C7 Cm7♭5 Cdim7") fails.push("基本 7 種(只印目前根音): " + names);
+      total++; if (!(await q.evaluate(() => /Steven Tsai/.test($("printSheet").textContent) && /HarmonyMap · steventsaimusic/.test($("printSheet").textContent) && /©/.test($("printSheet").textContent)))) fails.push("和弦表沒有作者與版權");
+      // 分頁自己排:按鈕寫的頁數 = 產生的頁數 = 實際 PDF 頁數;每一頁都有頁尾(作者、版權)
+      if (w === 390) for (const [inst, set] of [["guitar", "core"], ["piano", "other"]]) {
+        await q.click('#printPop [data-g="inst"][data-v="' + inst + '"]'); await q.click('#printPop [data-g="set"][data-v="' + set + '"]'); await q.click('#printPop [data-g="roots"][data-v="all"]');
+        const label = +(await q.evaluate(() => $("printGo").textContent)).replace(/\D+/g, " ").trim().split(" ").pop();
+        await q.click("#printGo"); await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
+        const dom = await q.evaluate(() => ({ pages: document.querySelectorAll(".ps-page").length, feet: [...document.querySelectorAll(".ps-page")].filter(p => /Steven Tsai/.test(p.textContent) && /HarmonyMap/.test(p.lastElementChild.textContent)).length }));
+        await q.evaluate(() => document.body.classList.add("printing"));
+        const pdf = ((await q.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true })).toString("latin1").match(/\/Type\s*\/Page[^s]/g) || []).length;
+        await q.evaluate(() => document.body.classList.remove("printing"));
+        total++; if (!(label === dom.pages && dom.pages === pdf && dom.feet === pdf)) fails.push("和弦表頁數(" + inst + " " + set + "): 按鈕 " + label + "、產生 " + dom.pages + "、PDF " + pdf + "、有頁尾 " + dom.feet);
+      }
       // 列印樣式:只看得到和弦表
       await q.emulateMedia({ media: "print" }); await q.evaluate(() => document.body.classList.add("printing"));
       const pr = await q.evaluate(() => ({ sheet: $("printSheet").getBoundingClientRect().height > 100, main: getComputedStyle(document.querySelector("main")).display, hdr: getComputedStyle(document.querySelector("header")).display }));
