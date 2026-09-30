@@ -867,9 +867,42 @@ async function openPage(browser, opts = {}){
     check(st.now === "C" && st.next === "G", "現在/下一個: " + st.now + " / " + st.next);
     check(st.fs[0] === st.fs[1], "現在/下一個字級不同: " + st.fs.join(" / "));
     check(st.dg === 2, "兩個和弦的按法要同時顯示(" + st.dg + ")");
-    // 鋼琴小鍵盤:固定兩個八度、從 C 或 F 開始,兩張一樣大
-    const kb = await q.evaluate(() => PRACTICE.steps.map(st => withStep(st, () => ((pianoDiagramSVG().match(/<rect x="[\d.]+" y="0" width="13.2"/g) || []).length))));
-    check(kb.every(n => n === 14), "小鍵盤不是固定兩個八度: " + kb.join(","));
+    // 鋼琴小鍵盤:從 C 或 F 開始,整組進行同一個大小:全部放得進 8 個白鍵就畫 8、否則 11、否則 15(使用者要求:鍵太小)
+    const kbCount = prog => q.evaluate(p => { const saved = PRACTICE.steps; PRACTICE.steps = practiceParseCustom(p).steps;
+      const r = PRACTICE.steps.map(st => (stepDiagram(st).match(/<rect x="[\d.]+" y="0" width="13.2"/g) || []).length); PRACTICE.steps = saved; return r; }, prog);
+    // 整組共用同一段鍵盤(起點是全組最低音下方的 C/F):「現在/下一個」同一個鍵上下對齊
+    for (const [prog, want] of [["C F", 8], ["C G Am F", 11], ["Cmaj7 Am7 Dm7 G7", 15], ["C9 F13", 0], ["C G/B Am", 0]]) {
+      const kb = await kbCount(prog);
+      check(kb.length && kb.every(n => n === kb[0]) && (!want || kb[0] === want), "小鍵盤大小(" + prog + ")應該都是 " + (want || "同一個") + ": " + kb.join(","));
+    }
+    // 就近轉位:C G Am F 的 G 要變成 G/B(最低音 B)、組成音不變;移動量比原位小;斜線和弦低音照樣在最下面;關掉恢復原位
+    { const r = await q.evaluate(() => { const saved = PRACTICE.steps, v0 = PRACTICE.voicing;
+        const run = (p, mode) => { PRACTICE.steps = practiceParseCustom(p).steps; PRACTICE.voicing = mode; PRACTICE._vc = null;
+          return PRACTICE.steps.map(st => withStep(st, () => displayNotes().map(n => n.midi))); };
+        const move = v => v.slice(1).reduce((a, c, i) => a + c.reduce((x, m) => x + Math.min(...v[i].map(y => Math.abs(y - m))), 0), 0);
+        const root = run("C G Am F", ""), near = run("C G Am F", "near"), slash = run("C D/F# G", "near");
+        const pcs = v => v.map(c => [...new Set(c.map(m => ((m % 12) + 12) % 12))].sort().join());
+        const r = { g: ((near[1][0] % 12) + 12) % 12, samePcs: pcs(root).join("|") === pcs(near).join("|"), less: move(near) < move(root),
+          slashLow: ((slash[1][0] % 12) + 12) % 12, off: run("C G", "").join("|") === root.slice(0, 2).join("|") };
+        PRACTICE.steps = saved; PRACTICE.voicing = v0; PRACTICE._vc = null; return r; });
+      check(r.g === 11 && r.samePcs && r.less && r.slashLow === 6 && r.off, "就近轉位: " + JSON.stringify(r)); }
+    // 全螢幕:5~8 個和弦排成兩排(上四下四)、整組照順序;4 個以內一排四張
+    { const r = await q.evaluate(() => { const saved = PRACTICE.steps;
+        const one = p => { PRACTICE.steps = practiceParseCustom(p).steps; PRACTICE.step = 1; practiceFullscreen(true);
+          const g = document.querySelector(".pf-grid"), cs = [...g.querySelectorAll(".pf-card")];
+          const tops = [...new Set(cs.map(c => Math.round(c.getBoundingClientRect().top)))].length;
+          const r = [cs.length, tops, g.classList.contains("two"), cs.findIndex(c => c.classList.contains("now"))].join(); practiceFullscreen(false); return r; };
+        const r = { six: one("C G Am F Dm Em"), four: one("C G Am F") }; PRACTICE.steps = saved; PRACTICE.step = 0; render(); return r; });
+      check(r.six === "6,2,true,1" && r.four === "4,1,false,0", "全螢幕兩排: " + JSON.stringify(r)); }
+    // 速度/拍子:上方「現在/下一個」與全螢幕也能調,三處同步(使用者要求)
+    { const r = await q.evaluate(() => { const b0 = PRACTICE.bpm, beats0 = PRACTICE.beats;
+        document.querySelector("#practiceStage .pt-faster").click(); const a = PRACTICE.bpm - b0;
+        practiceFullscreen(true); const f = $("prFull"); const hasCtl = !!(f.querySelector(".pt-range") && f.querySelector(".pt-beats"));
+        f.querySelector(".pt-slower").click(); const bk = PRACTICE.bpm === b0;
+        const sel = f.querySelector(".pt-beats"); sel.value = "3"; sel.dispatchEvent(new Event("change"));
+        const beats = PRACTICE.beats, sync = $("prBpmOut").textContent === PRACTICE.bpm + " BPM";
+        practiceFullscreen(false); PRACTICE.beats = beats0; render(); return { a, hasCtl, bk, beats, sync }; });
+      check(r.a === 5 && r.hasCtl && r.bk && r.beats === 3 && r.sync, "上方/全螢幕的速度拍子調整: " + JSON.stringify(r)); }
     const firstKey = await q.evaluate(() => withStep(PRACTICE.steps[2], () => { let lo = Math.min(...displayNotes().map(n => n.midi)); while (![0, 5].includes(pcOf(lo))) lo--; return simpleName(pcOf(lo), "sharp"); }));
     check(firstKey === "F", "Am 的小鍵盤應該從 F 開始,實際從 " + firstKey);
     const wh = await q.evaluate(() => [...document.querySelectorAll("#practiceStage svg.dg")].map(x => Math.round(x.getBoundingClientRect().width) + "x" + Math.round(x.getBoundingClientRect().height)));
@@ -997,6 +1030,15 @@ async function openPage(browser, opts = {}){
       return { at: chords.slice(0, 4).map(beatOf).join(","), text: r.steps.map(stepText).join(" ") };
     });
     total++; if (dur.at !== "0,2,4,8" || dur.text !== "C*2 G*2 Am") fails.push("半小節和弦: " + JSON.stringify(dur));
+    // 沒寫拍數的和弦填到小節線:C*1 G Am F(4/4)= 1 + 3 + 4 + 4 拍、共 3 小節;點和弦換拍數:整小節 → 1 → 2 → 3 → 整小節
+    const fill = await q.evaluate(() => { const keep = PRACTICE.steps, b0 = PRACTICE.beats; PRACTICE.beats = 4;
+      const tl = p => { PRACTICE.steps = practiceParseCustom(p).steps; const x = practiceTimeline(); return x.start.join() + "/" + x.dur.join() + "/" + x.bars; };
+      const r = { a: tl("C*1 G Am F"), b: tl("C*3 G*3 Am") };
+      PRACTICE.steps = practiceParseCustom("C G").steps; PRACTICE.open = true; render();
+      const seq = []; for (let k = 0; k < 4; k++) { $("prSteps").children[0].click(); seq.push(PRACTICE.steps[0].beats || 0); }
+      r.seq = seq.join(); r.bars = $("prBars") && $("prBars").textContent;
+      PRACTICE.steps = keep; PRACTICE.beats = b0; render(); return r; });
+    total++; if (fill.a !== "0,1,4,8/1,3,4,4/3" || fill.b !== "0,3,6/3,3,2/2" || fill.seq !== "1,2,3,0" || !/2/.test(fill.bars || "")) fails.push("拍數與小節數: " + JSON.stringify(fill));
     // 移調夾建議:E♭ B♭ Cm A♭ → 夾第 3 格(C G Am F),或第 1 格(D A Bm G)也行;取開放指型最多、同分取低格
     const cb = await q.evaluate(() => { const keep = PRACTICE.steps; PRACTICE.steps = practiceParseCustom("Eb Bb Cm Ab").steps; const k = practiceCapoBest(); PRACTICE.steps = keep; return k; });
     total++; if (cb !== 3 && cb !== 1) fails.push("移調夾建議 E♭ B♭ Cm A♭ → " + cb);
@@ -1461,10 +1503,10 @@ async function openPage(browser, opts = {}){
     // 全螢幕練習:橫式才有按鈕;按下去一次四個和弦(現在 + 後面三個,循環),離開鈕、轉直向都會關
     { const z = await openPage(browser, { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
       await z.click("#practiceOpen");
-      await z.evaluate(() => { PRACTICE.steps = practiceParseCustom("Fm C Am G Dm7").steps; PRACTICE.step = 3; render(); scrollTo(0, 0); });
+      await z.evaluate(() => { PRACTICE.steps = practiceParseCustom("Fm C Am G").steps; PRACTICE.step = 3; render(); scrollTo(0, 0); });
       await z.click("#prFs");
       const r = await z.evaluate(() => ({ open: !$("prFull").hidden, names: [...document.querySelectorAll(".pf-card b")].map(x => x.textContent).join(" "), now: document.querySelector(".pf-card.now b").textContent }));
-      total++; if (!r.open || r.names !== "G Dm7 Fm C" || r.now !== "G") fails.push("全螢幕四個和弦: " + JSON.stringify(r));
+      total++; if (!r.open || r.names !== "G Fm C Am" || r.now !== "G") fails.push("全螢幕四個和弦: " + JSON.stringify(r));
       await z.setViewportSize({ width: 390, height: 844 }); await z.waitForTimeout(200);
       const closed = await z.evaluate(() => $("prFull").hidden && !PRACTICE.fs);
       const hidden = await z.evaluate(() => getComputedStyle($("prFs")).display === "none");
