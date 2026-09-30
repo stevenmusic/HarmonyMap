@@ -301,6 +301,12 @@ async function openPage(browser, opts = {}){
           if (fg[v.barreLo] !== fg[v.barreHi]) bad.push(pc + ":" + def.sym + " " + gtrTabText(v.frets));
         }
         if (bad.length) fails.push("畫了橫按但兩端指法不同: " + bad.slice(0, 5).join(", ")); }
+      // 斜線和弦也最多 3 種(和弦圖那一格只排得下一列 3 個;D/F♯ 曾列出 4 種、前三個被擠出畫面)
+      total++;
+      { const over = [];
+        for (const def of CHORDS) for (let pc = 0; pc < 12; pc++) for (let iv = 1; iv < 12; iv++)
+          if (chordVoicingsFor(pc, def, (pc + iv) % 12).list.length > 3) over.push(pc + ":" + def.sym + "/" + iv);
+        if (over.length) fails.push("斜線和弦列了超過 3 種指法: " + over.slice(0, 5).join(", ")); }
       // 使用者的例子:Am7 不能再列 × 12 14 12 13 12(手貼到琴身)
       total++;
       if (chordVoicingsFor(9, chordById("m7")).list.some(v => Math.max(...v.frets) > 12)) fails.push("Am7 還列了第 12 格以上的指法");

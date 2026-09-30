@@ -2639,6 +2639,10 @@ function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
     const cut = list.slice(0, Math.max(a.length, b.length));
     res = { list: cut.filter(v => !mid(v)).concat(cut.filter(mid)), best: 0 };
   }
+  // 跟一般和弦一樣最多列 3 種(使用者要求「最實用的 3 種」):斜線和弦兩組合併後最多會到 6 種,
+  // 和弦圖那一格只排得下一列 3 個,第 4 個折到下一列、把前三個擠出畫面(D/F♯ 只看得到第 10 把位)
+  // 推薦的那個(best)一定留著
+  if (res.list.length > 3) res = res.best < 3 ? { ...res, list: res.list.slice(0, 3) } : { ...res, list: res.list.slice(0, 2).concat([res.list[res.best]]), best: 2 };
   VOICING_CACHE.set(key, res);
   return res;
 }
