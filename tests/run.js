@@ -289,6 +289,18 @@ async function openPage(browser, opts = {}){
         }
         if (all.length) fails.push(tag + ": 封閉和弦 1 弦沒彈 " + all.join(", "));
       }
+      // 橫按記號只畫在「兩端那兩條弦是同一根手指」的按法上;Cm7♭5 的 × 3 4 3 4 × 是 1 3 2 4,不是封閉和弦(使用者指正)
+      total++;
+      { const v = chordVoicingsFor(0, chordById("m7b5")).list[0];
+        if (gtrTabText(v.frets) !== "× 3 4 3 4 ×" || v.barreShown || /封閉|橫按/.test(voicingLabel(v))) fails.push("Cm7♭5 不該標成橫按/封閉: " + gtrTabText(v.frets) + " " + voicingLabel(v)); }
+      total++;
+      { const bad = [];
+        for (const def of CHORDS) for (let pc = 0; pc < 12; pc++) for (const v of chordVoicingsFor(pc, def).list) {
+          if (!v.barreShown) continue;
+          const fg = gtrFingering(v.frets);
+          if (fg[v.barreLo] !== fg[v.barreHi]) bad.push(pc + ":" + def.sym + " " + gtrTabText(v.frets));
+        }
+        if (bad.length) fails.push("畫了橫按但兩端指法不同: " + bad.slice(0, 5).join(", ")); }
       // 使用者的例子:Am7 不能再列 × 12 14 12 13 12(手貼到琴身)
       total++;
       if (chordVoicingsFor(9, chordById("m7")).list.some(v => Math.max(...v.frets) > 12)) fails.push("Am7 還列了第 12 格以上的指法");

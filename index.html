@@ -904,7 +904,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
    頁尾被擠到下一張、每隔一頁就是只有頁尾的白紙(使用者回報)。內容照最保守的 245mm 排(PS.pageH),任何瀏覽器的頁邊都放得下,
    頁尾 margin-top:auto 貼在每頁最下面 */
 .ps-page:last-child{break-after:auto;page-break-after:auto}
-.ps-head{height:17mm;flex:none;box-sizing:border-box;overflow:hidden}
+.ps-head{height:13mm;flex:none;box-sizing:border-box;overflow:hidden}
 .ps-top{display:flex;align-items:baseline;justify-content:space-between;gap:6mm;margin-bottom:1.2mm}
 .ps-title{font-family:"Noto Serif TC",serif;font-weight:700;font-size:16pt;letter-spacing:.04em;line-height:1.15;white-space:nowrap}
 .ps-meta{font-size:8.5pt;color:#3a3428;white-space:nowrap}
@@ -912,7 +912,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 .ps-body{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 .ps-body.full{justify-content:space-evenly}   /* 滿頁:多出來的高度平均分到每一列之間,不要全部堆在最下面(使用者要求) */
 .ps-row{display:grid;column-gap:3mm;flex:none}   /* 圖與圖之間 3mm:格數標示「4fr」不會貼到隔壁的圖 */
-.ps-row.guitar{grid-template-columns:8mm repeat(7,minmax(0,1fr));height:36mm}
+.ps-row.guitar{grid-template-columns:8mm repeat(7,minmax(0,1fr));height:37mm}
 .ps-row.piano{grid-template-columns:8mm repeat(4,minmax(0,1fr));height:27mm}
 .ps-lab{font-family:"Noto Serif TC",serif;font-weight:700;font-size:15pt;line-height:1;color:#B8861B;padding-top:1.2mm;white-space:nowrap}
 .ps-lab.more{visibility:hidden}   /* 同一個根音的第二列以後不重複寫 */
@@ -1295,7 +1295,7 @@ const I18N = {
     practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceVoice: "就近轉位", practiceVoiceTitle: "每個和弦用跟前一個最接近的轉位(手幾乎不用移動);關掉 = 照名稱的原位", practiceFullscreen: "全螢幕(一次看四到八個和弦)", practiceFullscreenExit: "離開全螢幕", practiceBeatsShort: "{n}拍", practiceHalfBar: "點一下換拍數:整小節 → 1 拍 → 2 拍 → …(沒設拍數的和弦會自動填滿到小節線)", practiceBars: "共 {n} 小節", practiceRamp: "逐漸加速", practiceRampOff: "固定速度", practiceRampOpt: "每 {k} 輪 +{n}", practiceRampOpt1: "每輪 +{n}", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
-    practiceBtn: "練習", printBtn: "列印和弦表 / 存成 PDF", printTitle: "和弦表(列印 / 存成 PDF)", printInst: "樂器", printLevel: "範圍", printCore: "基本 {n} 種", printOther: "其他 {n} 種", printAll: "全部 {n} 種", printRoots: "根音", printRoots12: "12 個根音", printRootsCur: "只有 {x}", printGo: "下載 PDF", printBusyPdf: "製作 PDF… {n}/{m}", printFile: "HarmonyMap-和弦表", printBusy: "製作中… {n}/{m}", printHint: "按「下載 PDF」直接存成檔案,不會出現網址、日期。每種和弦只列一個按法(最推薦的那個)。", printCount: "共 {n} 個和弦圖", printPages: "共 {n} 頁", printCont: "(續)", printSheetTitle: "HarmonyMap 和弦表", printColors: "金 = 根音、青 = 其他組成音", printStrings: "左 = 粗弦(6 弦)、右 = 細弦(1 弦)", printAlgoNote: "部分罕用和弦沒有公開資料可查,按法由程式依樂理推算", printNone: "(沒有好按的指法)", printFoot: "HarmonyMap · steventsaimusic@gmail.com", printCopy: "© {y} Steven Tsai · 歡迎教學與個人練習使用", practiceTitle: "換和弦練習", practiceClose: "結束練習",
+    practiceBtn: "練習", printBtn: "列印和弦表 / 存成 PDF", printTitle: "和弦表(列印 / 存成 PDF)", printInst: "樂器", printLevel: "範圍", printCore: "基本 {n} 種", printOther: "其他 {n} 種", printAll: "全部 {n} 種", printRoots: "根音", printRoots12: "12 個根音", printRootsCur: "只有 {x}", printGo: "下載 PDF", printBusyPdf: "製作 PDF… {n}/{m}", printFile: "HarmonyMap-和弦表", printBusy: "製作中… {n}/{m}", printHint: "按「下載 PDF」直接存成檔案,不會出現網址、日期。每種和弦只列一個按法(最推薦的那個)。", printCount: "共 {n} 個和弦圖", printPages: "共 {n} 頁", printCont: "(續)", printSheetTitle: "HarmonyMap 和弦表", printColors: "金 = 根音、青 = 其他組成音", printLegend: "T 拇指　1 食指　2 中指　3 無名指　4 小指 · 左 6 弦(粗)→ 右 1 弦(細)", printStrings: "左 = 粗弦(6 弦)、右 = 細弦(1 弦)", printAlgoNote: "部分罕用和弦沒有公開資料可查,按法由程式依樂理推算", printNone: "(沒有好按的指法)", printFoot: "HarmonyMap · steventsaimusic@gmail.com", printCopy: "© {y} Steven Tsai · 歡迎教學與個人練習使用", practiceTitle: "換和弦練習", practiceClose: "結束練習",
     practiceKey: "調", practiceTempo: "速度", practiceBeats: "每個和弦", practiceBeatsUnit: "拍",
     practiceAccomp: "換和弦時彈出和弦", practiceStart: "開始", practiceStop: "停止",
     practiceNow: "現在", practiceNext: "下一個", practiceCustom: "自訂進行",
@@ -1391,7 +1391,7 @@ const I18N = {
     practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceVoice: "Voice leading", practiceVoiceTitle: "Play each chord in the inversion closest to the previous one; off = root position as written", practiceFullscreen: "Full screen (four to eight chords at a time)", practiceFullscreenExit: "Exit full screen", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to change the length: whole bar → 1 beat → 2 beats → … (chords without a length fill up to the bar line)", practiceBars: "{n} bars total", practiceRamp: "Speed up gradually", practiceRampOff: "Steady tempo", practiceRampOpt: "+{n} every {k} loops", practiceRampOpt1: "+{n} every loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
-    practiceBtn: "Practice", printBtn: "Print chord chart / save as PDF", printTitle: "Chord chart (print / PDF)", printInst: "Instrument", printLevel: "Range", printCore: "Basic {n}", printOther: "Others ({n})", printAll: "All {n}", printRoots: "Roots", printRoots12: "All 12 roots", printRootsCur: "Only {x}", printGo: "Download PDF", printBusyPdf: "Making PDF… {n}/{m}", printFile: "HarmonyMap-chord-chart", printBusy: "Building… {n}/{m}", printHint: "\"Download PDF\" saves a file directly, with no web address or date on it. One shape per chord (the recommended one).", printCount: "{n} chord diagrams", printPages: "{n} pages", printCont: "(cont.)", printSheetTitle: "HarmonyMap Chord Chart", printColors: "gold = root, teal = other chord tones", printStrings: "left = low (6th) string, right = high (1st) string", printAlgoNote: "Some rare chords have no published shapes; those are worked out from theory", printNone: "(no playable shape)", printFoot: "HarmonyMap · steventsaimusic@gmail.com", printCopy: "© {y} Steven Tsai · Free for teaching and personal practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
+    practiceBtn: "Practice", printBtn: "Print chord chart / save as PDF", printTitle: "Chord chart (print / PDF)", printInst: "Instrument", printLevel: "Range", printCore: "Basic {n}", printOther: "Others ({n})", printAll: "All {n}", printRoots: "Roots", printRoots12: "All 12 roots", printRootsCur: "Only {x}", printGo: "Download PDF", printBusyPdf: "Making PDF… {n}/{m}", printFile: "HarmonyMap-chord-chart", printBusy: "Building… {n}/{m}", printHint: "\"Download PDF\" saves a file directly, with no web address or date on it. One shape per chord (the recommended one).", printCount: "{n} chord diagrams", printPages: "{n} pages", printCont: "(cont.)", printSheetTitle: "HarmonyMap Chord Chart", printColors: "gold = root, teal = other chord tones", printLegend: "T thumb  1 index  2 middle  3 ring  4 pinky · left: 6th (low) → right: 1st (high)", printStrings: "left = low (6th) string, right = high (1st) string", printAlgoNote: "Some rare chords have no published shapes; those are worked out from theory", printNone: "(no playable shape)", printFoot: "HarmonyMap · steventsaimusic@gmail.com", printCopy: "© {y} Steven Tsai · Free for teaching and personal practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
     practiceKey: "Key", practiceTempo: "Tempo", practiceBeats: "Each chord", practiceBeatsUnit: "beats",
     practiceAccomp: "Play the chord on each change", practiceStart: "Start", practiceStop: "Stop",
     practiceNow: "Now", practiceNext: "Next", practiceCustom: "Custom progression",
@@ -2414,9 +2414,14 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
   /* 畫成直排、標成「橫按」的條件:真的非橫按不可才算。× 0 2 2 2 0 雖然可以一指壓三條,
      但通常用三根手指按,畫一條橫槓反而誤導;超過四個按弦音(F、Bm),或沒有空弦、
      一指壓三條以上(Dmaj7 的 × 5 7 6 7 5)才是橫按和弦 */
-  const barreShown = barre && (nFretted > 4 || (!frets.includes(0) && barreHi - barreLo >= 2));
+  // 而且指法真的是同一根手指壓兩端那兩條弦:兩條弦的指法不同(Cm7♭5 的 × 3 4 3 4 × 是 1 3 2 4)就不是橫按,
+  // 不畫橫槓、也不叫封閉和弦(使用者指正)
+  // barreShape 是只看形狀的判斷,給排序與篩選用(維持原本的推薦結果);barreShown 才是畫出來、標成封閉和弦的
+  const barreShape = barre && (nFretted > 4 || (!frets.includes(0) && barreHi - barreLo >= 2));
+  let barreShown = barreShape;
+  if (barreShown) { const fg = gtrFingering(frets); barreShown = fg[barreLo] != null && fg[barreLo] === fg[barreHi]; }
   const span = nFretted ? maxF - minF : 0;
-  return { frets: frets.slice(), cost, missing, barre, barreShown, barreLo, barreHi, bassIsRoot, minF, fingers, span };
+  return { frets: frets.slice(), cost, missing, barre, barreShape, barreShown, barreLo, barreHi, bassIsRoot, minF, fingers, span };
 }
 
 /* 列出這個和弦在標準調音下彈得到的指法:先窮舉(每條弦只考慮組成音所在的格子,
@@ -2742,7 +2747,7 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     const lowStr = v => v.frets.findIndex(f => f >= 0);
     const maxFret = v => Math.max(0, ...v.frets);
     const coversTop = v => {
-      if (!v.barreShown || v.frets[5] >= 0) return true;
+      if (!v.barreShape || v.frets[5] >= 0) return true;
       for (let s = v.barreHi + 1; s <= 5; s++) {
         if (v.frets[s] >= v.minF) continue;
         if (!byPc.has(pcOf(GTR_OPEN[s] + v.minF))) return true;   // 延伸不過去,1 弦只能悶
@@ -2751,10 +2756,10 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     };
     const handFingers = v => {
       const rest = [];
-      v.frets.forEach((f, s) => { if (f > 0 && !(v.barreShown && f === v.minF && s >= v.barreLo && s <= v.barreHi)) rest.push([s, f]); });
+      v.frets.forEach((f, s) => { if (f > 0 && !(v.barreShape && f === v.minF && s >= v.barreLo && s <= v.barreHi)) rest.push([s, f]); });
       let runs = 0;
       rest.forEach(([s, f], i) => { if (!(i && rest[i - 1][0] === s - 1 && rest[i - 1][1] === f)) runs++; });
-      return runs + (v.barreShown ? 1 : 0);
+      return runs + (v.barreShape ? 1 : 0);
     };
     const played = v => v.frets.filter(f => f >= 0).length;
     // 按到第 5 格以上又混空弦:空弦只能是最低那條(當低音持續音,Am7 的 × 0 5 5 5 5);
@@ -2767,7 +2772,7 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
       for (let s = lo + 1; s < hi; s++) if (v.frets[s] < 0 && !(s === 1 && lo === 0 && v.frets[0] > 0)) return true; return false; };
     const usable = v => v.teach || maxFret(v) <= GTR_MAX_USE_FRET && coversTop(v) && handFingers(v) <= 4 &&
       (v.canon || played(v) >= 4) && openOnlyBass(v) && (v.canon || (topRings(v) && !innerMute(v))) &&
-      (v.shape || v.canon || !(v.barreShown && v.span >= 3)) &&
+      (v.shape || v.canon || !(v.barreShape && v.span >= 3)) &&
       // 表裡有這種和弦、這個根音卻沒有標準開放和弦(Cm):低把位帶空弦的一律不列(× 3 1 0 1 × 沒人這樣教)
       (v.canon || !(canon === null && isOpenPos(v)));
     const score = v => v.cost + Math.max(0, v.minF - 7) * 4;
@@ -2849,8 +2854,8 @@ function voicingLabelBase(v){
   const low = v.frets.findIndex(f => f >= 0);
   const rootLow = low >= 0 && pcOf(gm(low, v.frets[low])) === rootPc();
   if (hasOpen && v.minF <= 4) return t("vOpen");
-  if (!hasOpen && rootLow && low === 0) return t("vClosed6", { n: v.minF });
-  if (!hasOpen && rootLow && low === 1) return t("vClosed5", { n: v.minF });
+  if (!hasOpen && v.barreShown && rootLow && low === 0) return t("vClosed6", { n: v.minF });
+  if (!hasOpen && v.barreShown && rootLow && low === 1) return t("vClosed5", { n: v.minF });
   let s = v.barreShown ? t("vBarre", { n: v.minF }) : t("vPos", { n: Math.max(1, v.minF) });
   const rs = v.frets.findIndex((f, i) => f >= 0 && pcOf(gm(i, f)) === rootPc());
   if (rs >= 0) s += " · " + t("vRootOn", { n: 6 - rs });
@@ -2866,7 +2871,7 @@ let voicingWorker = null, warmQueue = [], warmBusy = false;
 function voicingWorkerSource(){
   const data = { DEG_SEMI, CHORDS, GTR_OPEN, GTR_FRETS, GTR_MAX_SPAN, GTR_MAX_USE_FRET, GTR_LIST_MARGIN, GTR_ALGO_MARGIN,
                  OPEN_CANON, OPEN_CANON_PC, GTR_REF, SLASH_CANON, TEACH_CANON };
-  const fns = [parseToken, tokenSemi, voicingComplete, toneWeight, gtrFingersNeeded, evalVoicing, shapeTemplates, matchesShape, gtrRef,
+  const fns = [parseToken, tokenSemi, voicingComplete, toneWeight, gtrFingersNeeded, gtrFingering, evalVoicing, shapeTemplates, matchesShape, gtrRef,
                slashCanon, openCanon, teachCanon, voicingTones, chordSetPcs, chordBySet, slashPair, chordVoicingsFor, voicingsCore, gtrTabText];
   return Object.entries(data).map(([k, v]) => "const " + k + " = " + JSON.stringify(v) + ";").join("\n") +
     "\nconst pcOf = " + pcOf + ";\nconst TAB_COLLATOR = new Intl.Collator();\nconst VOICING_CACHE = new Map();\n" +
@@ -5295,7 +5300,10 @@ function gtrFingering(frets){
   // 高音那幾條弦在最低格、上面還有別的格:食指小橫按(小 F = × × 3 2 1 1、Dm7 = × × 0 2 1 1)。
   // 全部同一格的(A = × 0 2 2 2 0)不算,照常 1 2 3
   // 而且那幾條弦要相鄰:D = × × 0 2 3 2 的兩個 2 格中間夾著 3 格,照常 1 3 2
-  const topBarre = canBarre && atLo[atLo.length - 1] === fretted[fretted.length - 1] && atLo[atLo.length - 1] - atLo[0] === atLo.length - 1 &&
+  // 最低格的弦不相鄰、中間夾了兩條以上(× × 1 3 2 1、1 2 3 1 × ×),或最低格有三條以上(× × 1 1 2 1):
+  // 一根一根按的話中指要從無名指、小指底下穿過去,實際上都是食指橫按
+  const topBarre = canBarre && atLo[atLo.length - 1] === fretted[fretted.length - 1] &&
+    (atLo[atLo.length - 1] - atLo[0] === atLo.length - 1 || atLo.length >= 3 || atLo[atLo.length - 1] - atLo[0] >= 3) &&
     fretted.some(s => frets[s] > lo);
   if (singles.length <= 4 && !topBarre) { assign(singles); return out; }
   let groups = canBarre ? barred() : singles;
@@ -5695,6 +5703,8 @@ function practiceTick(){
 }
 function renderPractice(){
   const c = $("practiceCard"), stage = $("practiceStage");
+  // 進行被換成比較短的(載入存好的、編輯)時,目前第幾個可能已經超出範圍
+  if (PRACTICE.step >= PRACTICE.steps.length) PRACTICE.step = 0;
   const P = PRACTICE, cur = P.steps[P.step], nxt = P.steps.length > 1 ? P.steps[(P.step + 1) % P.steps.length] : cur;
   const svg = d => '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
   try { localStorage.setItem(PRCUR_KEY, P.custom); } catch (e) {}
@@ -6400,7 +6410,7 @@ document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("prin
    固定在底部又會壓到最後一排;@page 的頁邊文字 iPhone Safari 不支援(實際產生 PDF 逐頁檢查過)。
    這樣做每個瀏覽器印出來都一樣,頁數也算得準(按鈕上寫「共 N 頁」,不會把「84 張圖」看成 84 頁)。
    一個根音跨頁時,下一頁開頭再寫一次根音(續) */
-const PS = { pageH: 245, footH: 8, headH: 17, guitar: { cols: 7, rowH: 36 }, piano: { cols: 4, rowH: 27 } };
+const PS = { pageH: 245, footH: 8, headH: 13, guitar: { cols: 7, rowH: 37 }, piano: { cols: 4, rowH: 27 } };
 function printPlan(inst, nRoots, nDefs){
   const L = PS[inst], rows = Math.ceil(nDefs / L.cols), pages = [[]];
   let used = 0;
@@ -6451,11 +6461,13 @@ async function buildPrintSheet(){
   } finally { Object.assign(STATE, { inst: savedInst, capo: savedCapo, lefty: savedLefty }); PRINT.busy = false; }
   const lvName = t(PRINT.set === "core" ? "printCore" : PRINT.set === "other" ? "printOther" : "printAll", { n: defs.length });
   // 頁首兩層(使用者回報英文時右上角擠成四行、壓到和弦名稱):第一行標題 + 範圍,下面固定兩行圖例,每行都不換行
-  const legend1 = inst === "guitar" ? t("fingerLegend") + " · " + t("printStrings") : t("printColors");
-  const legend2 = inst === "guitar" ? t("printColors") + (PRINT.set !== "core" ? " · " + t("printAlgoNote") : "") : "";
+  // 說明縮成一行(使用者決定):指法數字 + 弦的方向;顏色說明拿掉(黑白影印看不出來,也不影響按法)。
+  // PDF 會被印出來、轉傳給沒看過網站的人,所以指法與弦的方向要留;「其他 / 全部」另外註明罕用和弦是推算的
+  const legend1 = inst === "guitar" ? t("printLegend") : "";
+  const legend2 = inst === "guitar" && PRINT.set !== "core" ? t("printAlgoNote") : "";
   const head = '<div class="ps-head"><div class="ps-top"><div class="ps-title">' + t("printSheetTitle") + '</div><div class="ps-meta">' +
     [t(inst === "guitar" ? "instGuitar" : "instPiano"), lvName, roots.length === 12 ? t("printRoots12") : escapeHTML(rootNames[0])].join(" · ") + '</div></div>' +
-    '<div class="ps-legend">' + escapeHTML(legend1) + '</div>' + (legend2 ? '<div class="ps-legend">' + escapeHTML(legend2) + '</div>' : '') + '</div>';
+    (legend1 ? '<div class="ps-legend">' + escapeHTML(legend1) + '</div>' : '') + (legend2 ? '<div class="ps-legend">' + escapeHTML(legend2) + '</div>' : '') + '</div>';
   const plan = printPlan(inst, roots.length, defs.length);
   const foot = (i) => '<div class="ps-foot"><div>' + escapeHTML(t("printFoot")) + '</div><div>' + escapeHTML(t("printCopy", { y: new Date().getFullYear() })) + '</div><span class="ps-pno">' + (i + 1) + ' / ' + plan.length + '</span></div>';
   const cols = PS[inst].cols;
