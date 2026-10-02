@@ -1275,6 +1275,7 @@ const I18N = {
     clickSeventhHint: "點七和弦可以直接跳去看它的組成音。",
     enhNote: "≅ 照三度堆疊拼出來的音(例如 {a})跟和弦名稱的拼法({b})只差等音,聽起來一樣。",
     enhNoteTri: "≅ 這個調照級數拼要用到三重升降記號,這幾列改用等音拼寫。",
+    theoKey: "{a} 的調號超過 7 個升降記號,屬於「理論調」(照級數拼會出現重升/重降)。拼法本身沒錯,但實務上通常改寫成等音的 {b}:",
     findHelpTextGuitar: "在上面的指板點幾個格子,這裡就會列出所有名字符合的和弦。例如 C E G B♭ 會得到 <strong>C7</strong>,再加一個 D 就變成 <strong>C9</strong>。",
     findHelpText: "在上面的鍵盤點幾個音,這裡就會列出所有名字符合的和弦。例如點 C E G B♭ 會得到 <strong>C7</strong>,再加一個 D 就變成 <strong>C9</strong>。",
     selectedNotesLabel: "已選 {n} 個音 · {m} 個不同音級",
@@ -1371,6 +1372,7 @@ const I18N = {
     clickSeventhHint: "Tap a 7th chord to jump to its notes.",
     enhNote: "≅ The notes stacked in thirds (e.g. {a}) are an enharmonic respelling of the chord name ({b}) — they sound the same.",
     enhNoteTri: "≅ Spelling this key by degree would need triple sharps or flats, so these rows use enharmonic spellings.",
+    theoKey: "{a} has a key signature of more than 7 sharps or flats — a theoretical key (spelling it by degree brings in double sharps or flats). The spelling is correct, but in practice it's usually written enharmonically as {b}:",
     findHelpTextGuitar: "Tap a few frets on the fretboard above and every matching chord name shows up here. For example C E G B♭ gives <strong>C7</strong>; add a D and it becomes <strong>C9</strong>.",
     findHelpText: "Tap a few notes on the keyboard above and every matching chord name shows up here. For example C E G B♭ gives <strong>C7</strong>; add a D and it becomes <strong>C9</strong>.",
     selectedNotesLabel: "{n} notes selected · {m} distinct pitch classes",
@@ -1817,7 +1819,7 @@ const SCALES = [
   {id:"prometheus", zh:"普羅米修斯音階",  en:"Prometheus / Mystic",  g:"進階與罕用", t:["1","2","3","♯4","6","♭7"],         lv:1, d:"史克里亞賓的「神祕和弦」拆成音階,六個音全部可以疊成四度,無調性但不刺耳。", d_en:"Scriabin's \"Mystic chord\" unpacked into a scale — all six notes stack in 4ths, atonal but not harsh."},
   {id:"enigmatic",  zh:"謎音階",          en:"Enigmatic",            g:"進階與罕用", t:["1","♭2","3","♯4","♯5","♯6","7"],   lv:1, d:"威爾第出的作曲謎題,前半像弗里吉安、後半像全音,沒有任何一個標準和弦能完整支撐它。", d_en:"Verdi's compositional riddle — the lower half sounds like Phrygian, the upper half like whole tone; no standard chord can fully support it."},
   {id:"tritoneSc",  zh:"三全音音階",      en:"Tritone Scale",        g:"進階與罕用", t:["1","♭2","3","♭5","5","♭7"],        lv:1, d:"以三全音為週期的六聲對稱音階,兩個大三和弦相隔三全音疊起來的效果。", d_en:"A six-note symmetric scale with a tritone period — the effect of two major triads stacked a tritone apart."},
-  {id:"istrian",    zh:"伊斯特里亞音階",  en:"Istrian",              g:"進階與罕用", t:["1","♭2","♭3","♭4","♭5","♭7"],      lv:1, d:"克羅埃西亞伊斯特里亞半島的傳統音階,已列入聯合國非物質文化遺產。", d_en:"A traditional scale from Croatia's Istrian peninsula, inscribed on UNESCO's Intangible Cultural Heritage list."},
+  {id:"istrian",    zh:"伊斯特里亞音階",  en:"Istrian",              g:"進階與罕用", t:["1","♭2","♭3","♭4","♭5","5"],       lv:1, d:"克羅埃西亞伊斯特里亞半島的傳統音階,已列入聯合國非物質文化遺產。", d_en:"A traditional scale from Croatia's Istrian peninsula, inscribed on UNESCO's Intangible Cultural Heritage list."},
   {id:"leadWhole",  zh:"導音全音音階",    en:"Leading Whole Tone",   g:"進階與罕用", t:["1","2","3","♯4","♯5","♭7","7"],    lv:1, d:"全音音階最上面補一個導音,讓它終於有了解決的方向。", d_en:"The whole-tone scale with a leading tone added on top, finally giving it a sense of resolution."},
   {id:"sixSym",     zh:"六聲對稱音階",    en:"Six Tone Symmetrical", g:"進階與罕用", t:["1","♭2","3","4","♯5","6"],         lv:1, d:"半音與小三度交替的對稱音階,每隔大三度就重複一次。", d_en:"A symmetric scale alternating half steps and minor 3rds, repeating every major 3rd."},
   {id:"blues9",     zh:"九聲藍調",        en:"Nine Tone Blues",      g:"進階與罕用", t:["1","2","♭3","3","4","♭5","5","6","♭7"], lv:1, d:"大調藍調與小調藍調疊在一起,九個音幾乎涵蓋整個藍調語彙,實務上當素材庫用。", d_en:"Major blues and minor blues stacked together — nine notes covering almost the entire blues vocabulary, used in practice as a reference pool."},
@@ -3789,6 +3791,24 @@ STATE.group.chord = chordById(STATE.chordId).g;
 STATE.group.scale = scaleById(STATE.scaleId).g;
 function rootName(){ return LETTERS[STATE.letter] + accText(STATE.acc); }
 function rootPc(){ return ((LETTER_PC[STATE.letter] + STATE.acc) % 12 + 12) % 12; }
+/* 理論調:調號超過 7 個升降的調(G♯ 大調、F♭ 大調、D♭ 小調…),照級數拼會冒出重升/重降,實務上改用等音根音。
+   拼法照舊(字母照級數推),只在音階頁提示並給一顆換根音的鈕。看的是「同主音大調或小調」的調號
+   (音階有 ♭3 就看小調,否則看大調),所以 C♯ 大調(E♯ B♯)、C♭ 大調、A♯ 小調這些真實存在的調不提示,
+   G♯ 和聲小調的 F♯♯(導音)也不會被誤判 */
+const KEY_REF = { maj: ["1","2","3","4","5","6","7"], min: ["1","2","♭3","4","5","♭6","♭7"] };
+function keySignature(letter, acc, def){
+  const ref = def.t.some(tok => tokenSemi(tok) === 3 && parseToken(tok).deg === 3) ? KEY_REF.min : KEY_REF.maj;
+  return ref.reduce((n, tok) => n + spell(letter, acc, tok).acc, 0);
+}
+function theoreticalAlt(def, letter, acc){
+  if (!acc || !def) return null;
+  const sig = Math.abs(keySignature(letter, acc, def));
+  if (sig <= 7) return null;
+  const L2 = (letter + (acc > 0 ? 1 : 6)) % 7;
+  const a2 = ((LETTER_PC[letter] + acc - LETTER_PC[L2]) % 12 + 18) % 12 - 6;
+  if (Math.abs(a2) > 1 || Math.abs(keySignature(L2, a2, def)) >= sig) return null;
+  return { letter: L2, acc: a2 };
+}
 // 吉他的根音固定放在第三八度(C3 = MIDI 48),落在指板的中低音域;起始八度只管鋼琴
 function rootMidi(){ return 12 * ((STATE.inst === "guitar" ? 3 : STATE.octave) + 1) + LETTER_PC[STATE.letter] + STATE.acc; }
 
@@ -4514,18 +4534,24 @@ function renderReadout(){
     const myKey = pitchKey(def);
     const alsoKnown = SCALES.filter(x => x.id !== def.id && pitchKey(x) === myKey);
     const dia = diatonicChords(def);
+    const alt = theoreticalAlt(def, STATE.letter, STATE.acc);
+    const theoHtml = alt
+      ? '<div class="desc" style="margin-top:0;margin-bottom:12px">' + t("theoKey", { a: rootName() + " " + localName(def), b: LETTERS[alt.letter] + accText(alt.acc) + " " + localName(def) }) +
+        ' <button class="link-chip" data-theo="1">' + LETTERS[alt.letter] + accText(alt.acc) + " " + localName(def) + '</button></div>'
+      : "";
     const sameHtml = alsoKnown.length
       ? '<div class="card-title" style="margin-top:16px">' + t("otherScaleNames") + '</div><div class="link-chips">' +
         alsoKnown.map(x => '<button class="link-chip" data-scale="' + x.id + '">' + nameWithSub(localName(x), x) + '</button>').join("") +
         '</div>'
       : "";
     if (!dia) {
-      ex.innerHTML = '<div class="card-title">' + t("diatonicChordsTitle") + '</div><div class="desc" style="margin-top:0">' +
+      ex.innerHTML = theoHtml + '<div class="card-title">' + t("diatonicChordsTitle") + '</div><div class="desc" style="margin-top:0">' +
         t("noTertianTable", { n: def.t.length }) + '</div>' + sameHtml;
       ex.hidden = false;
       ex.querySelectorAll("[data-scale]").forEach(b => b.onclick = () => { STATE.scaleId = b.dataset.scale; jumpedTo(); });
+      ex.querySelectorAll("[data-theo]").forEach(b => b.onclick = () => { STATE.letter = alt.letter; STATE.acc = alt.acc; jumpedTo(); });
     } else {
-      let e = '<div class="card-title">' + t("diatonicChordsTitleFull") + '</div><div class="table-scroll"><table class="dia">' +
+      let e = theoHtml + '<div class="card-title">' + t("diatonicChordsTitleFull") + '</div><div class="table-scroll"><table class="dia">' +
               '<tr><th>' + t("colDegree") + '</th><th>' + t("colTriad") + '</th><th>' + t("col7th") + '</th><th>' + t("colTones") + '</th></tr>';
       for (const d of dia) {
         const enh = '<sup class="enh">≅</sup>';
@@ -4541,6 +4567,7 @@ function renderReadout(){
       ex.innerHTML = e;
       ex.hidden = false;
       ex.querySelectorAll("[data-scale]").forEach(b => b.onclick = () => { STATE.scaleId = b.dataset.scale; jumpedTo(); });
+      ex.querySelectorAll("[data-theo]").forEach(b => b.onclick = () => { STATE.letter = alt.letter; STATE.acc = alt.acc; jumpedTo(); });
       ex.querySelectorAll("button.link").forEach(b => {
         b.onclick = () => {
           if (!b.dataset.id || b.dataset.acc === "") return;

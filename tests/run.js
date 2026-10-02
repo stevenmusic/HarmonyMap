@@ -55,6 +55,33 @@ async function openPage(browser, opts = {}){
     report("樂理拼寫", r.total, r.fails);
   }
 
+  /* ── 1a. 理論調:調號超過 7 個升降才提示改等音根音;真實存在的調(C♯ 大調、C♭ 大調、A♯ 小調)不提示,
+     G♯ 和聲小調的 F♯♯ 不算。點提示的鈕要換到等音根音;伊斯特里亞音階是 1 ♭2 ♭3 ♭4 ♭5 5 ── */
+  {
+    const r = await p.evaluate(() => {
+      const fails = [];
+      const want = { ionian: "D♯→E♭ E♯→F F♭→E G♯→A♭ A♯→B♭ B♯→C", aeolian: "C♭→B D♭→C♯ E♯→F F♭→E G♭→F♯ B♯→C",
+                     harmMinor: "C♭→B D♭→C♯ E♯→F F♭→E G♭→F♯ B♯→C" };
+      for (const id in want) {
+        const got = [];
+        for (let L = 0; L < 7; L++) for (const a of [-1, 1]) {
+          const x = theoreticalAlt(scaleById(id), L, a);
+          if (x) got.push(LETTERS[L] + accText(a) + "→" + LETTERS[x.letter] + accText(x.acc));
+        }
+        if (got.join(" ") !== want[id]) fails.push(id + " 理論調: " + got.join(" ") + " ≠ " + want[id]);
+      }
+      STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; STATE.acc = 1; render();
+      if (document.querySelector("[data-theo]")) fails.push("C♯ 大調不該有理論調提示");
+      STATE.letter = 4; render();
+      const b = document.querySelector("[data-theo]");
+      if (!b) fails.push("G♯ 大調沒有理論調提示"); else { b.click(); if (rootName() !== "A♭") fails.push("理論調鈕換到 " + rootName()); }
+      if (scaleById("istrian").t.join(" ") !== "1 ♭2 ♭3 ♭4 ♭5 5") fails.push("istrian: " + scaleById("istrian").t.join(" "));
+      STATE.tab = "chord"; STATE.letter = 0; STATE.acc = 0; render();
+      return { total: 6, fails };
+    });
+    report("理論調", r.total, r.fails);
+  }
+
   /* ── 1b. 字典:全部和弦與音階 × 21 個根音 ──
      拼寫與 MIDI 自洽、音階內不得有重複音高、七聲音階七個字母各一次。
      兩種情形不算錯:級數本身就重複的音階(♭7 與 7、♭3 與 3),
