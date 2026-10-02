@@ -3421,7 +3421,9 @@ let audioStatusKey = ""; // 記住目前顯示的是哪一句(用 key,不是譯�
 function setAudioStatus(key){
   audioStatusKey = key || "";
   const el = $("audioStatus");
-  const txt = key ? t(key) : "";
+  // 吉他音色的提示只在吉他畫面顯示:一開頁面(預設吉他)就換到鋼琴時,背景照樣載入,但鋼琴畫面不該掛著「載入吉他音色中」
+  const offInst = /^(loadingGuitar|guitarLoadFailed)$/.test(audioStatusKey) && STATE.inst !== "guitar";
+  const txt = key && !offInst ? t(key) : "";
   if (el) { el.textContent = txt; el.hidden = !txt; }
 }
 /* 取樣的抓取:有 Cache API 就把抓到的 mp3 存起來,下次(包括沒網路時)直接從快取拿,不用每次重抓 70 個檔案。
@@ -6306,6 +6308,7 @@ function setInstrument(inst){
   // 從吉他換回鋼琴則保留那幾個音(鋼琴畫得出任何一組音)
   STATE.findFrets = [null, null, null, null, null, null];
   if (inst === "guitar") { STATE.findSel.clear(); if (audioCtx) loadGuitarSamples(STATE.gtrTone); }
+  if (audioStatusKey) setAudioStatus(audioStatusKey);   // 換樂器時重判提示要不要顯示
   render();
 }
 $("leftySel").addEventListener("change", e => {

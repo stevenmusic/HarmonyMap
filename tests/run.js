@@ -864,6 +864,24 @@ async function openPage(browser, opts = {}){
     report("iPhone 靜音開關", 5, fails);
   }
 
+  /* ── 5b2. 吉他音色的載入提示不能掛在鋼琴畫面上(預設吉他、一開頁面就換鋼琴時曾經出現) ── */
+  {
+    const q = await openPage(browser);
+    const fails = [];
+    const vis = () => q.evaluate(() => !$("audioStatus").hidden);
+    await q.evaluate(() => { setInstrument("guitar"); setAudioStatus("loadingGuitar"); });
+    if (!await vis()) fails.push("吉他畫面沒有顯示載入提示");
+    await q.click("#instPiano");
+    if (await vis()) fails.push("換到鋼琴後還顯示「載入吉他音色中」");
+    await q.click("#instGuitar");
+    if (!await vis()) fails.push("吉他音色還在載入,換回吉他時提示沒有回來");
+    await q.evaluate(() => setAudioStatus("loadingPiano"));
+    await q.click("#instPiano");
+    if (!await vis()) fails.push("鋼琴音色的載入提示被誤藏");
+    await q.close();
+    report("音色載入提示跟著樂器", 4, fails);
+  }
+
   /* ── 5c. 換和弦練習:輸入板排進行、上方換成「現在 / 下一個」兩張圖、節拍器實際換和弦 ── */
   {
     const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
