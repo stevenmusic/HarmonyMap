@@ -461,6 +461,7 @@ html[data-lang="en"] .chip i{white-space:normal}
 .help-pop h3{margin:0 0 8px;font-size:var(--fs-md);color:var(--gold)}
 .help-pop ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:7px;font-size:var(--fs-sm);color:var(--ivory);line-height:1.5}
 .help-pop b{color:var(--gold)}
+.help-pop .help-credit{margin:10px 0 0;font-size:var(--fs-2xs);color:var(--muted);line-height:1.45}
 .pr-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .pr-head .card-title{margin:0;white-space:nowrap}
 .pr-head select{flex:1;min-width:0;margin-left:auto;max-width:260px}
@@ -1226,6 +1227,7 @@ const I18N = {
     langToggleText: "EN", langToggleLabel: "切換為英文", langToggleTitle: "切換語言",
     themeToggleLabel: "淺色模式", themeToggleTitle: "切換淺色/深色主題",
     helpLabel: "使用說明", helpTitle: "小技巧",
+    helpCredit: "音色:鋼琴 Salamander Grand Piano(Alexander Holm,CC-BY 3.0)・古典吉他 Philharmonia Orchestra(CC BY-SA 3.0,經 ScrollScore 整理)・民謠/電吉他 tonejs-instruments(MIT)",
     help1: "<b>根音 + 和弦種類</b>兩下就選好;要斜線和弦再按 <b>/</b> 和低音(C / E = C/E)",
     help2: "點<b>鍵盤、指板任何地方</b>就播整個和弦或音階;點下方那行的<b>一個音名</b>只播那個音",
     help3: "吉他和弦圖:<b>點一下</b>刷整個和弦,手指<b>左右滑過</b>弦就一條一條撥",
@@ -1323,6 +1325,7 @@ const I18N = {
     langToggleText: "中", langToggleLabel: "Switch to Chinese", langToggleTitle: "Switch language",
     themeToggleLabel: "Light mode", themeToggleTitle: "Switch light/dark theme",
     helpLabel: "How to use", helpTitle: "Tips",
+    helpCredit: "Sounds: piano Salamander Grand Piano (Alexander Holm, CC-BY 3.0) · classical guitar Philharmonia Orchestra (CC BY-SA 3.0, prepared by ScrollScore) · acoustic/electric guitar tonejs-instruments (MIT)",
     help1: "<b>Root + chord type</b> — two taps. For a slash chord add <b>/</b> and the bass note (C / E = C/E)",
     help2: "Tap <b>anywhere on the keyboard or fretboard</b> to play the whole chord or scale; tap a <b>single note name</b> below it to hear just that note",
     help3: "Guitar diagrams: <b>tap</b> to strum the whole chord, <b>swipe across</b> the strings to pluck them one by one",
@@ -3430,7 +3433,9 @@ function setAudioStatus(key){
 }
 /* 取樣的抓取:有 Cache API 就把抓到的 mp3 存起來,下次(包括沒網路時)直接從快取拿,不用每次重抓 70 個檔案。
    快取名稱帶版本號,改了 PIANO_SAMPLES / GUITAR_SETS 的網址要把 v1 往上加。沒有 Cache API(file://、部分 WebView)就照舊直接抓 */
-const SAMPLE_CACHE = "hm-samples-v1";
+const SAMPLE_CACHE = "hm-samples-v2";   // v2:古典吉他換成 ScrollScore 的 Philharmonia
+// 舊版號的快取刪掉,不然舊檔一直佔著裝置空間
+try { if (window.caches && caches.keys) caches.keys().then(ks => ks.forEach(k => { if (k.startsWith("hm-samples-") && k !== SAMPLE_CACHE) caches.delete(k); })).catch(() => {}); } catch (e) {}
 function sampleFetch(url){
   const net = () => fetch(url).then(r => { if (!r.ok) throw new Error("404"); return r; });
   if (!window.caches || !caches.open) return net().then(r => r.arrayBuffer());
@@ -3477,16 +3482,19 @@ function loadPianoSamples(){
   return pianoLoading;
 }
 /* ── 吉他取樣 ─────────────────────────────
-   三套都是 tonejs-instruments 的真實錄音(MIT),從 npm 套件經 jsDelivr 取用,版本釘死。
-   檔名清單是照發佈的套件內容逐一列出的,不是套公式;
-   古典吉他的 D5.mp3 實測音高差了 100 cents(其實是別的音),刻意排除,由相鄰的取樣變速補上。
-   實測比較(峰值都在 -3 dBFS、沒有削波):
+   民謠吉他、電吉他是 tonejs-instruments 的真實錄音(MIT),從 npm 套件經 jsDelivr 取用,版本釘死。
+   檔名清單是照發佈的套件內容逐一列出的,不是套公式。
+   古典吉他是 Philharmonia Orchestra 的取樣(CC BY-SA 3.0),ScrollScore 整理成 guitar/classical/(HarmonyHands 也讀同一份):
+     E2~B4 每個半音 + D5、D♯5、E5、G5、G♯5、C6,檔名與音準校正(tune,音分)照 manifest.json;
+     強/弱兩層只載入強的那層(沒有強的那個音才用弱的),38 檔。原本的 tonejs 古典吉他只有 28 個音、間距到 3 半音、
+     尾巴在還沒衰減完就被截掉(尾端雜訊 -51 dBFS),換掉了。同一組和弦實測響度跟原本差 0.4 dB 內,增益不用改
+   實測比較(tonejs 峰值都在 -3 dBFS、沒有削波):
      民謠吉他  37 檔、每個半音都有錄音(不必變速),尾端雜訊 -105 dBFS,音準全部在 ±15 cents 內 ← 預設
-     古典吉他  29 檔、最大間距 3 半音,尾端雜訊 -51 dBFS(錄音在還沒衰減完時就被截掉)
+     古典吉他  38 檔、E2~B4 每個半音都有錄音,尾端雜訊 -106 dBFS
      電吉他    17 檔、每 3 半音一個,尾端雜訊 -73 dBFS */
 const GUITAR_SETS = {
   acoustic: { base: "https://cdn.jsdelivr.net/npm/tonejs-instrument-guitar-acoustic-mp3@1.1.2/", files: "A2 A3 A4 As2 As3 As4 B2 B3 B4 C3 C4 C5 Cs3 Cs4 Cs5 D2 D3 D4 D5 Ds2 Ds3 Ds4 E2 E3 E4 F2 F3 F4 Fs2 Fs3 Fs4 G2 G3 G4 Gs2 Gs3 Gs4" },
-  nylon:    { base: "https://cdn.jsdelivr.net/npm/tonejs-instrument-guitar-nylon-mp3@1.1.1/",    files: "A2 A3 A4 A5 As5 B1 B2 B3 B4 Cs3 Cs4 Cs5 D2 D3 Ds4 E2 E3 E4 E5 Fs2 Fs3 Fs4 Fs5 G3 G5 Gs2 Gs4 Gs5" },
+  nylon:    { base: "https://raw.githubusercontent.com/stevenmusic/ScrollScore/main/guitar/classical/", manifest: true, layer: 2 },
   electric: { base: "https://cdn.jsdelivr.net/npm/tonejs-instrument-guitar-electric-mp3@1.1.1/", files: "A2 A3 A4 A5 C3 C4 C5 C6 Cs2 Ds3 Ds4 Ds5 E2 Fs2 Fs3 Fs4 Fs5" }
 };
 const guitarBuffers = {}, guitarLoading = {};
@@ -3495,10 +3503,22 @@ function loadGuitarSamples(kind){
   if (!set || guitarBuffers[kind] || guitarLoading[kind]) return;
   if (sampleFail[kind] && Date.now() - sampleFail[kind] < 15000) return;
   const list = [];
-  const jobs = set.files.split(" ").map(name => {
-    const m = name.match(/^([A-G]s?)(\d)$/);
-    const midi = (+m[2] + 1) * 12 + NOTE_SEMITONE[m[1]];
-    return sampleFetch(set.base + name + ".mp3")
+  // 檔案清單:有 manifest 的照 manifest(每個錄音音高挑一層,帶音準校正),其他照 files 列的檔名
+  const filesP = set.manifest
+    ? fetch(set.base + "manifest.json").then(r => { if (!r.ok) throw new Error("404"); return r.json(); }).then(man => {
+        const pick = {};
+        for (const [name, info] of Object.entries(man.samples)) {
+          const cur = pick[info.root];
+          if (!cur || Math.abs(info.L - set.layer) < Math.abs(cur.L - set.layer)) pick[info.root] = { name, L: info.L, tune: info.tune || 0 };
+        }
+        return Object.entries(pick).map(([root, p]) => ({ url: set.base + p.name + ".flac", midi: +root, tune: p.tune }));
+      })
+    : Promise.resolve(set.files.split(" ").map(name => {
+        const m = name.match(/^([A-G]s?)(\d)$/);
+        return { url: set.base + name + ".mp3", midi: (+m[2] + 1) * 12 + NOTE_SEMITONE[m[1]], tune: 0 };
+      }));
+  const jobs = filesP.catch(() => []).then(files => Promise.all(files.map(({ url, midi, tune }) =>
+    sampleFetch(url)
       .then(arr => audioCtx.decodeAudioData(arr))
       .then(buf => {
         // 這幾套錄音在撥弦前有 30~70ms 的空白,刷弦時每條弦只差幾十 ms,不裁掉的話節奏會糊。
@@ -3506,13 +3526,12 @@ function loadGuitarSamples(kind){
         const x = buf.getChannelData(0);
         let peak = 0; for (let i = 0; i < x.length; i++) peak = Math.max(peak, Math.abs(x[i]));
         let on = 0; while (on < x.length && Math.abs(x[on]) < peak * 0.1) on++;
-        list.push({ midi, buffer: buf, offset: Math.max(0, on / buf.sampleRate - 0.005) });
+        list.push({ midi, tune, buffer: buf, offset: Math.max(0, on / buf.sampleRate - 0.005) });
       })
-      .catch(() => {});
-  });
+      .catch(() => {}))));
   const first = !sampleTried[kind]; sampleTried[kind] = true;
   if (first) setAudioStatus("loadingGuitar");
-  guitarLoading[kind] = Promise.all(jobs).then(() => {
+  guitarLoading[kind] = jobs.then(() => {
     if (list.length) { guitarBuffers[kind] = list; sampleFail[kind] = 0; if (audioStatusKey === "loadingGuitar") setAudioStatus(""); return; }
     guitarLoading[kind] = null; sampleFail[kind] = Date.now();
     if (first) { setAudioStatus("guitarLoadFailed"); setTimeout(() => { if (audioStatusKey === "guitarLoadFailed") setAudioStatus(""); }, 4000); }
@@ -3523,7 +3542,7 @@ function playSampledGuitar(midi, when, dur){
   const list = guitarBuffers[STATE.gtrTone];
   if (!list || !list.length) return false;
   const best = nearestSample(list, midi);
-  const rate = Math.pow(2, (midi - best.midi) / 12);
+  const rate = Math.pow(2, (midi - best.midi - (best.tune || 0) / 100) / 12);   // tune:錄音的音準偏差(音分)
   const src = audioCtx.createBufferSource();
   src.buffer = best.buffer;
   src.playbackRate.setValueAtTime(rate, when);
@@ -6447,7 +6466,7 @@ window.addEventListener("pointerdown", wakeAudio, { capture: true });
 function toggleHelp(force){
   const pop = $("helpPop"), btn = $("helpToggle");
   const open = force !== undefined ? force : pop.hidden;
-  if (open) pop.innerHTML = '<h3 id="helpPopTitle">' + t("helpTitle") + '</h3><ul>' + [1, 2, 3, 4, 5, 6, 7, 8].map(i => '<li>' + t("help" + i) + '</li>').join("") + '</ul>';
+  if (open) pop.innerHTML = '<h3 id="helpPopTitle">' + t("helpTitle") + '</h3><ul>' + [1, 2, 3, 4, 5, 6, 7, 8].map(i => '<li>' + t("help" + i) + '</li>').join("") + '</ul><p class="help-credit">' + t("helpCredit") + '</p>';
   pop.hidden = !open;
   btn.setAttribute("aria-expanded", String(open));
 }

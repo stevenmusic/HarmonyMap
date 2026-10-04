@@ -38,8 +38,10 @@
   手機上圖只有 0.5~0.6 倍,圖裡的字會縮到 5~8px(使用者回報「幾乎看不到」);svg `overflow:visible` 讓字伸進格子左右的空白
 - ○/× 只能從 `gtrMarkers(frets)` 來:0 = ○、-1 = ×、其他 = 按弦。
   音階沒有「不彈」,空弦不在音階裡就什麼都不標(不是畫 ×)
-- 吉他取樣三套(民謠/古典/電吉他)來自 npm 的 tonejs-instrument-guitar-*,經 jsDelivr、版本釘死。
-  檔名清單照套件內容列出;古典吉他的 D5.mp3 實測差 100 cents,刻意排除
+- 吉他取樣三套:民謠/電吉他來自 npm 的 tonejs-instrument-guitar-*,經 jsDelivr、版本釘死,檔名清單照套件內容列出。
+  古典吉他是 Philharmonia Orchestra(CC BY-SA 3.0),從 ScrollScore 的 `guitar/classical/`(raw.githubusercontent)讀,照 manifest.json
+  每個錄音音高載入強的那層(沒有才用弱的)、tune 校正音準(HarmonyHands 讀同一份)。原本的 tonejs 古典吉他只有 28 個音、
+  間距到 3 半音、尾巴被截,使用者要求換成每個音都有錄音的。說明(?)最下面列音源與授權(CC BY-SA 要標示來源)
 - **每個和弦列出最實用的 3 種指法**(斜線和弦也一樣:兩組合併後最多會到 6 種,`chordVoicingsFor` 截到 3 種、推薦的一定留著;
   和弦圖一格只排得下一列 3 個,多的會折行把前面擠出畫面,D/F♯ 曾經只看得到第 10 把位)(使用者要求;不再固定「開放 / 五弦封閉 / 六弦封閉」三格——那樣會硬塞出
   Am7 的 × 12 14 12 13 12 這種手貼到琴身的按法,又漏掉 × 0 5 5 5 5 這種實際會用的)。試過 4 種,手機上每張圖只剩 82px,
