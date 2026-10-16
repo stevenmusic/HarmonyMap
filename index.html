@@ -2660,7 +2660,7 @@ function chordVoicingsFor(rPc, def, bassPc = null, noShapes = false){
   VOICING_CACHE.set(key, res);
   return res;
 }
-const GTR_MAX_USE_FRET = 12;   // 最高按到第幾格(原聲吉他琴頸在 12/14 格接琴身)
+const GTR_MAX_USE_FRET = 10;   // 最高按到第幾格(使用者要求 10 格以內;原聲吉他琴頸在 12/14 格接琴身)
 const GTR_LIST_MARGIN = 45, GTR_ALGO_MARGIN = 12;
 const TAB_COLLATOR = new Intl.Collator();
 function voicingsCore(rPc, def, bassPc = null, noShapes = false){
