@@ -1871,6 +1871,66 @@ async function openPage(browser, opts = {}){
     report("音訊與穩定性", total, fails);
   }
 
+  /* ── 大螢幕滿版、辨識範例、順階和弦出處 ── */
+  {
+    const fails = []; let total = 0;
+    // 介面倍率 --ui:手機 1、1920×1080 約 1.4、2560×1440 1.7(上限)、1366×768 維持 1
+    for (const [w, h, lo, hi] of [[390, 844, 1, 1], [1366, 768, 1, 1.02], [1024, 1366, 1.1, 1.25], [1920, 1080, 1.38, 1.46], [2560, 1440, 1.69, 1.71]]) {
+      const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      const ui = await q.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--ui"));
+      total++; if (!(ui >= lo && ui <= hi)) fails.push("介面倍率 " + w + "×" + h + ": " + ui + "(應該在 " + lo + "~" + hi + ")");
+      // 轉向:直接用 setViewportSize 轉過去之後倍率要跟直接打開的一樣
+      if (w === 1024) {
+        await q.setViewportSize({ width: 1366, height: 1024 }); await q.waitForTimeout(150);
+        const r = await q.evaluate(() => +getComputedStyle(document.documentElement).getPropertyValue("--ui"));
+        total++; if (Math.abs(r - 1366 / 880) > 0.02 && r < 1.3) fails.push("轉橫向後倍率沒更新: " + r);
+      }
+      await q.close();
+    }
+    {
+      const q = await openPage(browser, { viewport: { width: 1920, height: 1080 } });
+      // 鋼琴音階在寬螢幕:只亮一個八度(8 個白鍵 C~C),但音域往兩側補到放得滿(沒亮的鍵是底圖)
+      const sc = await q.evaluate(() => { STATE.inst = "piano"; STATE.tab = "scale"; render();
+        return { whites: KB_WHITE_KEYS.length, lit: keyboardNotes().length, canvasW: Math.round($("keyboardCanvas")._cssW), card: Math.round($("keyboardCanvas").parentElement.clientWidth) }; });
+      total++; if (sc.lit !== 8 || sc.whites < 18 || sc.canvasW < sc.card * 0.8) fails.push("寬螢幕鋼琴音階沒有補滿: " + JSON.stringify(sc));
+      // 窄螢幕(單欄)回到一個八度,不會殘留寬螢幕補的鍵
+      await q.setViewportSize({ width: 600, height: 900 }); await q.waitForTimeout(150);
+      const nar = await q.evaluate(() => { render(); return KB_WHITE_KEYS.length; });
+      total++; if (nar !== 8) fails.push("改回窄螢幕後鋼琴音階白鍵數 " + nar + "(應該 8)");
+      await q.close();
+    }
+    {
+      const q = await openPage(browser, { viewport: { width: 1200, height: 900 } });
+      // 辨識分頁還沒點任何音:列出常見和弦範例,點一下帶入
+      const ex = await q.evaluate(async () => {
+        const out = {};
+        STATE.inst = "guitar"; STATE.tab = "find"; render();
+        out.n = document.querySelectorAll(".find-try").length;
+        document.querySelector('.find-try[data-cid="7"][data-rp="7"]').click();
+        out.g7 = STATE.findFrets.join(",") + "|" + document.querySelector(".find-item .fname").textContent;
+        STATE.findSel.clear(); STATE.findFrets = [null, null, null, null, null, null]; STATE.inst = "piano"; render();
+        document.querySelector('.find-try[data-cid="m7"][data-rp="9"]').click();
+        out.am7 = [...STATE.findSel].join(",") + "|" + document.querySelector(".find-item .fname").textContent;
+        return out;
+      });
+      total++; if (ex.n !== 27) fails.push("辨識範例數量 " + ex.n + "(應該 27)");
+      total++; if (ex.g7 !== "3,2,0,0,0,1|G7") fails.push("吉他範例 G7: " + ex.g7);
+      total++; if (ex.am7 !== "69,72,76,79|Am7") fails.push("鋼琴範例 Am7: " + ex.am7);
+      // 這個和弦出現在哪些調的順階和弦(級數照音階度數,大調 / 自然小調 / 和聲小調)
+      const keys = await q.evaluate(() => {
+        const f = (rp, id) => chordKeys(rp, chordById(id)).map(g => g.hits.map(h => g.names[h.tonic] + " " + g.labelKey + " " + h.roman).join(",")).join("|");
+        return { cmaj7: f(0, "maj7"), g7: f(7, "7"), bm7b5: f(11, "m7b5"), sus4: f(0, "sus4") };
+      });
+      total++; if (keys.cmaj7 !== "C keyMajor Imaj7,G keyMajor IVmaj7|E keyMinor VImaj7,A keyMinor IIImaj7|E keyHarmMinor VImaj7") fails.push("Cmaj7 出現的調: " + keys.cmaj7);
+      total++; if (!/^C keyMajor V7\|A keyMinor VII7\|C keyHarmMinor V7$/.test(keys.g7)) fails.push("G7 出現的調: " + keys.g7);
+      total++; if (keys.bm7b5 !== "C keyMajor viiø7|A keyMinor iiø7|A keyHarmMinor iiø7") fails.push("Bm7♭5 出現的調: " + keys.bm7b5);
+      total++; if (keys.sus4 !== "") fails.push("sus4 不是三、七和弦,不該有結果: " + keys.sus4);
+      if (q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
+      await q.close();
+    }
+    report("大螢幕與辨識範例", total, fails);
+  }
+
   /* ── App 內建取樣(iOS 封裝,app/samples/):頁面是 capacitor:// 時先讀包裡的,不碰網路 ── */
   {
     const fails = []; let total = 0;

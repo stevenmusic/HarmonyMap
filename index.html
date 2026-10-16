@@ -49,13 +49,14 @@
   --radius-md:14px;
   --radius-lg:18px;
   --radius-pill:999px;
-  --fs-2xs:11px;
-  --fs-xs:12px;
-  --fs-sm:13px;
-  --fs-md:14px;
-  --fs-lg:16px;
-  --fs-xl:19px;
-  --fs-2xl:26px;
+  --ui:1;   /* 大螢幕(兩欄)才 > 1,由 applyUiScale 依視窗寬高連續算出;字級全部乘它,畫面才不會在 1920 寬上又小又空 */
+  --fs-2xs:calc(11px * var(--ui));
+  --fs-xs:calc(12px * var(--ui));
+  --fs-sm:calc(13px * var(--ui));
+  --fs-md:calc(14px * var(--ui));
+  --fs-lg:calc(16px * var(--ui));
+  --fs-xl:calc(19px * var(--ui));
+  --fs-2xl:calc(26px * var(--ui));
   --surface-glass:rgba(32,26,15,.88);
   --surface-inset:rgba(22,18,9,.55);
   --card-tint:rgba(255,255,255,.035);
@@ -171,7 +172,7 @@ header h1 span{color:var(--ivory);font-weight:600}
    .lower(和弦清單 + 結果面板)是唯一會捲動的區域。 */
 main{
   flex:1;display:flex;flex-direction:column;gap:14px;
-  padding:14px;max-width:1400px;width:100%;margin:0 auto;
+  padding:14px;max-width:clamp(1400px,92vw,2400px);width:100%;margin:0 auto;   /* 1400 以下不變;大螢幕連續放寬,兩側不再各空一大塊 */
 }
 .topbar{
   position:sticky;top:var(--header-h, 56px);z-index:15;
@@ -218,7 +219,7 @@ main{
 .inst-switch{display:flex;gap:2px;flex:none;background:var(--surface-inset);border:1px solid var(--line);
              border-radius:var(--radius-pill);padding:4px}
 .inst-switch button{
-  flex:0 0 auto;width:56px;white-space:nowrap;overflow:hidden;text-align:center;
+  flex:0 0 auto;width:calc(56px * var(--ui));white-space:nowrap;overflow:hidden;text-align:center;
   border:none;background:transparent;color:var(--muted-bright);font-family:inherit;
   font-size:var(--fs-sm);padding:0;border-radius:var(--radius-pill);cursor:pointer;
   transition:background .2s,color .2s;
@@ -423,12 +424,12 @@ main{
 
 /* 等寬格線排列。原本用 flex 讓晶片各自照文字長度決定寬度,每一列的數量與寬度都不一樣,
    整片看起來參差不齊;改成固定欄寬的 grid,行列自然對齊,長短名稱都排得整整齊齊 */
-.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
-.chips.wide{grid-template-columns:repeat(auto-fill,minmax(152px,1fr))} /* 音階名稱長,欄位加寬 */
+.chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(calc(104px * var(--ui)),1fr));gap:6px}
+.chips.wide{grid-template-columns:repeat(auto-fill,minmax(calc(152px * var(--ui)),1fr))} /* 音階名稱長,欄位加寬 */
 .chip{
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
   border:1px solid var(--line);background:var(--surface-inset);color:var(--ivory);
-  border-radius:var(--radius-sm);padding:8px 8px;cursor:pointer;
+  border-radius:var(--radius-sm);padding:calc(8px * var(--ui)) 8px;cursor:pointer;
   font-family:inherit;text-align:center;transition:border-color .15s,background .15s;
 }
 .chip{position:relative}
@@ -680,7 +681,7 @@ body.pr-fs-on{overflow:hidden}
 @media (max-height:420px){ .kb-popover:not([hidden]){display:grid;grid-template-columns:auto auto;column-gap:12px} }
 .kb-gear{
   flex:none;background:transparent;border:1px solid var(--line);color:var(--muted-bright);
-  border-radius:var(--radius-pill);width:26px;height:26px;line-height:1;
+  border-radius:var(--radius-pill);width:calc(26px * var(--ui));height:calc(26px * var(--ui));line-height:1;
   display:inline-flex;align-items:center;justify-content:center; /* 線稿圖示要自己置中,不靠字型基線 */
   cursor:pointer;margin-left:8px;transition:border-color .15s,color .15s;
 }
@@ -708,7 +709,7 @@ table.dia button.link::after{content:"";position:absolute;inset:-10px -8px}
 /* 寬度固定、★ 永遠佔位(不是把位 1 時只是看不見):換把位時數字不移位,右邊的 ‹ › 與前面的音名也跟著不動 */
 .pos-nav .n{width:3.1em;padding:0;white-space:nowrap;font-size:var(--fs-sm);color:var(--ivory)}
 .pos-nav small.off{visibility:hidden}
-.pos-nav button{width:22px;height:22px}
+.pos-nav button{width:calc(22px * var(--ui));height:calc(22px * var(--ui))}
 /* 有把位箭頭的那一行:名稱(這是哪個音階)比音名重要,放不下時音名先縮 */
 .kb-summary.has-pos{gap:5px;padding-left:8px;padding-right:6px}
 .kb-summary.has-pos b{font-size:var(--fs-md)}
@@ -816,6 +817,9 @@ table.dia button.link:hover{color:var(--gold);border-color:var(--gold)}
   transition:border-color .15s,color .15s;
 }
 .link-chip:hover{border-color:var(--gold);color:var(--gold)}
+.link-chip.key-tag{cursor:default}
+.link-chip.key-tag:hover{border-color:var(--line);color:inherit}
+.link-chip.key-tag b{color:var(--gold-bright);font-weight:700}
 
 /* 反查結果 */
 .find-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}   /* 寬的時候排多欄(平板、桌機),手機照舊一欄 */
@@ -996,13 +1000,17 @@ body.light{background:
   /* 釘住的那塊裡面:左邊放分頁與根音、右邊放鍵盤;下半部左邊清單、右邊說明 */
   /* 第一列固定是分頁那排的高度(auto),右邊跨兩列的鍵盤多出來的高度全給第二列(1fr),
      左邊的根音/辨識卡片才不會因為卡片高度不同、或換樂器而上下跳 */
-  .topbar{display:grid;grid-template-columns:minmax(280px,340px) 1fr;grid-template-rows:auto 1fr;gap:10px 14px;align-items:start}
+  .topbar{display:grid;grid-template-columns:minmax(calc(280px * var(--ui)),calc(340px * var(--ui))) 1fr;grid-template-rows:auto 1fr;gap:10px 14px;align-items:start}
   .topbar .tab-row{grid-column:1;grid-row:1}
   /* 顯示區撐滿左欄高度(高度由 resizeKeyboardCanvas 的 twoColumnAvail 算);內容比較矮時(鋼琴維持琴鍵比例)
      在摘要列上方置中,不是全部擠在最上面、下面留一塊空白 */
   .topbar .kb-wrap{align-self:stretch;display:flex;flex-direction:column}
   .topbar .kb-wrap[hidden]{display:none}   /* 上面的 display:flex 會蓋過 hidden:練習時一般鍵盤會露在「現在/下一個」底下 */
   .topbar #rootCard,.topbar #findCard{align-self:stretch}
+  .kb-summary{height:calc(34px * var(--ui) + 8px)}   /* ui = 1 時 42px(原本內容撐出來的高度);放大時照倍率,中英文、各分頁高度一致 */
+  /* 左欄卡片被拉高對齊右邊的顯示區時(音階分頁的根音卡片只有兩列),列與列平均分開,不是全部擠在上面、下面空一大塊 */
+  .topbar #rootCard.spread{display:flex;flex-direction:column}
+  .topbar #rootCard.spread .root-line{flex:1 1 auto;align-content:space-evenly}   /* 只有音階分頁(兩列)才分開;和弦分頁有快速鍵,換樂器時不能移位 */
   .topbar .kb-wrap > #keyboardCanvas{align-self:center}
   .topbar .kb-wrap > #keyboardCanvas{margin-top:auto}
   .topbar .kb-wrap > .kb-summary{margin-top:auto}
@@ -1020,10 +1028,18 @@ body.light{background:
      反過來(清單鎖 420px、說明吃 1fr)在平板橫式會很難看——實測 1024×768 時
      清單被擠成 420 寬 × 1292 高的窄長條、右下角一大片空白。
      讓清單隨寬度長大,每列多放幾顆晶片,整體高度就跟著降下來 */
-  .lower{display:grid;grid-template-columns:minmax(360px,1fr) minmax(340px,480px);align-items:start}
+  .lower{display:grid;grid-template-columns:minmax(360px,1fr) minmax(calc(340px * var(--ui)),calc(480px * var(--ui)));align-items:start}
   /* 右邊的說明欄也跟著釘住。不然左邊清單很長、右邊說明很短,清單一往下捲,
      右半邊就整片空著。--topbar-h 由 JS 量出來(鍵盤高度會隨音域變,寫死會對不齊) */
   .info{position:sticky;top:calc(var(--header-h, 60px) + var(--topbar-h, 250px) + 10px)}
+  .lower > #typeCard{align-self:stretch}   /* 右邊說明比較長時,左邊清單卡片拉到一樣高,底部對齊 */
+  /* 音階分頁:左邊清單很短、右邊「說明 + 順階和弦表」很長,右下角與左下角各空一大塊。
+     改成 左 = 清單 + 說明、右 = 順階和弦表(兩邊高度差不多);.info 用 display:contents 讓兩張卡片直接排進 .lower 的格線 */
+  .lower.scaletab{grid-template-columns:minmax(360px,1fr) minmax(calc(340px * var(--ui)),calc(400px * var(--ui)))}   /* 順階和弦表不需要 480 那麼寬,讓給左邊清單 */
+  .lower.scaletab .info{display:contents}
+  .lower.scaletab > #typeCard{grid-column:1;grid-row:1}
+  .lower.scaletab #readout{grid-column:1;grid-row:2}
+  .lower.scaletab #extraCard{grid-column:2;grid-row:1 / span 2}
   .lower.practicing{grid-template-columns:minmax(0,760px)}
   /* 辨識:沒有左邊的清單,結果改佔滿兩欄(結果清單自己排多欄)。原本結果擠在左欄、右半邊整片空著 */
   .lower.finding{grid-template-columns:minmax(0,1fr)}
@@ -1048,6 +1064,18 @@ body.light{background:
   /* 圖在卡片剩下的空間裡等比例放到最大(SVG 預設 meet,框比圖寬/高時置中) */
   .topbar .kb-stage .pr-now .dg{flex:1 1 0;min-height:90px;height:auto;width:100%;max-width:min(100%, 420px);margin:6px auto 0}   /* 練習時手在琴上、眼睛離螢幕遠,圖可以比和弦分頁大 */
   .topbar .kb-stage .pr-now .dg.kb{max-width:100%;min-height:50px;aspect-ratio:auto}
+  /* 直式大平板(1024×1366)與直立螢幕:寬度夠兩欄、高度更夠。清單與說明並排會讓右下角整塊空著;
+     改成清單佔滿整個寬度(晶片自動排很多欄),底下「說明」與「延伸資訊」左右並排 */
+  @media (orientation:portrait){
+    .lower:not(.practicing):not(.finding){grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+    .lower:not(.practicing):not(.finding) .info{display:contents}
+    .lower:not(.practicing):not(.finding) > #typeCard{grid-column:1 / -1;grid-row:1}
+    .lower:not(.practicing):not(.finding) #readout{grid-column:1;grid-row:2}
+    .lower:not(.practicing):not(.finding) #extraCard{grid-column:2;grid-row:2}
+    .lower:not(.practicing):not(.finding){align-items:stretch}   /* 說明與延伸資訊兩張卡片同高,底部對齊 */
+    .lower.scaletab:not(.practicing) #readout{grid-column:1 / -1}   /* 音階:說明很短、順階和弦表很長,各佔一整列(並排的話說明下面整塊空著) */
+    .lower.scaletab:not(.practicing) #extraCard{grid-column:1 / -1;grid-row:3}
+  }
 }
 </style>
 </head>
@@ -1252,6 +1280,10 @@ const I18N = {
     playModeLabel: "播放方式",
     rootCardTitle: "根音",
     findChordTitle: "辨識和弦",
+    findTryTitle: "試試看(點一下,帶入這個和弦的音)",
+    findTryTriads: "三和弦",
+    findTrySevenths: "七和弦",
+    findTryColors: "掛留、加音、減與增",
     findCardDesc: "點鍵盤上的琴鍵選音。最低的音當低音,不是根音時寫成斜線和弦(E G C → C/E)。",
     clearSelection: "清除選音",
     spellAuto: "拼寫:照調號(自動)", spellSharp: "拼寫偏好:升記號 ♯", spellFlat: "拼寫偏好:降記號 ♭",
@@ -1277,6 +1309,8 @@ const I18N = {
     octaveNth: "第 {n} 八度",
     formulaLabel: "公式", semitoneStepsLabel: "半音間隔",
     suggestedScales: "可以搭配的音階",
+    chordKeysTitle: "出現在這些調裡(順階和弦)",
+    keyMajor: "大調", keyMinor: "小調", keyHarmMinor: "和聲小調",
     otherChordNames: "同樣這幾個音的其他和弦名稱",
     aliasLabel: "別名", listSep: "、",
     otherScaleNames: "同樣這幾個音的其他名稱",
@@ -1350,6 +1384,10 @@ const I18N = {
     playModeLabel: "Playback",
     rootCardTitle: "Root",
     findChordTitle: "Identify Chord",
+    findTryTitle: "Try an example (tap to load its notes)",
+    findTryTriads: "Triads",
+    findTrySevenths: "Seventh chords",
+    findTryColors: "Sus, add, dim & aug",
     findCardDesc: "Tap keys on the keyboard to pick notes. The lowest note is the bass — when it isn't the root you get a slash chord (E G C → C/E).",
     clearSelection: "Clear notes",
     spellAuto: "Spelling: by key (auto)", spellSharp: "Spelling: sharps ♯", spellFlat: "Spelling: flats ♭",
@@ -1375,6 +1413,8 @@ const I18N = {
     octaveNth: "Octave {n}",
     formulaLabel: "Formula", semitoneStepsLabel: "Semitone steps",
     suggestedScales: "Scales that fit this chord",
+    chordKeysTitle: "Found in these keys (diatonic chords)",
+    keyMajor: "major", keyMinor: "minor", keyHarmMinor: "harmonic minor",
     otherChordNames: "Other names for the same notes",
     aliasLabel: "aka", listSep: ", ",
     otherScaleNames: "Other names for the same notes",
@@ -2217,9 +2257,17 @@ function chordKeyboardFit(cv, w, maxH, fac){
 function resizeKeyboardCanvas(){
   const cv = $("keyboardCanvas");
   if (!cv) return;
+  applyUiScale();   // 轉向、改視窗大小、直接打開,每一條路都會走到這裡,字級倍率跟著現在的視窗算
   // 吉他和弦分頁的畫布是藏起來的(寬度 0),寬度改量外框,顯示區高度才算得出來
   cv.style.width = "";   // 先還原成滿版再量(鋼琴在寬螢幕會把畫布縮窄,不還原的話下一次量到的是縮過的寬度)
   const w = cv.getBoundingClientRect().width || cv.parentElement.clientWidth;
+  /* 兩欄的鋼琴音階:一個八度只有 8 個白鍵,白鍵最寬 56px,1920 寬的顯示區兩側各空 470px(使用者要求每種尺寸都要飽滿)。
+     音階還是只亮一個八度(照 scaleOctaveRange),但音域往兩側多畫沒亮的鍵,補到放得滿為止——
+     跟和弦分頁一樣,沒亮的鍵只是底圖。每次都從一個八度重算,視窗大小改變(兩欄 ↔ 單欄)不會越撐越寬 */
+  if (STATE.tab === "scale") {
+    scaleOctaveRange(keyboardNotes().map(n => n.midi));
+    if (STATE.inst === "piano" && TWO_COL.matches) extendKbRange(Math.floor(w / 56));
+  }
   /* 鍵盤是釘住的,螢幕越矮它就越該收斂,否則上半部佔滿整個畫面、下面的清單沒空間捲。
      用「視窗高度的 22%」當上限而不是再開一個高度斷點:斷點會在某個高度突然跳一階,
      連續縮放則是一路平滑收斂,而且直向手機與桌機(844/900px 高)算出來仍是原本的 170px 上限,
@@ -3298,7 +3346,17 @@ function fretAt(px, py){
 }
 
 // 摘要列的「放不下就拿掉副標/縮字」是照當下寬度算的:轉向、改視窗大小之後要重算(不重算的話窄→寬會留著縮小的字,寬→窄會被切)
-function refreshDisplaySize(){ syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); renderSummary(); syncStickyMetrics(); if (PRACTICE.open) fitStageNames(); }
+/* 介面放大倍率:兩欄版面(≥900px 寬)依視窗寬高連續放大字級與左右欄寬(1.0 ~ 1.7):min(寬 ÷ 880, 高 ÷ 760)。
+   1024×1366 約 1.16、1366×1024 約 1.35、1920×1080 約 1.42、2560×1440 1.7;高 < 760(1366×768、1280×720)維持 1。
+   不開斷點(CLAUDE.md:要隨尺寸連續變化的東西用公式) */
+function applyUiScale(){
+  const w = window.innerWidth, h = window.innerHeight;
+  const ui = w >= 900 ? Math.min(1.7, Math.max(1, Math.min(w / 880, h / 760))) : 1;
+  const v = ui.toFixed(3);
+  if (document.documentElement.style.getPropertyValue("--ui") !== v) document.documentElement.style.setProperty("--ui", v);
+}
+applyUiScale();
+function refreshDisplaySize(){ applyUiScale(); syncStickyMetrics(); resizeKeyboardCanvas(); drawKeyboardLive(); renderSummary(); syncStickyMetrics(); if (PRACTICE.open) fitStageNames(); }
 if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { try { renderSummary(); } catch (e) {} });   // 網頁字型晚到時字寬會變
 window.addEventListener("resize", refreshDisplaySize);
 /* iPhone 轉橫向時 resize 事件比版面還早到:當下量到的還是直向的版面(不是兩欄、高度上限是螢幕的 22%),
@@ -3902,6 +3960,23 @@ function displayNotes(){
 /* 鋼琴音階只顯示一個八度(使用者要求)。照抄自 ScrollScore 的 rebuildKeyboardRange 規定至少兩個八度,
    那段不能改,所以在它後面再疊一層:把音域收成「主音下方最近的 C 或 F」到「高八度主音」
    (從 C 或 F 開始,黑鍵分組才完整,跟練習的小鍵盤同一條規則);最後一個音是黑鍵就多補到下一個白鍵 */
+/* 把音域往兩側補到 target 個白鍵(不超過 88 鍵鋼琴):高音側、低音側輪流各補一個白鍵(邊緣的黑鍵只畫在兩個白鍵之間,不會有斷掉的) */
+function extendKbRange(target){
+  const whites = (lo, hi) => { let n = 0; for (let m = lo; m <= hi; m++) if (!isBlackKey(m)) n++; return n; };
+  let lo = KB_LOW, hi = KB_HIGH, up = true;
+  for (let guard = 0; guard < 60; guard++) {
+    let nlo = lo, nhi = hi;
+    if (up) { nhi = hi + 1; while (isBlackKey(nhi)) nhi++; }
+    else { nlo = lo - 1; while (isBlackKey(nlo)) nlo--; }
+    if (nlo < 21 || nhi > 108 || whites(nlo, nhi) > target) { if (!up) break; up = false; continue; }
+    lo = nlo; hi = nhi; up = !up;
+  }
+  KB_LOW = lo; KB_HIGH = hi;
+  KB_WHITE_KEYS = [];
+  for (let m = KB_LOW; m <= KB_HIGH; m++) if (!isBlackKey(m)) KB_WHITE_KEYS.push(m);
+  KB_WHITE_IDX = {};
+  KB_WHITE_KEYS.forEach((m, i) => KB_WHITE_IDX[m] = i);
+}
 function scaleOctaveRange(midis){
   if (!midis.length) return;
   let lo = Math.min(...midis), hi = Math.max(...midis);
@@ -4377,6 +4452,35 @@ function buildTypeList(){
 
 const ROMAN = ["I","II","III","IV","V","VI","VII"];
 /* 七聲音階的順階和弦:每隔一個音疊上去,再用和弦辨識表反查名稱 */
+/* 這個和弦是哪些調的順階和弦(大調、自然小調、和聲小調各 12 個調,三和弦或七和弦),附級數。
+   只用音高算(不碰 STATE),拼法用調號慣用的:大調 C D♭ D E♭ E F F♯ G A♭ A B♭ B、小調 C C♯ D E♭ E F F♯ G G♯ A B♭ B。
+   和弦不是三和弦或七和弦(sus、add、延伸音…)就沒有結果,卡片不顯示 */
+const KEY_NAMES = { ionian: ["C","D♭","D","E♭","E","F","F♯","G","A♭","A","B♭","B"], minor: ["C","C♯","D","E♭","E","F","F♯","G","G♯","A","B♭","B"] };
+function chordKeys(rootPc, def){
+  const cm = CHORD_MATCH.find(m => m.ref === def);
+  if (!cm || (cm.size !== 3 && cm.size !== 4)) return [];
+  const want = cm.pcs.join(",");
+  const out = [];
+  for (const [sid, labelKey, names] of [["ionian", "keyMajor", KEY_NAMES.ionian], ["aeolian", "keyMinor", KEY_NAMES.minor], ["harmMinor", "keyHarmMinor", KEY_NAMES.minor]]) {
+    const sc = scaleById(sid);
+    if (!sc || sc.t.length !== 7) continue;
+    const semi = sc.t.map(tok => ((tokenSemi(tok) % 12) + 12) % 12);
+    const hits = [];
+    for (let tonic = 0; tonic < 12; tonic++) {
+      for (let i = 0; i < 7; i++) {
+        const abs = k => (tonic + semi[(i + k) % 7]) % 12, rootAbs = abs(0);
+        if (rootAbs !== rootPc) continue;
+        const stack = cm.size === 3 ? [0, 2, 4] : [0, 2, 4, 6];
+        if (setKey(stack.map(k => abs(k) - rootAbs)) !== want) continue;
+        const minorThird = ((abs(2) - rootAbs + 12) % 12) === 3;
+        const sym = def.sym === "m7♭5" ? "ø7" : def.sym === "dim" ? "°" : def.sym === "dim7" ? "°7" : def.sym === "aug" ? "+" : def.sym === "maj" || def.sym === "min" ? "" : def.sym.replace(/^m(?!aj)/, "");
+        hits.push({ tonic, roman: (minorThird ? ROMAN[i].toLowerCase() : ROMAN[i]) + sym });
+      }
+    }
+    if (hits.length) out.push({ labelKey, names, hits });
+  }
+  return out;
+}
 function diatonicChords(scale){
   if (scale.t.length !== 7) return null;
   const notes = scale.t.map(tok => spell(STATE.letter, STATE.acc, tok));
@@ -4567,6 +4671,13 @@ function renderReadout(){
       }
       e += '</div>';
     }
+    // 這個和弦出現在哪些調的順階和弦裡(學和弦進行最常用到的對照;也讓右欄在寬螢幕不會空一大塊)
+    const keys = chordKeys(rootPc(), def);
+    if (keys.length) {
+      e += '<div class="card-title"' + (e ? ' style="margin-top:16px"' : '') + '>' + t("chordKeysTitle") + '</div><div class="link-chips">';
+      for (const g of keys) for (const h of g.hits) e += '<span class="link-chip key-tag">' + g.names[h.tonic] + " " + t(g.labelKey) + ' · <b>' + h.roman + '</b></span>';
+      e += '</div>';
+    }
     // 同一組音的其他寫法(等和弦)
     const others = matchChords(rootPc(), notes.map(n => (rootPc() + n.semi) % 12)).filter(c => c.id !== def.id);
     if (others.length) {
@@ -4718,13 +4829,53 @@ function findAnalysis(){
   return { sel, pcs, bassPc, results, nameByPc, tokByPc };
 }
 
+/* 辨識分頁還沒點任何音時,結果面板只有一行說明,平板與桌機下面整片空著(使用者要求畫面飽滿)。
+   改成列出一批常見和弦,點一下就把這個和弦的音帶進指板/鍵盤,馬上看到辨識結果怎麼運作。
+   吉他帶入該和弦的推薦指法(弦與格數照 findFrets 的格式:0 = ○、-1 = ×),鋼琴帶入根音在中央 C 附近的音 */
+const FIND_TRY = [
+  ["findTryTriads", [[0, "maj", "C"], [7, "maj", "G"], [2, "maj", "D"], [9, "maj", "A"], [4, "maj", "E"], [5, "maj", "F"],
+                     [9, "min", "Am"], [4, "min", "Em"], [2, "min", "Dm"]]],
+  ["findTrySevenths", [[0, "maj7", "Cmaj7"], [7, "7", "G7"], [9, "m7", "Am7"], [2, "m7", "Dm7"], [4, "m7", "Em7"], [5, "maj7", "Fmaj7"],
+                       [4, "7", "E7"], [2, "7", "D7"], [11, "m7b5", "Bm7♭5"]]],
+  ["findTryColors", [[0, "sus4", "Csus4"], [7, "sus2", "Gsus2"], [0, "add9", "Cadd9"], [0, "6", "C6"], [11, "dim", "Bdim"], [0, "aug", "Caug"],
+                     [0, "dim7", "Cdim7"], [0, "9", "C9"], [2, "sus2", "Dsus2"]]]
+];
+function findTryHtml(){
+  let h = '<div class="card-title" style="margin-top:16px">' + t("findTryTitle") + '</div>';
+  for (const [key, items] of FIND_TRY) {
+    h += '<div class="rt-sub" style="margin:12px 0 6px">' + t(key) + '</div><div class="find-list">';
+    for (const [rp, id, label] of items)
+      h += '<div class="find-item find-try" role="button" tabindex="0" data-rp="' + rp + '" data-cid="' + id + '"><span class="fname">' + label +
+           '</span><span class="fzh">' + localName(chordById(id)) + '</span></div>';
+    h += '</div>';
+  }
+  return h;
+}
+function findTryLoad(rp, id){
+  const def = chordById(id);
+  if (!def) return;
+  if (STATE.inst === "guitar") {
+    const vs = chordVoicingsFor(rp, def), v = vs.list[vs.best];
+    if (!v) return;
+    STATE.findFrets = v.frets.map(f => f < 0 ? -1 : f);
+    syncFindFromFrets();
+  } else {
+    STATE.findSel = new Set(def.t.map(tok => 60 + rp + (((tokenSemi(tok) % 12) + 12) % 12)));
+  }
+  render();
+  playCurrent();
+}
 function renderFindReadout(ro, ex){
   const an = findAnalysis();
   const sel = an.sel;
   if (!sel.length) {
     ro.innerHTML = '<div class="rt-head"><div class="rt-name">' + t("findChordTitle") + '</div></div>' +
-      '<div class="desc" style="margin-top:0">' + t(STATE.inst === "guitar" ? "findHelpTextGuitar" : "findHelpText") + '</div>';
+      '<div class="desc" style="margin-top:0">' + t(STATE.inst === "guitar" ? "findHelpTextGuitar" : "findHelpText") + '</div>' + findTryHtml();
     ex.hidden = true;
+    ro.querySelectorAll(".find-try").forEach(el => {
+      const go = () => findTryLoad(+el.dataset.rp, el.dataset.cid);
+      el.onclick = go; el.onkeydown = ev => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); go(); } };
+    });
     return;
   }
   const pcs = an.pcs, results = an.results;
@@ -4944,6 +5095,8 @@ function renderCore(){
   document.querySelector(".info").hidden = practicing;
   document.querySelector(".lower").classList.toggle("practicing", practicing);
   document.querySelector(".lower").classList.toggle("finding", findMode);
+  document.querySelector(".lower").classList.toggle("scaletab", STATE.tab === "scale" && !practicing);
+  $("rootCard").classList.toggle("spread", STATE.tab === "scale");
   $("practiceOpen").hidden = STATE.tab !== "chord";
   $("printOpen").hidden = STATE.tab !== "chord";
   // 練習按鈕上標出進行裡已經排了幾個和弦(從結果面板「加入練習」時看得到有加進去)
