@@ -407,7 +407,7 @@ async function openPage(browser, opts = {}){
         if (bad && mid++ < 5) fails.push("中間打叉的指法當推薦或排在前面: " + def.id + "@" + pc + (bass != null ? "/" + bass : "") + " " + vs.list.map(v => v.frets.join(" ")).join(" | "));
       }
       // 教材首選(使用者確認過):m7♭5 的 12 個根音、Gsus4 / G7sus4 / Esus2 的開放按法、A♭dim / A♭sus2
-      { const want = { m7b5: ["x3434x","x4545x","xx0111","x6767x","012333","1x110x","202210","3x332x","4x443x","x0101x","x1212x","x2323x"] };
+      { const want = { m7b5: ["x3434x","x4545x","xx0111","x6767x","010030","1x110x","202210","3x332x","4x443x","x0101x","x1212x","x2323x"] };
         const tabS = f => f.map(x => x < 0 ? "x" : x.toString(36)).join("");
         want.m7b5.forEach((w, pc) => { const vs = chordVoicingsFor(pc, chordById("m7b5"), null), got = tabS(vs.list[vs.best].frets);
           if (got !== w) fails.push("m7♭5 的推薦(根音 " + pc + "): " + got + ",應該 " + w); });
@@ -439,7 +439,7 @@ async function openPage(browser, opts = {}){
       const std = { "x32010": "x32010", "x02220": "x01230", "320003": "210003", "022100": "023100", "xx0232": "xx0132", "x02210": "x02310",
         "022000": "023000", "xx0231": "xx0231", "133211": "134211", "x24432": "x13421", "x21202": "x21304", "x35453": "x13241",
         "200232": "T00132", "x02010": "x02010", "320001": "320001", "x32310": "x32410", "xx3211": "xx3211", "xx0211": "xx0211",
-        "xx0212": "xx0213", "xx3210": "xx3210", "x02020": "x02030", "320033": "210034", "x33211": "x34211" };
+        "xx0212": "xx0213", "xx3210": "xx3210", "x02020": "x02030", "x32000": "x32000", "x0101x": "x0102x", "010030": "010030", "320033": "210034", "x33211": "x34211" };
       const show = (f, g) => g.map((x, i) => f[i] < 0 ? "x" : f[i] === 0 ? "0" : x).join("");
       for (const [fr, want] of Object.entries(std)) {
         total++;
