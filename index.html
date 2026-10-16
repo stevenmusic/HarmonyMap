@@ -105,7 +105,8 @@ body{
 header{
   display:flex;align-items:center;flex-wrap:wrap;
   gap:8px 14px;justify-content:space-between;
-  padding:10px 14px;border-bottom:1px solid var(--line);
+  /* iOS App(viewport-fit=cover):頂欄要避開瀏海/動態島與橫式的左右缺口 */
+  padding:max(10px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) 10px max(14px,env(safe-area-inset-left));border-bottom:1px solid var(--line);
   background:var(--panel);
   position:sticky;top:0;z-index:20;
 }
@@ -172,7 +173,7 @@ header h1 span{color:var(--ivory);font-weight:600}
    .lower(和弦清單 + 結果面板)是唯一會捲動的區域。 */
 main{
   flex:1;display:flex;flex-direction:column;gap:14px;
-  padding:14px;max-width:clamp(1400px,92vw,2400px);width:100%;margin:0 auto;   /* 1400 以下不變;大螢幕連續放寬,兩側不再各空一大塊 */
+  padding:14px max(14px,env(safe-area-inset-right)) 14px max(14px,env(safe-area-inset-left));max-width:clamp(1400px,92vw,2400px);width:100%;margin:0 auto;   /* 1400 以下不變;大螢幕連續放寬,兩側不再各空一大塊 */
 }
 .topbar{
   position:sticky;top:var(--header-h, 56px);z-index:15;
@@ -210,7 +211,7 @@ main{
 .tabs button{
   flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:none;background:transparent;color:var(--muted-bright);
   font-family:inherit;font-size:var(--fs-md);font-weight:500;line-height:18px;   /* 行高寫死:中文字的行框比英文高 2px,換語言整頁會往上跳 */
-  padding:9px 8px;border-radius:var(--radius-pill);cursor:pointer;transition:background .2s,color .2s;
+  padding:9px clamp(2px,1.2vw,8px);border-radius:var(--radius-pill);cursor:pointer;transition:background .2s,color .2s;   /* 左右內距隨寬度連續縮:390px 英文選中的粗體「Identify」不再被截 */
 }
 .tabs button[aria-selected="true"]{background:var(--gold-fill);color:var(--on-fill);font-weight:700}
 /* 樂器切換跟分頁同一列、同一種膠囊外框,但字小一階:它是「換顯示方式」,不是主要導覽 */
@@ -292,6 +293,12 @@ main{
 /* 搜尋 + 篩選同一排,省掉一整行的高度 */
 .find-row{display:flex;gap:8px;align-items:stretch;margin-bottom:10px}
 .find-row .search-wrap{flex:1;min-width:0;margin-bottom:0}
+@media (max-width:600px){
+  /* 手機:搜尋獨佔一行,篩選 / 練習 / 和弦表在下面一排(原本搜尋框被擠到 29~99px,placeholder 只剩一個字) */
+  .find-row{flex-wrap:wrap}
+  .find-row .search-wrap{flex:1 1 100%}
+  .find-row > :not(.search-wrap){flex:1 1 auto}
+}
 .filter-summary{
   cursor:pointer;user-select:none;flex:none;
   display:inline-flex;align-items:center;gap:6px;
@@ -466,7 +473,8 @@ html[data-lang="en"] .chip i{white-space:normal}
 .help-pop b{color:var(--gold)}
 .help-pop .help-credit{margin:10px 0 0;font-size:var(--fs-2xs);color:var(--muted);line-height:1.45}
 .pr-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
-.pr-head .card-title{margin:0;white-space:nowrap}
+.pr-head .card-title{margin:0;white-space:nowrap;flex:none}
+.pr-head .pr-bars{min-width:0;flex:0 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}   /* 280px 英文「4 bars total」不能把 × 擠出卡片 */
 .pr-head select{flex:1;min-width:0;margin-left:auto;max-width:260px}
 .pr-head .kb-gear{margin-left:auto}
 .pr-set{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
@@ -822,7 +830,10 @@ table.dia button.link:hover{color:var(--gold);border-color:var(--gold)}
 .link-chip.key-tag b{color:var(--gold-bright);font-weight:700}
 
 /* 反查結果 */
-.find-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}   /* 寬的時候排多欄(平板、桌機),手機照舊一欄 */
+.find-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px}
+/* 範例和弦(每組 9 個):三欄整除,不會剩一個孤兒;手機一欄 */
+.find-list.try{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:600px){ .find-list.try{grid-template-columns:minmax(0,1fr)} }   /* 寬的時候排多欄(平板、桌機),手機照舊一欄 */
 .find-item{
   display:flex;align-items:center;gap:10px;flex-wrap:wrap;
   border:1px solid var(--line);border-radius:var(--radius-sm);padding:9px 12px;background:var(--surface-inset);
@@ -842,7 +853,7 @@ footer{
   padding:16px 14px calc(18px + env(safe-area-inset-bottom));
   text-align:center;color:var(--muted);font-size:var(--fs-2xs);line-height:1.8;
 }
-footer a{color:var(--muted-bright);text-decoration:none;border-bottom:1px solid var(--line)}
+footer a{color:var(--muted-bright);text-decoration:none;border-bottom:1px solid var(--line);display:inline-block;padding:7px 4px 6px;margin:-4px 0}
 footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 /* ── 觸控裝置:點擊目標放大(照抄 ScrollScore 的 pointer:coarse 三條規則)────────── */
 @media (pointer:coarse){
@@ -891,7 +902,7 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 /* 窄手機(≤380px)只留下載圖示(金框膠囊),不然搜尋框只剩 49px;字留在 title / aria-label */
 @media (max-width:380px){ #printOpen span{display:none} #printOpen{padding:5px 10px} }
 #printOpen[hidden]{display:none}
-.print-pop{width:min(380px, calc(100vw - 24px))}
+.print-pop{width:min(380px, calc(100vw - 24px));background:var(--panel)}   /* 不透明:半透明時底下的琴鍵與字會透上來 */
 .print-pop h3{margin:0}
 .print-pop .pr-head{margin-bottom:12px}
 .pp-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
@@ -1046,7 +1057,7 @@ body.light{background:
   .lower.finding .info{position:static}
   /* 兩欄時練習:練習卡片(輸入板、進行、設定)搬到左欄分頁下面(原本根音卡片的位置,練習時是空的),
      右邊「現在/下一個」跟著捲動停在畫面上(sticky)。原本左欄整片空、練習卡片被擠到畫面下面(使用者回報橫式平板) */
-  .topbar > #practiceCard{grid-column:1;grid-row:2;align-self:stretch;min-width:0}
+  .topbar > #practiceCard{grid-column:1;grid-row:2;align-self:stretch;min-width:0;display:flex;flex-direction:column;justify-content:space-between}   /* 右邊「現在/下一個」很高時,輸入區、進行、設定平均分開,不是全部擠在上面 */
   .topbar #practiceCard .root-line{flex-wrap:wrap}
   .topbar #practiceCard .root-line .letters,.topbar #practiceCard .acc-row{flex:1 1 100%;margin-left:0}
   .topbar #practiceCard .quick-grid{grid-template-columns:repeat(5,1fr)}
@@ -2266,7 +2277,7 @@ function resizeKeyboardCanvas(){
      跟和弦分頁一樣,沒亮的鍵只是底圖。每次都從一個八度重算,視窗大小改變(兩欄 ↔ 單欄)不會越撐越寬 */
   if (STATE.tab === "scale") {
     scaleOctaveRange(keyboardNotes().map(n => n.midi));
-    if (STATE.inst === "piano" && TWO_COL.matches) extendKbRange(Math.floor(w / 56));
+    if (STATE.inst === "piano" && TWO_COL.matches) extendKbRange(Math.floor(w / (56 * uiK())));
   }
   /* 鍵盤是釘住的,螢幕越矮它就越該收斂,否則上半部佔滿整個畫面、下面的清單沒空間捲。
      用「視窗高度的 22%」當上限而不是再開一個高度斷點:斷點會在某個高度突然跳一階,
@@ -2310,7 +2321,7 @@ function resizeKeyboardCanvas(){
     // 鋼琴白鍵實際的長寬比約 6.4(寬 23.5mm、長 150mm);照抄的 WHITE_KEY_ASPECT 是 5.2,兩欄有空間時放寬到真實比例
     /* 白鍵最寬 56px:寬螢幕上一個八度只有 8 個白鍵,撐滿 1000px 會變成一塊塊方磚(1920 寬的音階分頁)。
        畫布本身縮窄、置中;手機與一般桌機本來就不到 56px,不受影響 */
-    const nWhite = Math.max(KB_WHITE_KEYS.length, 1), kw = Math.min(w, nWhite * 56);
+    const nWhite = Math.max(KB_WHITE_KEYS.length, 1), kw = Math.min(w, nWhite * 56 * uiK());
     cv.style.width = avail && kw < w ? kw + "px" : "";
     const real = computeKeyboardHeight(kw, KB_MIN_H, 10000) * 6.4 / WHITE_KEY_ASPECT;
     cv.style.height = (avail ? Math.min(avail, real) : H) + "px";
@@ -3358,6 +3369,7 @@ function fretAt(px, py){
 /* 介面放大倍率:兩欄版面(≥900px 寬)依視窗寬高連續放大字級與左右欄寬(1.0 ~ 1.7):min(寬 ÷ 880, 高 ÷ 760)。
    1024×1366 約 1.16、1366×1024 約 1.35、1920×1080 約 1.42、2560×1440 1.7;高 < 760(1366×768、1280×720)維持 1。
    不開斷點(CLAUDE.md:要隨尺寸連續變化的東西用公式) */
+const uiK = () => parseFloat(document.documentElement.style.getPropertyValue("--ui")) || 1;
 function applyUiScale(){
   const w = window.innerWidth, h = window.innerHeight;
   const ui = w >= 900 ? Math.min(1.7, Math.max(1, Math.min(w / 880, h / 760))) : 1;
@@ -4852,7 +4864,7 @@ const FIND_TRY = [
 function findTryHtml(){
   let h = '<div class="card-title" style="margin-top:16px">' + t("findTryTitle") + '</div>';
   for (const [key, items] of FIND_TRY) {
-    h += '<div class="rt-sub" style="margin:12px 0 6px">' + t(key) + '</div><div class="find-list">';
+    h += '<div class="rt-sub" style="margin:12px 0 6px">' + t(key) + '</div><div class="find-list try">';
     for (const [rp, id, label] of items)
       h += '<div class="find-item find-try" role="button" tabindex="0" data-rp="' + rp + '" data-cid="' + id + '"><span class="fname">' + label +
            '</span><span class="fzh">' + localName(chordById(id)) + '</span></div>';
@@ -6709,7 +6721,7 @@ function renderPrintPop(){
       chip("set", "other", PRINT.set === "other", t("printOther", { n: CHORDS.length - PRINT_CORE.length })) + chip("set", "all", PRINT.set === "all", t("printAll", { n: CHORDS.length })) + '</div>' +
     '<div class="pp-row"><span class="filter-label">' + t("printRoots") + '</span>' + chip("roots", "all", PRINT.roots === "all", t("printRoots12")) + chip("roots", "cur", PRINT.roots === "cur", t("printRootsCur", { x: rootName() })) + '</div>' +
     '<p class="pp-hint">' + t("printCount", { n }) + (LANG === "en" ? ". " : "。") + t("printHint") + '</p>' +
-    '<button class="btn primary pp-go" id="printGo"' + (PRINT.busy ? " disabled" : "") + '>' + t("printGo") + '(' + t("printPages", { n: printPageCount() }) + ')</button>';
+    '<button class="btn primary pp-go" id="printGo"' + (PRINT.busy ? " disabled" : "") + '>' + t("printGo") + (LANG === "en" ? " (" : "(") + t("printPages", { n: printPageCount() }) + ')</button>';
   pop.querySelectorAll("[data-g]").forEach(b => { b.onclick = () => {
     const g = b.dataset.g, v = b.dataset.v;
     if (g === "inst") PRINT.inst = v; else if (g === "set") PRINT.set = v; else PRINT.roots = v;

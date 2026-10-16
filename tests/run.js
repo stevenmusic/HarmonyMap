@@ -1315,10 +1315,10 @@ async function openPage(browser, opts = {}){
         const key = $("keyboardCanvas").getBoundingClientRect().width / Math.max(KB_WHITE_KEYS.length, 1);
         $("tabChord").click();
         const big = Math.max(...[...sv.querySelectorAll("text.fn, text.frl, text.mx")].map(t => parseFloat(t.getAttribute("font-size")) * k));
-        return { k, key, big };
+        return { k, key, big, ui: +getComputedStyle(document.documentElement).getPropertyValue("--ui") };
       });
       total++; if (prop.k > 2.21 || prop.big > 16.5) fails.push("和弦圖放大 " + prop.k.toFixed(2) + " 倍、最大的字 " + prop.big.toFixed(1) + "px(" + w + "×" + h + "),圖裡的字會比介面大");
-      total++; if (prop.key > 56.5) fails.push("鋼琴白鍵 " + Math.round(prop.key) + "px 寬(" + w + "×" + h + ")");
+      total++; if (prop.key > 56.5 * Math.max(1, prop.ui)) fails.push("鋼琴白鍵 " + Math.round(prop.key) + "px 寬(" + w + "×" + h + ")");
       await q.close();
     }
     // 轉橫向:iPhone 的 resize 事件比版面還早到,第一次算出來是直向的小鍵盤,捲動後才變大(使用者回報)。
@@ -1652,7 +1652,8 @@ async function openPage(browser, opts = {}){
       total++; if (!vis.Chord || vis.Scale || vis.Find) fails.push("列印鈕只該在和弦分頁(" + w + "): " + JSON.stringify(vis));
       const row = await q.evaluate(() => { const r = document.querySelector(".find-row").getBoundingClientRect(), s = document.querySelector(".search-wrap").getBoundingClientRect(), b = $("printOpen").getBoundingClientRect();
         return { over: b.right > r.right + 1, search: Math.round(s.width), h: Math.round(r.height) }; });
-      total++; if (row.over || row.search < 90 || row.h > 44) fails.push("清單上方那排擠壞了(" + w + "): " + JSON.stringify(row));
+      total++; if (row.over || row.search < 90 || (w > 600 && row.h > 44))   // ≤600 寬搜尋獨佔一行、按鈕在下面一排(搜尋框不再被擠到 29~99px)
+       fails.push("清單上方那排擠壞了(" + w + "): " + JSON.stringify(row));
       await q.click("#printOpen");
       for (const [inst, lv, want] of [["guitar", "core", 84], ["piano", "other", 73 * 12], ["guitar", "all", 80 * 12]]) {
         await q.click('#printPop [data-g="inst"][data-v="' + inst + '"]'); await q.click('#printPop [data-g="set"][data-v="' + lv + '"]');
@@ -1892,7 +1893,7 @@ async function openPage(browser, opts = {}){
       // 鋼琴音階在寬螢幕:只亮一個八度(8 個白鍵 C~C),但音域往兩側補到放得滿(沒亮的鍵是底圖)
       const sc = await q.evaluate(() => { STATE.inst = "piano"; STATE.tab = "scale"; render();
         return { whites: KB_WHITE_KEYS.length, lit: keyboardNotes().length, canvasW: Math.round($("keyboardCanvas")._cssW), card: Math.round($("keyboardCanvas").parentElement.clientWidth) }; });
-      total++; if (sc.lit !== 8 || sc.whites < 18 || sc.canvasW < sc.card * 0.8) fails.push("寬螢幕鋼琴音階沒有補滿: " + JSON.stringify(sc));
+      total++; if (sc.lit !== 8 || sc.whites < 12 || sc.canvasW < sc.card * 0.8) fails.push("寬螢幕鋼琴音階沒有補滿: " + JSON.stringify(sc));
       // 窄螢幕(單欄)回到一個八度,不會殘留寬螢幕補的鍵
       await q.setViewportSize({ width: 600, height: 900 }); await q.waitForTimeout(150);
       const nar = await q.evaluate(() => { render(); return KB_WHITE_KEYS.length; });
