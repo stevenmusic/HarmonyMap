@@ -101,3 +101,5 @@
   讀不到才走網路原本的來源;**網頁版不碰這些路徑**(否則每個取樣多一次 404)。檔案放在 `app/samples/`(`app/scripts/sync-web.js` 複製進封裝),`index.html` 本身仍是單檔。
 - 取樣清單(`PIANO_SAMPLES`、`GUITAR_SETS`)改了,`app/samples/` 要跟著換並重算 `SHA256SUMS`;測試「App 內建取樣」會比對每個檔案都在、四套都能全部解碼、載入時沒有對外請求。
 - 古典吉他的清單來自 manifest(每個錄音音高挑強音層),App 包裡放的是同一批 38 檔 + manifest.json。
+- **字型**:網頁版連 Google Fonts;App 版由 `app/scripts/sync-web.js` 把 `index.html` 裡那兩行(preconnect 與 css2 連結)換成內建的 `fonts/fonts.css`,
+  所以 **index.html 的字型連結格式不能隨便改**(換不到 sync 會停止)、字重改了 `app/fonts/` 要重新產生。App 因此完全不連網路。

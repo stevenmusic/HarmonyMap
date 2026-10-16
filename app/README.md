@@ -12,7 +12,7 @@
 ```bash
 cd app
 npm install
-node scripts/sync-web.js            # 核對取樣雜湊,把 ../index.html 與 samples/ 複製到 www/
+node scripts/sync-web.js            # 核對取樣與字型雜湊,把 ../index.html、samples/、fonts/ 複製到 www/
 npx cap add ios                     # 產生 ios/ 專案
 npx capacitor-assets generate --ios # 用 assets/icon-only.png 產生各尺寸圖示
 npx cap sync ios
@@ -35,7 +35,7 @@ cd app && npm run sync   # 重新複製 index.html 並同步到 ios/
 然後把版本號(Xcode 的 Version / Build)加一,重新 Archive。
 
 ## 上架前自測(實機)
-- 離線(飛航模式)開啟:鋼琴與三種吉他(古典、民謠、電吉他)都要是真實取樣音色,不是合成音;只有字型會退回系統字型
+- 離線(飛航模式)開啟:鋼琴與三種吉他(古典、民謠、電吉他)都要是真實取樣音色,不是合成音;字型也要跟網頁版一樣(Noto Serif TC / Sans TC),品牌名 HarmonyMap 是襯線體
 - 第一次點發聲時取樣從 App 包裡讀(不需網路),切到吉他、換吉他音色時會再載一次,正常不到 1 秒
 - 靜音開關打開時仍有聲音(網頁已處理 iOS 靜音開關)
 - 直式、橫式、iPad 分割畫面:沒有橫向捲動、按鈕不被截斷
@@ -48,8 +48,15 @@ cd app && npm run sync   # 重新複製 index.html 並同步到 ios/
 - 取樣授權:鋼琴 CC BY 3.0、民謠/電吉他 CC BY 3.0、古典吉他 CC BY-SA 3.0。標示已寫在 App 說明(?)最下面,
   來源與雜湊值見 `samples/LICENSES.md`。審核若詢問,指向這份即可。
 
+## 字型(內建,與網頁版一致)
+- `fonts/` 是 Noto Serif TC(600、700)與 Noto Sans TC(400、500、700),216 個 woff2 切片(依 unicode-range 分片,瀏覽器只載入用到的)、約 10 MB,
+  內容與網頁版 Google Fonts 對 Safari 回的相同;授權 SIL OFL 1.1(`fonts/OFL-*.txt`)。
+- `sync-web.js` 會把 `index.html` 的兩行 Google Fonts 連結換成 `fonts/fonts.css`(只換 `www/` 裡的複本,原檔不動);
+  連結被改過、換不到就停止。結果:**App 完全不連網路**,隱私權政策也照這樣寫。
+- 網頁版字型的字重(`index.html` 的 `family=…:wght@…`)若改了,要重新產生 `fonts/`(測試會提醒)。
+
 ## 取樣(內建離線)
-- `samples/` 共 123 個檔案、約 15.7 MB(鋼琴 2.0、民謠吉他 6.8、電吉他 1.8、古典吉他 5.6),包進 App 後安裝檔約 20~25 MB(含 iOS 外殼,以 Xcode 實際 Archive 的大小為準)。
+- `samples/` 共 123 個檔案、約 15.7 MB(鋼琴 2.0、民謠吉他 6.8、電吉他 1.8、古典吉他 5.6),加上字型 10 MB,包進 App 後安裝檔約 30~35 MB(含 iOS 外殼,以 Xcode 實際 Archive 的大小為準)。
 - App 內頁面網址是 `capacitor://`,程式(`localSampleUrl`)會先讀 `samples/…`,讀不到才走網路原來的來源;網頁版不受影響。
 - `scripts/sync-web.js` 複製前會用 `samples/SHA256SUMS` 核對,缺檔或被改過就停止。
 - 換取樣:換檔 → 重算 SHA256SUMS(指令在 `samples/LICENSES.md`)→ 跑 `node tests/run.js`(「App 內建取樣」那一組)。

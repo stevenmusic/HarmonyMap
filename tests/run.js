@@ -1928,6 +1928,23 @@ async function openPage(browser, opts = {}){
       await loadPianoSamples(); window.fetch = of; return pianoBuffers ? pianoBuffers.length : 0;
     });
     total++; if (miss !== 29) fails.push("本機缺一個檔時應該只少一個(退回網路被封鎖): " + miss);
+    // 字型:App 版把 Google Fonts 換成內建的 fonts/fonts.css(字型與網頁版一致、離線也一樣)。
+    // 這裡直接跑 sync-web.js(它會先核對取樣與字型的雜湊),再檢查產出的頁面
+    { const out = path.resolve(__dirname, "..", "app", "www");
+      let sync = ""; try { sync = execSync("node " + JSON.stringify(path.resolve(__dirname, "..", "app", "scripts", "sync-web.js")), { stdio: "pipe" }).toString(); } catch (e) { sync = "失敗: " + e.stderr; }
+      total++; if (!/^已產生/.test(sync)) fails.push("sync-web.js 沒有成功: " + sync.slice(0, 200));
+      else {
+        const html = fs.readFileSync(path.join(out, "index.html"), "utf8");
+        total++; if (/fonts\.(googleapis|gstatic)\.com/.test(html) || !html.includes('href="fonts/fonts.css"')) fails.push("App 版頁面還有連網字型,或沒有指向 fonts/fonts.css");
+        const css = fs.readFileSync(path.join(out, "fonts", "fonts.css"), "utf8"), urls = [...css.matchAll(/url\(([^)]+)\)/g)].map(m => m[1]);
+        total++; if (urls.length !== 540 || urls.some(u => /^https?:/.test(u))) fails.push("fonts.css 的網址數量或內容不對: " + urls.length);
+        const miss = [...new Set(urls)].filter(u => !fs.existsSync(path.join(out, "fonts", u)));
+        total++; if (miss.length) fails.push("fonts.css 指到不存在的字型檔 " + miss.length + " 個,例如 " + miss[0]);
+        for (const fam of ["Noto Serif TC", "Noto Sans TC"]) { total++; if (!css.includes("font-family: '" + fam + "'")) fails.push("fonts.css 缺少 " + fam); }
+        // 網頁版的字型宣告跟 App 內建的是同一組家族與字重
+        const want = (fs.readFileSync(path.resolve(__dirname, "..", "index.html"), "utf8").match(/family=Noto\+Serif\+TC:wght@([\d;]+)&family=Noto\+Sans\+TC:wght@([\d;]+)/) || []).slice(1).join("/");
+        total++; if (want !== "600;700/400;500;700") fails.push("網頁版 Google Fonts 的字重變了(" + want + "),app/fonts 要重新產生");
+      } }
     if (q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
     await q.close();
     report("App 內建取樣", total, fails);
