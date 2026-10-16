@@ -229,7 +229,7 @@ main{
 }
 /* 320px 的英文介面:選中的分頁是粗體,「Identify」要 54px、格子只有 52px,會變成「Ident…」。
    分頁寬度固定(換語言不能移位),所以改字級:小一階就放得下 */
-@media (max-width:340px){ .tabs button{font-size:var(--fs-sm)} }
+@media (max-width:340px){ .tabs button{font-size:clamp(8.5px,3.1vw,var(--fs-sm))} }   /* 3.1vw:280px 的折疊機英文「Identify」(Noto Sans TC)也放得下 */
 
 /* ── 根音:字母列 + 升降記號 ── */
 .root-row{display:flex;gap:6px;flex-wrap:wrap}
@@ -261,6 +261,8 @@ main{
   transition:background .15s,color .15s,border-color .15s;
 }
 .quick-btn:hover{border-color:var(--gold);color:var(--gold)}
+/* 四個字的標籤(m7♭5):字級隨螢幕寬度連續縮小,不加斷點、不用省略號——Noto Sans TC 比系統字型寬,390px 也會被截 */
+.quick-btn.long{font-size:max(9px,min(var(--fs-sm),3.05vw));letter-spacing:-.04em}
 .quick-btn[aria-pressed="true"]{background:var(--gold-fill);border-color:var(--gold-fill);color:var(--on-fill);font-weight:700}
 /* 手機:根音卡片是釘住的,每省下一點高度就是清單多看到一排。
    「根音」這個標題可以省——底下就是 C D E F G A B 七顆按鈕,不會看不懂 */
@@ -857,6 +859,14 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
    必須放在 pointer:coarse 之後才不會被上面的 min-width:44px 蓋掉 */
 @media (pointer:coarse) and (max-width:420px){
   .btn{min-width:clamp(38px, 10.5vw, 44px)}
+}
+
+/* 齒輪(26px)畫面上不能變大(照抄 ScrollScore、摘要列很擠),觸控時用透明的 ::after 把可點範圍撐到 38px。
+   把位 ‹ ›(畫面 22px)本來就有 31×30 的可點範圍(實測),不加,免得蓋到旁邊的數字 */
+@media (pointer:coarse){
+  .kb-gear{position:relative}
+  .kb-gear::after{content:"";position:absolute;inset:-6px}
+  .kb-summary.has-pos .kb-gear::after{left:-1px}   /* 左邊緊貼把位 › */
 }
 
 /* ── 使用者在系統關掉動態效果時,一律不要有轉場與動畫 ──────────────
@@ -4034,7 +4044,7 @@ function buildQuickGrid(){
     const c = chordById(id);
     if (!c) continue;
     const b = document.createElement("button");
-    b.className = "quick-btn";
+    b.className = "quick-btn" + ([...label].length >= 4 ? " long" : "");   // m7♭5 這種四個字的,窄螢幕用較小字級(有真字型時 280/320/390 都會被截)
     b.textContent = label;
     b.title = rootName() + c.sym + " · " + localName(c);
     b.setAttribute("aria-pressed", String(STATE.chordId === id));
@@ -5975,7 +5985,7 @@ function renderPractice(){
   $("prAcc").appendChild(sb);
   for (const [id, label] of QUICK_CHORDS) {
     const b = document.createElement("button");
-    b.className = "quick-btn"; b.textContent = label;
+    b.className = "quick-btn" + ([...label].length >= 4 ? " long" : ""); b.textContent = label;
     b.onclick = () => padChord(id);
     $("prQuick").appendChild(b);
   }

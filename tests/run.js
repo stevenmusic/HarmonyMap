@@ -1945,6 +1945,34 @@ async function openPage(browser, opts = {}){
         const want = (fs.readFileSync(path.resolve(__dirname, "..", "index.html"), "utf8").match(/family=Noto\+Serif\+TC:wght@([\d;]+)&family=Noto\+Sans\+TC:wght@([\d;]+)/) || []).slice(1).join("/");
         total++; if (want !== "600;700/400;500;700") fails.push("網頁版 Google Fonts 的字重變了(" + want + "),app/fonts 要重新產生");
       } }
+    // 用 App 版(內建 Noto 字型)在窄螢幕檢查按鈕文字不被截:一般測試封鎖網路、字型退回系統字型,看不出 Noto Sans TC 比較寬造成的截斷
+    // (曾經 390 / 320 / 280 的 m7♭5 被截成「m7…」、280 的英文分頁「Identify」被截)
+    if (fs.existsSync(path.join(path.resolve(__dirname, "..", "app", "www"), "index.html"))) {
+      const http = require("http"), root = path.resolve(__dirname, "..", "app", "www");
+      const mime = { ".html": "text/html", ".css": "text/css", ".woff2": "font/woff2", ".json": "application/json", ".mp3": "audio/mpeg", ".flac": "audio/flac" };
+      const srv = http.createServer((req, res) => {
+        const f = path.join(root, decodeURIComponent(req.url.split("?")[0]).replace(/^\/$/, "/index.html"));
+        if (!f.startsWith(root) || !fs.existsSync(f)) { res.statusCode = 404; return res.end(); }
+        res.setHeader("content-type", mime[path.extname(f)] || "application/octet-stream"); res.end(fs.readFileSync(f));
+      });
+      await new Promise(r => srv.listen(0, "127.0.0.1", r));
+      const port = srv.address().port, clipped = [];
+      for (const [w, h] of [[280, 653], [320, 568], [360, 640], [390, 844], [430, 932], [768, 1024], [1024, 768]]) {
+        const c = await browser.newContext({ viewport: { width: w, height: h }, hasTouch: true, isMobile: w < 900 });
+        const pg = await c.newPage(); await pg.route(/^https?:\/\/(?!127\.0\.0\.1)/, r => r.abort());
+        await pg.goto("http://127.0.0.1:" + port + "/"); await pg.evaluate(() => document.fonts.ready); await pg.waitForTimeout(400);
+        const r = await pg.evaluate(() => { const o = [];
+          for (const lang of ["zh", "en"]) { applyLanguage(lang); for (const inst of ["guitar", "piano"]) for (const tab of ["chord", "scale", "find"]) {
+            STATE.inst = inst; STATE.tab = tab; render();
+            for (const e of document.querySelectorAll(".quick-btn, .tabs button, .inst-switch button, .key-btn, .group-tabs button"))
+              if (e.offsetParent !== null && e.scrollWidth > e.clientWidth + 0.5) o.push(lang + " " + tab + " " + e.textContent.trim()); } }
+          return [...new Set(o)].slice(0, 4); });
+        total++; if (r.length) clipped.push(w + "px: " + r.join(", "));
+        await c.close();
+      }
+      srv.close();
+      if (clipped.length) fails.push("內建字型下按鈕文字被截: " + clipped.join(" | "));
+    }
     if (q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
     await q.close();
     report("App 內建取樣", total, fails);
