@@ -1925,6 +1925,19 @@ async function openPage(browser, opts = {}){
       total++; if (!/^C keyMajor V7\|A keyMinor VII7\|C keyHarmMinor V7$/.test(keys.g7)) fails.push("G7 出現的調: " + keys.g7);
       total++; if (keys.bm7b5 !== "C keyMajor viiø7|A keyMinor iiø7|A keyHarmMinor iiø7") fails.push("Bm7♭5 出現的調: " + keys.bm7b5);
       total++; if (keys.sus4 !== "") fails.push("sus4 不是三、七和弦,不該有結果: " + keys.sus4);
+      // 練習移調:整組進行同一種升降偏好(審查員抓到 F♯ 與 D♭ 混用);級數可以用連字號 ii-V-I
+      const tr = await q.evaluate(() => {
+        const out = {};
+        for (const [txt, d] of [["C Am F G", 1], ["C Am F G", 4], ["C Am F G", 11], ["D G A Bm", 4], ["E A B C#m", 1], ["Am: i iv V7", 9]]) {
+          PRACTICE.steps = practiceParseCustom(txt).steps; PRACTICE.shift = 0; practiceTranspose(d);
+          out[txt + "+" + d] = PRACTICE.steps.map(stepName).join(" ");
+        }
+        const r = practiceParseCustom("G: ii-V-I"); out.ro = r.steps.map(stepName).join(" ") + "|" + r.bad.length;
+        return out;
+      });
+      const want = { "C Am F G+1": "D♭ B♭m G♭ A♭", "C Am F G+4": "E C♯m A B", "C Am F G+11": "B G♯m E F♯", "D G A Bm+4": "F♯ B C♯ D♯m",
+                     "E A B C#m+1": "F B♭ C Dm", "Am: i iv V7+9": "F♯m Bm C♯7", ro: "Am D G|0" };
+      for (const k in want) { total++; if (tr[k] !== want[k]) fails.push("練習移調/級數 " + k + ": " + tr[k] + "(應為 " + want[k] + ")"); }
       if (q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
       await q.close();
     }

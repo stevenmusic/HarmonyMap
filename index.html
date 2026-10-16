@@ -2480,7 +2480,8 @@ function evalVoicing(frets, tones, rPc, bassPc, extraPc, trusted){
     if (minF >= 3) for (let s = 0; s < 6; s++) if (frets[s] === 0) cost += 4;
   }
   cost += 3 * (6 - nPlayed);
-  if (bassPc != null && nPlayed <= 3) cost += 8;   // 斜線和弦只彈 3 條弦(x x x 0 0 0)聽不出低音,有 4 條弦以上的就讓給它
+  if (bassPc != null && nPlayed <= 3) cost += 8;
+  if (bassPc != null) cost += 4 * Math.max(0, Math.max(...frets) - 8);   // 斜線和弦的高把位(第 9 格以上)每高一格扣分,有低把位的就不推薦它(Amaj7/C♯ 原本推薦第 9~11 格)   // 斜線和弦只彈 3 條弦(x x x 0 0 0)聽不出低音,有 4 條弦以上的就讓給它
   // 中間夾一條不彈的弦要另外用手指悶住。例外:根音在 6 弦、5 弦不彈是爵士的標準按法
   // (m7♭5 的 7 × 7 7 6 ×、dim7 的 8 × 7 8 7 ×),6 弦的手指順便就把 5 弦悶掉了。
   // 這種按法還是列出來,但一定排在不用悶弦的後面、不當推薦按法(voicingsCore 的 midMute,使用者決定)
@@ -2868,11 +2869,13 @@ function voicingsCore(rPc, def, bassPc = null, noShapes = false){
     const usableAll = pool.filter(usable), sourced = usableAll.filter(v => !fromDb(v));
     const cands = (sourced.length ? sourced : usableAll).sort((a, b) => midMute(a) - midMute(b) || score(a) - score(b) || cmpAll(a, b));
     const raw = v => score(v) - (v.bonus || 0);
+    // 按住的音完全相同、只差低音弦有沒有彈(2 4 4 3 2 2 與 × × 4 3 2 2):算同一種,不佔兩個名額
+    const subsetOf = (a, b) => !a.canon && !b.canon && a.frets.every((f, s) => f < 0 || f === b.frets[s]) && a.frets.filter(f => f >= 0).length < b.frets.filter(f => f >= 0).length;
     const same = (a, b) => lowStr(a) === lowStr(b) && Math.abs(a.minF - b.minF) <= 1 && isOpenPos(a) === isOpenPos(b);
     for (const v of cands) {
       // 最多 3 種:4 種在手機上每張圖只剩 82px 寬,看不清楚(使用者決定「太小就列三種」)
       if (picked.length >= 3) break;
-      if (picked.some(p => same(p, v))) continue;
+      if (picked.some(p => same(p, v) || subsetOf(p, v) || subsetOf(v, p))) continue;
       if (picked.length && raw(v) > Math.min(...picked.map(raw)) + GTR_LIST_MARGIN) break;
       // 資料庫沒有、也不是 E/A 形的(純窮舉出來的)要分數夠接近才列,避免硬湊出沒人這樣彈的按法
       if (picked.length && !v.ref && !v.shape && !v.canon && raw(v) > Math.min(...picked.map(raw)) + GTR_ALGO_MARGIN) continue;
@@ -5211,7 +5214,14 @@ function romanStep(w, key){
 function practiceParseCustom(text){
   const bad = [], steps = [];
   let key = null;
-  for (const w0 of text.split(/[\s,|]+/).filter(Boolean)) {
+  // 級數常寫成 ii-V-I:每一段都是級數時用連字號拆開(和弦名稱本身不拆)
+  const ROMAN_PART = /^[b♭#♯]?[ivIV]+/;
+  const words = text.split(/[\s,|]+/).filter(Boolean).flatMap(w => {
+    if (!w.includes("-") || !ROMAN_PART.test(w)) return [w];
+    const parts = w.split("-");
+    return parts.length > 1 && parts.every(p => ROMAN_PART.test(p)) ? parts : [w];
+  });
+  for (const w0 of words) {
     // 結尾的 *n = 這個和弦佔 n 拍(C*2 = 兩拍);沒寫的填到小節線(practiceTimeline)
     const dm = w0.match(/^(.+?)\*([1-8])$/), w = dm ? dm[1] : w0, beats = dm ? +dm[2] : 0;
     const push = st => steps.push(beats ? Object.assign(st, { beats }) : st);
@@ -5236,12 +5246,17 @@ function storeSavedProgs(a){ try { localStorage.setItem(PROG_KEY, JSON.stringify
 /* 整組移調:根音平移 d 個半音,拼法取常見的調名(C D♭ D E♭ E F F♯ G A♭ A B♭ B)。
    斜線低音存的是「離根音幾個半音」,跟著走,不用另外算 */
 const PC_SPELL = [[0,0],[1,-1],[1,0],[2,-1],[2,0],[3,0],[3,1],[4,0],[5,-1],[5,0],[6,-1],[6,0]];
+const PC_SPELL_SHARP = [[0,0],[0,1],[1,0],[1,1],[2,0],[3,0],[3,1],[4,0],[4,1],[5,0],[5,1],[6,0]];
+const PC_SPELL_FLAT = [[0,0],[1,-1],[1,0],[2,-1],[2,0],[3,0],[4,-1],[4,0],[5,-1],[5,0],[6,-1],[6,0]];
+/* 整組進行用同一種升降偏好(同一個調號裡不會同時有 F♯ 與 D♭):看移調後第一個和弦當主音(小三和弦則取關係大調),
+   G D A E B 與 F♯ 用升記號,其餘(C F B♭ E♭ A♭ D♭)用降記號 */
 function practiceTranspose(d){
   PRACTICE.shift = (((PRACTICE.shift || 0) + d + 6) % 12 + 12) % 12 - 6;   // 目前移了幾個半音(−6 ~ +5),顯示在「移調」旁邊
-  PRACTICE.steps = PRACTICE.steps.map(st => {
-    const [letter, acc] = PC_SPELL[pcOf(LETTER_PC[st.letter] + st.acc + d)];
-    return Object.assign({}, st, { letter, acc });
-  });
+  const moved = PRACTICE.steps.map(st => Object.assign({}, st, { pcNew: pcOf(LETTER_PC[st.letter] + st.acc + d) }));
+  const first = moved[0], def = first && chordById(first.id);
+  const tonic = def ? (def.t.includes("♭3") ? pcOf(first.pcNew + 3) : first.pcNew) : 0;
+  const table = [7, 2, 9, 4, 11, 6].includes(tonic) ? PC_SPELL_SHARP : PC_SPELL_FLAT;
+  PRACTICE.steps = moved.map(st => { const [letter, acc] = table[st.pcNew]; const o = Object.assign({}, st, { letter, acc }); delete o.pcNew; return o; });
 }
 /* 輸入板:根音一下 + 和弦一下就加進去;要轉位(斜線和弦)再按「/」+ 低音字母(+ ♭ ♯)。
    按字母一律是本位音,♭ ♯ 是開關,所以不需要 ♮ */
@@ -6693,7 +6708,7 @@ function renderPrintPop(){
     '<div class="pp-row"><span class="filter-label">' + t("printLevel") + '</span>' + chip("set", "core", PRINT.set === "core", t("printCore", { n: PRINT_CORE.length })) +
       chip("set", "other", PRINT.set === "other", t("printOther", { n: CHORDS.length - PRINT_CORE.length })) + chip("set", "all", PRINT.set === "all", t("printAll", { n: CHORDS.length })) + '</div>' +
     '<div class="pp-row"><span class="filter-label">' + t("printRoots") + '</span>' + chip("roots", "all", PRINT.roots === "all", t("printRoots12")) + chip("roots", "cur", PRINT.roots === "cur", t("printRootsCur", { x: rootName() })) + '</div>' +
-    '<p class="pp-hint">' + t("printCount", { n }) + '。' + t("printHint") + '</p>' +
+    '<p class="pp-hint">' + t("printCount", { n }) + (LANG === "en" ? ". " : "。") + t("printHint") + '</p>' +
     '<button class="btn primary pp-go" id="printGo"' + (PRINT.busy ? " disabled" : "") + '>' + t("printGo") + '(' + t("printPages", { n: printPageCount() }) + ')</button>';
   pop.querySelectorAll("[data-g]").forEach(b => { b.onclick = () => {
     const g = b.dataset.g, v = b.dataset.v;
