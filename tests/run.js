@@ -1652,7 +1652,7 @@ async function openPage(browser, opts = {}){
       total++; if (!vis.Chord || vis.Scale || vis.Find) fails.push("列印鈕只該在和弦分頁(" + w + "): " + JSON.stringify(vis));
       const row = await q.evaluate(() => { const r = document.querySelector(".find-row").getBoundingClientRect(), s = document.querySelector(".search-wrap").getBoundingClientRect(), b = $("printOpen").getBoundingClientRect();
         return { over: b.right > r.right + 1, search: Math.round(s.width), h: Math.round(r.height) }; });
-      total++; if (row.over || row.search < 90 || (w > 600 && row.h > 44))   // ≤600 寬搜尋獨佔一行、按鈕在下面一排(搜尋框不再被擠到 29~99px)
+      total++; if (row.over || row.search < 90 || (w > 380 && row.h > 44))   // ≤380 寬搜尋獨佔一行、按鈕在下面一排(搜尋框不再被擠到 29~99px)
        fails.push("清單上方那排擠壞了(" + w + "): " + JSON.stringify(row));
       await q.click("#printOpen");
       for (const [inst, lv, want] of [["guitar", "core", 84], ["piano", "other", 73 * 12], ["guitar", "all", 80 * 12]]) {
