@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 180 180">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1d1812"/><stop offset="1" stop-color="#0c0a07"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9c85f"/><stop offset="1" stop-color="#e8a93b"/></linearGradient>
+    <linearGradient id="cream" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fbf7ec"/><stop offset="1" stop-color="#ece5d2"/></linearGradient>
+    <linearGradient id="teal" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fd8c6"/><stop offset="1" stop-color="#3bb7a6"/></linearGradient>
+    <linearGradient id="blk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2620"/><stop offset="1" stop-color="#0f0d0a"/></linearGradient>
+  </defs>
+  <rect width="180" height="180" fill="url(#g)"/>
+  <rect x="25" y="40" width="42" height="100" rx="9" fill="url(#gold)"/>
+  <rect x="69" y="40" width="42" height="100" rx="9" fill="url(#cream)"/>
+  <rect x="113" y="40" width="42" height="100" rx="9" fill="url(#teal)"/>
+  <rect x="52" y="40" width="26" height="62" rx="7" fill="url(#blk)"/>
+  <rect x="102" y="40" width="26" height="62" rx="7" fill="url(#blk)"/>
+  <rect x="58" y="48" width="5" height="40" rx="2.5" fill="#fff" opacity=".18"/>
+  <rect x="108" y="48" width="5" height="40" rx="2.5" fill="#fff" opacity=".18"/>
+  <rect x="35" y="127" width="22" height="4" rx="2" fill="#000" opacity=".15"/>
+  <rect x="79" y="127" width="22" height="4" rx="2" fill="#000" opacity=".12"/>
+  <rect x="123" y="127" width="22" height="4" rx="2" fill="#000" opacity=".15"/>
+</svg>

@@ -421,6 +421,19 @@ async function openPage(browser, opts = {}){
           const pc = +p, def = chordById(id), want = teachCanon(pc, id), vs = chordVoicingsFor(pc, def, null), got = vs.list[vs.best] && vs.list[vs.best].frets;
           if ((!got || got.join() !== want.join()) && n++ < 5) fails.push("教材首選沒有生效: " + id + "@" + pc + " 要 " + want.join(" ") + " 得 " + (got ? got.join(" ") : "-"));
         } }
+      // 獨立驗算(不靠程式內建規則,直接用標準調音算音高):每個列出的按法 ── 沒有和弦外的音、最低音是根音、
+      // 三音 / 七音 / ♭5 / ♯5 不能少(只准省略完全五度、與有 13 的和弦裡的 9 與 11、7alt 類的變化音)
+      { const OPEN = [4, 9, 2, 7, 11, 4], B = { 1: 0, 2: 2, 3: 4, 4: 5, 5: 7, 6: 9, 7: 11, 9: 2, 11: 5, 13: 9 }, bad = [];
+        const semi = t => { const m = t.match(/^([♭♯]*)(\d+)$/); let s = B[+m[2]]; for (const c of m[1]) s += c === "♭" ? -1 : 1; if (t === "♭♭7") s = 9; return ((s % 12) + 12) % 12; };
+        for (const d of CHORDS) for (let rp = 0; rp < 12; rp++) for (const v of chordVoicingsFor(rp, d).list) {
+          const pcs = v.frets.map((f, i) => f < 0 ? null : (OPEN[i] + f) % 12), got = new Set(pcs.filter(x => x != null).map(x => (x - rp + 12) % 12));
+          const want = new Set(d.t.map(semi)), low = pcs.find(x => x != null);
+          const extra = [...got].filter(x => !want.has(x));
+          const essential = d.t.filter(t => /^[♭♯]*[2-4673]$|^[♭♯]5$/.test(t) && !got.has(semi(t)));
+          if (extra.length || (low - rp + 12) % 12 !== 0 || essential.length)
+            bad.push(d.sym + "@" + rp + " " + v.frets.join(","));
+        }
+        total++; if (bad.length) fails.push("獨立驗算 " + bad.length + " 個按法有問題: " + bad.slice(0, 5).join(" | ")); }
       // 資料庫有收錄這個和弦時,網頁列出的每一個按法都要來自資料庫或標準表(使用者要求核對實用性)
       { let n = 0;
         for (const def of CHORDS) for (let pc = 0; pc < 12; pc++) { if (!gtrRef(pc, def.id, null).length) continue;

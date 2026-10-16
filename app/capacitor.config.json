@@ -1,0 +1,10 @@
+{
+  "appId": "com.stevenmusic.harmonymap",
+  "appName": "HarmonyMap",
+  "webDir": "www",
+  "backgroundColor": "#0C0A07",
+  "ios": {
+    "contentInset": "never",
+    "limitsNavigationsToAppBoundDomains": false
+  }
+}

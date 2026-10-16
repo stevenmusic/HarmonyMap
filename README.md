@@ -119,3 +119,7 @@ F♯7♯9 是 **F♯ A♯ C♯ E G♯♯**,D♭13 是 **D♭ F A♭ C♭ E♭ B�
 取樣清單、最近取樣 + playbackRate 補音高、同和弦共用錄音、衰減時間常數、
 依音高擺左右的聲像與殘響送出,全部照 ScrollScore 的實作與參數;
 取樣抓不到時退回的合成音色備援同樣沿用它的合成器設定。
+
+
+## iOS 封裝(App Store)
+`app/` 放 Capacitor 封裝設定、圖示、上架資料與隱私權政策,步驟見 `app/README.md`。網頁本體仍是單檔 `index.html`。
