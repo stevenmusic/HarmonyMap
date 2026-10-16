@@ -21,7 +21,7 @@ HarmonyMap 是給音樂人與學習者的和弦與音階字典。選根音、挑
 • 吉他:每個和弦列出最實用的 3 種指法,和弦圖標示左手手指、可設移調夾與左手模式
 • 斜線和弦與轉位、同音異名的另一種寫法
 • 換和弦練習:節拍器、和弦進行輸入、移調與存檔
-• 真實鋼琴與吉他取樣音色,離線時自動改用合成音色
+• 內建真實鋼琴與三種吉他(古典、民謠、電吉他)取樣音色,完全離線也能用
 • 繁體中文與英文介面、淺色與深色主題,適配手機、平板與桌面尺寸
 
 ## Description (English)
@@ -33,14 +33,14 @@ HarmonyMap is a chord and scale dictionary for musicians and learners. Pick a ro
 • Guitar: the 3 most practical voicings per chord, fingering numbers, capo and left-handed mode
 • Slash chords, inversions, and enharmonic alternate names
 • Chord-change practice: metronome, progression input, transposition, saving
-• Realistic piano and guitar samples, with a synthesized fallback when offline
+• Realistic piano and three guitar sounds (classical, acoustic, electric) built in — works fully offline
 • English and Traditional Chinese, light and dark themes, from phones to desktops
 
 ## 關鍵字(100 字元內)
 和弦,音階,吉他,鋼琴,指法,樂理,chord,scale,guitar,piano,fretboard,theory
 
 ## 審核備註(App Review Notes)
-No login required. The app is a self-contained music-theory tool; no account, purchase, or user-generated content. Audio samples are fetched from public CDNs and fall back to built-in synthesis when offline.
+No login required. The app is a self-contained music-theory tool; no account, purchase, or user-generated content. Piano and guitar samples are bundled in the app (credits are listed at the bottom of the in-app Help screen); no network is required.
 
 ## 截圖
 App Store Connect 目前要求至少 6.9 吋(或 6.5 吋)iPhone 截圖一組,若支援 iPad 還需 13 吋 iPad 截圖一組。

@@ -1227,7 +1227,7 @@ const I18N = {
     langToggleText: "EN", langToggleLabel: "切換為英文", langToggleTitle: "切換語言",
     themeToggleLabel: "淺色模式", themeToggleTitle: "切換淺色/深色主題",
     helpLabel: "使用說明", helpTitle: "小技巧",
-    helpCredit: "音色:鋼琴 Salamander Grand Piano(Alexander Holm,CC-BY 3.0)・古典吉他 Philharmonia Orchestra(CC BY-SA 3.0,經 ScrollScore 整理)・民謠/電吉他 tonejs-instruments(MIT)",
+    helpCredit: "音色:鋼琴 Salamander Grand Piano(Alexander Holm,CC-BY 3.0)・古典吉他 Philharmonia Orchestra(CC BY-SA 3.0,經 ScrollScore 整理)・民謠吉他 University of Iowa MIS、電吉他 Karoryfer Samples(經 tonejs-instruments 整理,取樣 CC-BY 3.0)",
     help1: "<b>根音 + 和弦種類</b>兩下就選好;要斜線和弦再按 <b>/</b> 和低音(C / E = C/E)",
     help2: "點<b>鍵盤、指板任何地方</b>就播整個和弦或音階;點下方那行的<b>一個音名</b>只播那個音",
     help3: "吉他和弦圖:<b>點一下</b>刷整個和弦,手指<b>左右滑過</b>弦就一條一條撥",
@@ -1325,7 +1325,7 @@ const I18N = {
     langToggleText: "中", langToggleLabel: "Switch to Chinese", langToggleTitle: "Switch language",
     themeToggleLabel: "Light mode", themeToggleTitle: "Switch light/dark theme",
     helpLabel: "How to use", helpTitle: "Tips",
-    helpCredit: "Sounds: piano Salamander Grand Piano (Alexander Holm, CC-BY 3.0) · classical guitar Philharmonia Orchestra (CC BY-SA 3.0, prepared by ScrollScore) · acoustic/electric guitar tonejs-instruments (MIT)",
+    helpCredit: "Sounds: piano Salamander Grand Piano (Alexander Holm, CC-BY 3.0) · classical guitar Philharmonia Orchestra (CC BY-SA 3.0, prepared by ScrollScore) · acoustic guitar University of Iowa MIS, electric guitar Karoryfer Samples (prepared by tonejs-instruments, samples CC-BY 3.0)",
     help1: "<b>Root + chord type</b> — two taps. For a slash chord add <b>/</b> and the bass note (C / E = C/E)",
     help2: "Tap <b>anywhere on the keyboard or fretboard</b> to play the whole chord or scale; tap a <b>single note name</b> below it to hear just that note",
     help3: "Guitar diagrams: <b>tap</b> to strum the whole chord, <b>swipe across</b> the strings to pluck them one by one",
@@ -3440,7 +3440,24 @@ function setAudioStatus(key){
 const SAMPLE_CACHE = "hm-samples-v2";   // v2:古典吉他換成 ScrollScore 的 Philharmonia
 // 舊版號的快取刪掉,不然舊檔一直佔著裝置空間
 try { if (window.caches && caches.keys) caches.keys().then(ks => ks.forEach(k => { if (k.startsWith("hm-samples-") && k !== SAMPLE_CACHE) caches.delete(k); })).catch(() => {}); } catch (e) {}
+/* App 版(iOS 封裝,頁面網址是 capacitor://)把取樣一起打包在 samples/ 底下,先讀包裡的、讀不到才走網路,所以離線也有真實音色。
+   網頁版沒有這些檔案,不會去碰(不然每個取樣多一次 404)。網址對應表放在函式裡,因為 GUITAR_SETS 定義在後面 */
+function localSampleUrl(url){
+  if (location.protocol !== "capacitor:" && window.__HM_LOCAL_SAMPLES__ !== true) return null;
+  for (const [base, dir] of [[PIANO_BASE, "piano/"], [GUITAR_SETS.acoustic.base, "acoustic/"], [GUITAR_SETS.electric.base, "electric/"], [GUITAR_SETS.nylon.base, "classical/"]])
+    if (url.startsWith(base)) return "samples/" + dir + url.slice(base.length);
+  return null;
+}
 function sampleFetch(url){
+  const loc = localSampleUrl(url);
+  return loc ? fetch(loc).then(r => { if (!r.ok) throw new Error("404"); return r.arrayBuffer(); }).catch(() => sampleFetchNet(url)) : sampleFetchNet(url);
+}
+// 清單檔(不進快取,跟原本一樣每次問網路):App 版先讀包裡的
+function sampleJson(url){
+  const net = () => fetch(url).then(r => { if (!r.ok) throw new Error("404"); return r.json(); }), loc = localSampleUrl(url);
+  return loc ? fetch(loc).then(r => { if (!r.ok) throw new Error("404"); return r.json(); }).catch(net) : net();
+}
+function sampleFetchNet(url){
   const net = () => fetch(url).then(r => { if (!r.ok) throw new Error("404"); return r; });
   if (!window.caches || !caches.open) return net().then(r => r.arrayBuffer());
   return caches.open(SAMPLE_CACHE).then(c => c.match(url).then(hit => hit ||
@@ -3509,7 +3526,7 @@ function loadGuitarSamples(kind){
   const list = [];
   // 檔案清單:有 manifest 的照 manifest(每個錄音音高挑一層,帶音準校正),其他照 files 列的檔名
   const filesP = set.manifest
-    ? fetch(set.base + "manifest.json").then(r => { if (!r.ok) throw new Error("404"); return r.json(); }).then(man => {
+    ? sampleJson(set.base + "manifest.json").then(man => {
         const pick = {};
         for (const [name, info] of Object.entries(man.samples)) {
           const cur = pick[info.root];

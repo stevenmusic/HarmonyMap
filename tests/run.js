@@ -1115,7 +1115,8 @@ async function openPage(browser, opts = {}){
       PRACTICE.bpm = 120; PRACTICE.beats = 4; PRACTICE.countIn = true; PRACTICE.accomp = true;
       const clicks = [], chords = [], oc = practiceClick, op = playCurrent;
       practiceClick = t => clicks.push(t); playCurrent = at => chords.push(at);
-      practiceStart(); await new Promise(r => setTimeout(r, 2150));
+      practiceStart(); for (let i = 0; i < 60 && !chords.length; i++) await new Promise(r => setTimeout(r, 100));   // 等第一個和弦排進去(固定等 2.15 秒在機器忙時會漏)
+      await new Promise(r => setTimeout(r, 150));
       practiceStop(); practiceClick = oc; playCurrent = op; PRACTICE.countIn = false;
       return { firstChord: chords[0] != null ? +(chords[0] - clicks[0]).toFixed(3) : null, nClicksBefore: clicks.filter(t => chords[0] == null || t < chords[0] - 1e-6).length };
     });
@@ -1868,6 +1869,68 @@ async function openPage(browser, opts = {}){
     if (q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
     await q.close();
     report("音訊與穩定性", total, fails);
+  }
+
+  /* ── App 內建取樣(iOS 封裝,app/samples/):頁面是 capacitor:// 時先讀包裡的,不碰網路 ── */
+  {
+    const fails = []; let total = 0;
+    const sdir = path.resolve(__dirname, "..", "app", "samples");
+    const q = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    q._errors = []; q.on("pageerror", e => q._errors.push(e.message));
+    const external = [];
+    await q.route(/^https?:\/\//, r => { const u = r.request().url(); if (!/fonts\.(googleapis|gstatic)\.com/.test(u)) external.push(u); r.abort(); });
+    await q.exposeFunction("readSample", rel => {
+      const f = path.join(sdir, rel);
+      if (!f.startsWith(sdir + path.sep) || !fs.existsSync(f)) return null;
+      return fs.readFileSync(f).toString("base64");
+    });
+    await q.addInitScript(() => {
+      window.__HM_LOCAL_SAMPLES__ = true;
+      const of = window.fetch.bind(window);
+      window.fetch = (u, o) => {
+        const s = String(u);
+        if (!/^(https?:|file:|data:|blob:)/.test(s) && s.startsWith("samples/")) {
+          return window.readSample(s.slice(8)).then(b64 => {
+            if (b64 == null) return new Response("", { status: 404 });
+            const bin = atob(b64), a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+            return new Response(a);
+          });
+        }
+        return of(u, o);
+      };
+    });
+    await q.goto(PAGE);
+    // 網址對照:四套取樣各自對到 samples/ 底下,不認得的網址不動
+    const map = await q.evaluate(() => [PIANO_BASE + "A4.mp3", GUITAR_SETS.acoustic.base + "A2.mp3", GUITAR_SETS.electric.base + "A2.mp3",
+      GUITAR_SETS.nylon.base + "manifest.json", "https://example.com/x.mp3"].map(localSampleUrl));
+    total++; if (map.join("|") !== "samples/piano/A4.mp3|samples/acoustic/A2.mp3|samples/electric/A2.mp3|samples/classical/manifest.json|")
+      fails.push("取樣網址對照: " + map.join("|"));
+    // 沒有旗標、也不是 capacitor:// 時(網頁版)一律不走本機
+    const off = await q.evaluate(() => { window.__HM_LOCAL_SAMPLES__ = false; const r = localSampleUrl(PIANO_BASE + "A4.mp3"); window.__HM_LOCAL_SAMPLES__ = true; return r; });
+    total++; if (off !== null) fails.push("網頁版不該讀本機取樣: " + off);
+    // 包裡每個檔案都存在、數量與程式列的清單一致
+    const want = await q.evaluate(() => ({ piano: PIANO_SAMPLES.map(([l, o]) => l + o + ".mp3"),
+      acoustic: GUITAR_SETS.acoustic.files.split(" ").map(n => n + ".mp3"), electric: GUITAR_SETS.electric.files.split(" ").map(n => n + ".mp3") }));
+    for (const [dir, list] of Object.entries(want)) for (const n of list) { total++; if (!fs.existsSync(path.join(sdir, dir, n))) fails.push("包裡缺少 " + dir + "/" + n); }
+    // 真的載入:四套都要全部解碼成功,而且完全沒有對外請求
+    await q.locator("#kbSummary b").click();
+    const got = await q.evaluate(async () => {
+      await loadPianoSamples(); const o = { piano: pianoBuffers ? pianoBuffers.length : 0 };
+      for (const k of ["acoustic", "nylon", "electric"]) { loadGuitarSamples(k); await guitarLoading[k]; o[k] = guitarBuffers[k] ? guitarBuffers[k].length : 0; }
+      return o;
+    });
+    total++; if (got.piano !== 30 || got.acoustic !== 37 || got.nylon !== 38 || got.electric !== 17) fails.push("內建取樣載入數量: " + JSON.stringify(got));
+    total++; if (external.length) fails.push("內建取樣載入時不該有對外請求: " + external.slice(0, 3).join(", "));
+    // 包裡缺檔時退回網路(這裡網路被封鎖 → 該檔跳過,其他照常):把鋼琴 A4 的本機檔弄不見
+    const miss = await q.evaluate(async () => {
+      const of = window.fetch; window.fetch = (u, o) => String(u).endsWith("samples/piano/A4.mp3") ? Promise.resolve(new Response("", { status: 404 })) : of(u, o);
+      pianoBuffers = null; pianoLoading = null; sampleFail.piano = 0;
+      await loadPianoSamples(); window.fetch = of; return pianoBuffers ? pianoBuffers.length : 0;
+    });
+    total++; if (miss !== 29) fails.push("本機缺一個檔時應該只少一個(退回網路被封鎖): " + miss);
+    if (q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
+    await q.close();
+    report("App 內建取樣", total, fails);
   }
 
   await browser.close();

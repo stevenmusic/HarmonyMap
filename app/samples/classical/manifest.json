@@ -1,0 +1,515 @@
+{
+"source": "Philharmonia Orchestra sound samples (CC BY-SA 3.0), processed by guitar/build/philharmonia_build.py",
+"mode": "nearest",
+"sr": 44100,
+"velRanges": [
+[
+1,
+79
+],
+[
+80,
+127
+]
+],
+"ampVeltrack": 96,
+"samples": {
+"ph-A2-L2": {
+"root": 45,
+"L": 2,
+"rr": 1,
+"tune": 0.8,
+"frames": 301188
+},
+"ph-A2-L1": {
+"root": 45,
+"L": 1,
+"rr": 1,
+"tune": -0.6,
+"frames": 234421
+},
+"ph-A3-L2": {
+"root": 57,
+"L": 2,
+"rr": 1,
+"tune": 14.9,
+"frames": 191603
+},
+"ph-A3-L1": {
+"root": 57,
+"L": 1,
+"rr": 1,
+"tune": 0.3,
+"frames": 224041
+},
+"ph-A4-L2": {
+"root": 69,
+"L": 2,
+"rr": 1,
+"tune": 9.5,
+"frames": 188241
+},
+"ph-A4-L1": {
+"root": 69,
+"L": 1,
+"rr": 1,
+"tune": 9.0,
+"frames": 178058
+},
+"ph-As2-L2": {
+"root": 46,
+"L": 2,
+"rr": 1,
+"tune": 5.8,
+"frames": 312760
+},
+"ph-As2-L1": {
+"root": 46,
+"L": 1,
+"rr": 1,
+"tune": 1.3,
+"frames": 263318
+},
+"ph-As3-L2": {
+"root": 58,
+"L": 2,
+"rr": 1,
+"tune": 16.4,
+"frames": 110672
+},
+"ph-As3-L1": {
+"root": 58,
+"L": 1,
+"rr": 1,
+"tune": 6.4,
+"frames": 161682
+},
+"ph-As4-L2": {
+"root": 70,
+"L": 2,
+"rr": 1,
+"tune": 10.9,
+"frames": 139003
+},
+"ph-As4-L1": {
+"root": 70,
+"L": 1,
+"rr": 1,
+"tune": 8.5,
+"frames": 169835
+},
+"ph-B2-L2": {
+"root": 47,
+"L": 2,
+"rr": 1,
+"tune": 0.4,
+"frames": 268986
+},
+"ph-B2-L1": {
+"root": 47,
+"L": 1,
+"rr": 1,
+"tune": -3.7,
+"frames": 225448
+},
+"ph-B3-L2": {
+"root": 59,
+"L": 2,
+"rr": 1,
+"tune": 19.5,
+"frames": 177896
+},
+"ph-B3-L1": {
+"root": 59,
+"L": 1,
+"rr": 1,
+"tune": 11.4,
+"frames": 199863
+},
+"ph-B4-L2": {
+"root": 71,
+"L": 2,
+"rr": 1,
+"tune": 6.3,
+"frames": 164153
+},
+"ph-B4-L1": {
+"root": 71,
+"L": 1,
+"rr": 1,
+"tune": 4.5,
+"frames": 198569
+},
+"ph-C3-L2": {
+"root": 48,
+"L": 2,
+"rr": 1,
+"tune": 1.7,
+"frames": 264487
+},
+"ph-C3-L1": {
+"root": 48,
+"L": 1,
+"rr": 1,
+"tune": -4.2,
+"frames": 235750
+},
+"ph-C4-L2": {
+"root": 60,
+"L": 2,
+"rr": 1,
+"tune": 15.8,
+"frames": 165063
+},
+"ph-C6-L1": {
+"root": 84,
+"L": 1,
+"rr": 1,
+"tune": 12.5,
+"frames": 204351
+},
+"ph-Cs3-L2": {
+"root": 49,
+"L": 2,
+"rr": 1,
+"tune": -2.5,
+"frames": 247015
+},
+"ph-Cs3-L1": {
+"root": 49,
+"L": 1,
+"rr": 1,
+"tune": -4.6,
+"frames": 216329
+},
+"ph-Cs4-L2": {
+"root": 61,
+"L": 2,
+"rr": 1,
+"tune": 16.6,
+"frames": 137754
+},
+"ph-D3-L2": {
+"root": 50,
+"L": 2,
+"rr": 1,
+"tune": 1.6,
+"frames": 265595
+},
+"ph-D3-L1": {
+"root": 50,
+"L": 1,
+"rr": 1,
+"tune": -3.4,
+"frames": 169879
+},
+"ph-D4-L2": {
+"root": 62,
+"L": 2,
+"rr": 1,
+"tune": 13.0,
+"frames": 167913
+},
+"ph-D4-L1": {
+"root": 62,
+"L": 1,
+"rr": 1,
+"tune": 7.1,
+"frames": 242349
+},
+"ph-D5-L2": {
+"root": 74,
+"L": 2,
+"rr": 1,
+"tune": -10.7,
+"frames": 97126
+},
+"ph-D5-L1": {
+"root": 74,
+"L": 1,
+"rr": 1,
+"tune": 4.0,
+"frames": 203214
+},
+"ph-Ds3-L2": {
+"root": 51,
+"L": 2,
+"rr": 1,
+"tune": 3.8,
+"frames": 399730
+},
+"ph-Ds3-L1": {
+"root": 51,
+"L": 1,
+"rr": 1,
+"tune": 0.2,
+"frames": 209082
+},
+"ph-Ds4-L2": {
+"root": 63,
+"L": 2,
+"rr": 1,
+"tune": 13.9,
+"frames": 213611
+},
+"ph-Ds4-L1": {
+"root": 63,
+"L": 1,
+"rr": 1,
+"tune": 6.8,
+"frames": 212422
+},
+"ph-Ds5-L2": {
+"root": 75,
+"L": 2,
+"rr": 1,
+"tune": 5.3,
+"frames": 146310
+},
+"ph-Ds5-L1": {
+"root": 75,
+"L": 1,
+"rr": 1,
+"tune": 7.5,
+"frames": 155104
+},
+"ph-E2-L2": {
+"root": 40,
+"L": 2,
+"rr": 1,
+"tune": 9.9,
+"frames": 199707
+},
+"ph-E2-L1": {
+"root": 40,
+"L": 1,
+"rr": 1,
+"tune": -1.2,
+"frames": 214399
+},
+"ph-E3-L2": {
+"root": 52,
+"L": 2,
+"rr": 1,
+"tune": -4.8,
+"frames": 267841
+},
+"ph-E3-L1": {
+"root": 52,
+"L": 1,
+"rr": 1,
+"tune": -6.4,
+"frames": 198797
+},
+"ph-E4-L2": {
+"root": 64,
+"L": 2,
+"rr": 1,
+"tune": 3.8,
+"frames": 219379
+},
+"ph-E4-L1": {
+"root": 64,
+"L": 1,
+"rr": 1,
+"tune": 3.1,
+"frames": 210346
+},
+"ph-E5-L2": {
+"root": 76,
+"L": 2,
+"rr": 1,
+"tune": 4.7,
+"frames": 160698
+},
+"ph-E5-L1": {
+"root": 76,
+"L": 1,
+"rr": 1,
+"tune": -0.4,
+"frames": 216089
+},
+"ph-F2-L2": {
+"root": 41,
+"L": 2,
+"rr": 1,
+"tune": 7.8,
+"frames": 272265
+},
+"ph-F2-L1": {
+"root": 41,
+"L": 1,
+"rr": 1,
+"tune": -2.0,
+"frames": 216023
+},
+"ph-F3-L2": {
+"root": 53,
+"L": 2,
+"rr": 1,
+"tune": 1.8,
+"frames": 339857
+},
+"ph-F3-L1": {
+"root": 53,
+"L": 1,
+"rr": 1,
+"tune": -6.7,
+"frames": 208151
+},
+"ph-F4-L2": {
+"root": 65,
+"L": 2,
+"rr": 1,
+"tune": 9.3,
+"frames": 165166
+},
+"ph-F4-L1": {
+"root": 65,
+"L": 1,
+"rr": 1,
+"tune": 8.3,
+"frames": 229701
+},
+"ph-Fs2-L2": {
+"root": 42,
+"L": 2,
+"rr": 1,
+"tune": -9.7,
+"frames": 196379
+},
+"ph-Fs2-L1": {
+"root": 42,
+"L": 1,
+"rr": 1,
+"tune": -14.3,
+"frames": 275848
+},
+"ph-Fs3-L2": {
+"root": 54,
+"L": 2,
+"rr": 1,
+"tune": 0.2,
+"frames": 247085
+},
+"ph-Fs3-L1": {
+"root": 54,
+"L": 1,
+"rr": 1,
+"tune": -2.0,
+"frames": 198595
+},
+"ph-Fs4-L2": {
+"root": 66,
+"L": 2,
+"rr": 1,
+"tune": 10.4,
+"frames": 208959
+},
+"ph-Fs4-L1": {
+"root": 66,
+"L": 1,
+"rr": 1,
+"tune": 8.0,
+"frames": 176839
+},
+"ph-G2-L2": {
+"root": 43,
+"L": 2,
+"rr": 1,
+"tune": 9.6,
+"frames": 201448
+},
+"ph-G2-L1": {
+"root": 43,
+"L": 1,
+"rr": 1,
+"tune": 13.4,
+"frames": 209099
+},
+"ph-G3-L2": {
+"root": 55,
+"L": 2,
+"rr": 1,
+"tune": 9.8,
+"frames": 145709
+},
+"ph-G3-L1": {
+"root": 55,
+"L": 1,
+"rr": 1,
+"tune": 5.9,
+"frames": 153752
+},
+"ph-G4-L2": {
+"root": 67,
+"L": 2,
+"rr": 1,
+"tune": 7.8,
+"frames": 198522
+},
+"ph-G4-L1": {
+"root": 67,
+"L": 1,
+"rr": 1,
+"tune": 7.6,
+"frames": 202261
+},
+"ph-G5-L2": {
+"root": 79,
+"L": 2,
+"rr": 1,
+"tune": 9.3,
+"frames": 120981
+},
+"ph-Gs2-L2": {
+"root": 44,
+"L": 2,
+"rr": 1,
+"tune": 9.4,
+"frames": 249749
+},
+"ph-Gs2-L1": {
+"root": 44,
+"L": 1,
+"rr": 1,
+"tune": 4.2,
+"frames": 243615
+},
+"ph-Gs3-L2": {
+"root": 56,
+"L": 2,
+"rr": 1,
+"tune": 14.7,
+"frames": 194160
+},
+"ph-Gs3-L1": {
+"root": 56,
+"L": 1,
+"rr": 1,
+"tune": 10.4,
+"frames": 181433
+},
+"ph-Gs4-L2": {
+"root": 68,
+"L": 2,
+"rr": 1,
+"tune": 9.2,
+"frames": 157177
+},
+"ph-Gs4-L1": {
+"root": 68,
+"L": 1,
+"rr": 1,
+"tune": 6.9,
+"frames": 194217
+},
+"ph-Gs5-L2": {
+"root": 80,
+"L": 2,
+"rr": 1,
+"tune": 21.9,
+"frames": 139934
+}
+}
+}

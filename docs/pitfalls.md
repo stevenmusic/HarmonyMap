@@ -95,3 +95,9 @@
 - 從結果面板跳到別的音階/和弦(`jumpedTo`)、關掉練習:捲回頁面最上面(不然停在舊的捲動位置,名稱被切一半),跳轉也會發聲
 - 搜尋框在 ≤380px 用短提示(`searchPlaceholder*Short`),長的會被切成「e.g. C/E」像別的和弦
 - 分享連結一律寫 `inst`;沒寫樂器的舊連結用鋼琴開;移調夾只在吉他時從連結讀
+
+## App 版的內建取樣(iOS 封裝)
+- 頁面網址是 `capacitor://`(或測試時設 `window.__HM_LOCAL_SAMPLES__ = true`)時,`sampleFetch` / `sampleJson` 先讀 `samples/…`(對照表 `localSampleUrl`),
+  讀不到才走網路原本的來源;**網頁版不碰這些路徑**(否則每個取樣多一次 404)。檔案放在 `app/samples/`(`app/scripts/sync-web.js` 複製進封裝),`index.html` 本身仍是單檔。
+- 取樣清單(`PIANO_SAMPLES`、`GUITAR_SETS`)改了,`app/samples/` 要跟著換並重算 `SHA256SUMS`;測試「App 內建取樣」會比對每個檔案都在、四套都能全部解碼、載入時沒有對外請求。
+- 古典吉他的清單來自 manifest(每個錄音音高挑強音層),App 包裡放的是同一批 38 檔 + manifest.json。
