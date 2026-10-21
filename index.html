@@ -59,6 +59,7 @@
   --fs-2xl:calc(26px * var(--ui));
   --surface-glass:rgba(32,26,15,.88);
   --surface-inset:rgba(22,18,9,.55);
+  --seg-track:rgba(255,255,255,.07);--seg-sep:rgba(242,185,75,.28);   /* 分段鈕的軌道、沒選的格子之間的分隔線 */
   --card-tint:rgba(255,255,255,.035);
   --stage-glow:#171208;
   color-scheme:dark;
@@ -82,6 +83,7 @@ body.light{
   --shadow-lg:0 18px 44px rgba(90,72,30,.18);
   --surface-glass:rgba(252,249,241,.92);
   --surface-inset:rgba(255,255,255,.7);
+  --seg-track:rgba(60,45,10,.08);--seg-sep:rgba(122,92,22,.3);
   --card-tint:rgba(133,100,24,.05);
   --stage-glow:#FFFDF6;
   color-scheme:light;
@@ -204,28 +206,29 @@ main{
 }
 
 /* ── 分頁(和弦 / 音階 / 辨識)── */
-.tabs{display:flex;gap:6px;background:var(--surface-inset);border:1px solid var(--line);
-      border-radius:var(--radius-pill);padding:4px}
+/* 分段鈕 = iOS 原生樣式(2026-10-21 使用者選定,跟 PianoDrill / DrumDrill 一樣):灰底軌道 + 浮起來的選中塊;沒選的格子之間一條淡分隔線 */
+.tabs{display:flex;gap:2px;background:var(--seg-track);border:0;border-radius:10px;padding:3px}
 /* 三個分頁等寬(flex-basis 0),樂器切換固定寬度:按鈕的位置與大小不隨文字長短改變,
    換語言(和弦/Chord、辨識/Identify、吉他/Guitar)時整排不會移位(使用者要求) */
 .tabs button{
   flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:none;background:transparent;color:var(--muted-bright);
   font-family:inherit;font-size:var(--fs-md);font-weight:500;line-height:18px;   /* 行高寫死:中文字的行框比英文高 2px,換語言整頁會往上跳 */
-  padding:9px clamp(2px,1.2vw,8px);border-radius:var(--radius-pill);cursor:pointer;transition:background .2s,color .2s;   /* 左右內距隨寬度連續縮:390px 英文選中的粗體「Identify」不再被截 */
+  padding:9px clamp(2px,1.2vw,8px);border-radius:8px;cursor:pointer;transition:background .2s,color .2s;   /* 左右內距隨寬度連續縮:390px 英文選中的粗體「Identify」不再被截 */
 }
-.tabs button[aria-selected="true"]{background:var(--gold-fill);color:var(--on-fill);font-weight:700}
-/* 樂器切換跟分頁同一列、同一種膠囊外框,但字小一階:它是「換顯示方式」,不是主要導覽 */
+.tabs button + button:not([aria-selected="true"]),.inst-switch button + button:not([aria-pressed="true"]){background:linear-gradient(var(--seg-sep),var(--seg-sep)) no-repeat left center / 1px 50%}
+.tabs button[aria-selected="true"] + button,.inst-switch button[aria-pressed="true"] + button{background:transparent}
+.tabs button[aria-selected="true"]{background:var(--gold-fill);color:var(--on-fill);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.35),0 0 0 .5px rgba(0,0,0,.08)}
+/* 樂器切換跟分頁同一列、同一種軌道,但字小一階:它是「換顯示方式」,不是主要導覽 */
 .tab-row{display:flex;gap:6px;min-width:0}
 .tab-row .tabs{flex:1;min-width:0}
-.inst-switch{display:flex;gap:2px;flex:none;background:var(--surface-inset);border:1px solid var(--line);
-             border-radius:var(--radius-pill);padding:4px}
+.inst-switch{display:flex;gap:2px;flex:none;background:var(--seg-track);border:0;border-radius:10px;padding:3px}
 .inst-switch button{
   flex:0 0 auto;width:calc(56px * var(--ui));white-space:nowrap;overflow:hidden;text-align:center;
   border:none;background:transparent;color:var(--muted-bright);font-family:inherit;
-  font-size:var(--fs-sm);padding:0;border-radius:var(--radius-pill);cursor:pointer;
+  font-size:var(--fs-sm);padding:0;border-radius:8px;cursor:pointer;
   transition:background .2s,color .2s;
 }
-.inst-switch button[aria-pressed="true"]{background:var(--teal-fill);color:var(--on-fill);font-weight:700}
+.inst-switch button[aria-pressed="true"]{background:var(--teal-fill);color:var(--on-fill);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.35),0 0 0 .5px rgba(0,0,0,.08)}
 @media (max-width:380px){
   .inst-switch button{width:48px} .tabs button{padding:9px 2px}
 }
