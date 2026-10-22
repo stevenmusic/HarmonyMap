@@ -49,6 +49,7 @@
   --radius-md:14px;
   --radius-lg:18px;
   --radius-pill:999px;
+  --radius-btn:12px;   /* 按鈕一律圓角方形(2026-10-22 使用者選定,PianoDrill / DrumDrill / ScrollScore 同一套);只有圖示的圓形按鈕維持圓形 */
   --ui:1;   /* 大螢幕(兩欄)才 > 1,由 applyUiScale 依視窗寬高連續算出;字級全部乘它,畫面才不會在 1920 寬上又小又空 */
   --fs-2xs:calc(11px * var(--ui));
   --fs-xs:calc(12px * var(--ui));
@@ -142,7 +143,7 @@ header h1 span{color:var(--ivory);font-weight:600}
   display:inline-flex;align-items:center;justify-content:center;gap:6px;line-height:1;
   border:1px solid var(--gold);background:transparent;color:var(--gold);
   font-family:inherit;font-size:var(--fs-md);font-weight:500;
-  padding:8px 16px;height:38px;border-radius:var(--radius-pill);cursor:pointer;
+  padding:8px 16px;height:38px;border-radius:var(--radius-btn);cursor:pointer;
   transition:background .2s,color .2s;white-space:nowrap;
 }
 .btn svg{flex:none}
@@ -155,6 +156,7 @@ header h1 span{color:var(--ivory);font-weight:600}
    同一套外觀),只顯示「EN」/「中」文字、不搭配圖示——四個專案不要有的用文字有的用圖示。
    aspect-ratio:1 讓寬度自動跟著當下 .btn 的高度走,不用每個斷點各寫一次寬度 */
 #langToggle{aspect-ratio:1;padding:0}
+#helpToggle,#themeToggle,#langToggle{border-radius:50%}   /* 只有圖示的頂欄按鈕維持圓形 */
 #langToggle[aria-pressed="true"]{background:var(--gold-fill);color:var(--on-fill)}
 /* 頂欄的內距與間距同樣跟著寬度連續縮放,不用斷點硬切(照 ScrollScore 的值) */
 @media (max-width:600px){
@@ -306,7 +308,7 @@ main{
   cursor:pointer;user-select:none;flex:none;
   display:inline-flex;align-items:center;gap:6px;
   background:transparent;font-family:inherit;
-  border:1px solid var(--line);border-radius:var(--radius-pill);
+  border:1px solid var(--line);border-radius:var(--radius-btn);
   padding:5px 14px 5px 10px;font-size:var(--fs-xs);color:var(--muted-bright);
   transition:border-color .15s,color .15s;
 }
@@ -327,7 +329,7 @@ main{
 .filter-rows[hidden],.filter-row[hidden]{display:none}
 .filter-chip{
   border:1px solid var(--line);background:transparent;color:var(--muted-bright);
-  border-radius:var(--radius-pill);padding:5px 12px;font-family:inherit;font-size:var(--fs-xs);
+  border-radius:var(--radius-btn);padding:5px 12px;font-family:inherit;font-size:var(--fs-xs);
   cursor:pointer;transition:border-color .15s,color .15s,background .15s;white-space:nowrap;
 }
 .filter-chip:hover{border-color:var(--gold);color:var(--gold)}
@@ -405,7 +407,7 @@ main{
 .search-wrap{position:relative;margin-bottom:10px}
 .search-wrap input{
   width:100%;height:38px;padding:0 12px 0 34px;
-  background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-pill);
+  background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-btn);
   color:var(--ivory);font-family:inherit;font-size:var(--fs-sm);
 }
 .search-wrap input:focus{outline:none;border-color:var(--gold)}
@@ -610,7 +612,7 @@ body.pr-fs-on{overflow:hidden}
 .pr-custom .filter-chip{flex:none}
 .pr-custom select{flex:none;max-width:38%}
 .pr-custom input{flex:1;min-width:0;background:var(--surface-inset);color:var(--ivory);border:1px solid var(--line);
-                 border-radius:var(--radius-pill);padding:0 12px;height:34px;font:inherit;font-size:var(--fs-sm)}
+                 border-radius:var(--radius-btn);padding:0 12px;height:34px;font:inherit;font-size:var(--fs-sm)}
 .pr-bad{font-size:var(--fs-xs);color:#E07A5F;margin-bottom:6px}
 .pr-go{width:100%;height:44px;font-size:var(--fs-md)}
 /* 開始鈕左邊放速度 − BPM +(播放中手不用離開上面這塊就能調;BPM 數字連點 = 打拍子) */
@@ -768,7 +770,7 @@ table.dia button.link::after{content:"";position:absolute;inset:-10px -8px}
 }
 select.mini{
   background:var(--surface-inset);color:var(--ivory);border:1px solid var(--line);
-  border-radius:var(--radius-pill);padding:0 10px;height:32px;font-family:inherit;font-size:var(--fs-sm);
+  border-radius:var(--radius-btn);padding:0 10px;height:32px;font-family:inherit;font-size:var(--fs-sm);
 }
 select.mini:focus{outline:none;border-color:var(--gold)}
 /* 手機上鍵盤是釘住的,這條工具列也跟著一直佔畫面高度——圖例的資訊
@@ -824,7 +826,7 @@ table.dia button.link:hover{color:var(--gold);border-color:var(--gold)}
 .link-chips{display:flex;flex-wrap:wrap;gap:6px}
 .link-chip{
   border:1px dashed var(--line);background:transparent;color:var(--muted-bright);
-  border-radius:var(--radius-pill);padding:6px 12px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;
+  border-radius:var(--radius-btn);padding:6px 12px;font-family:inherit;font-size:var(--fs-xs);cursor:pointer;
   transition:border-color .15s,color .15s;
 }
 .link-chip:hover{border-color:var(--gold);color:var(--gold)}
