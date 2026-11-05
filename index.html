@@ -1742,6 +1742,7 @@ const CHORDS = [
   {id:"6sus4", sym:"6sus4", zh:"六掛四和弦", en:"6sus4", g:"無三度和弦", t:["1","4","5","6"], lv:1, st:"pop jz", d:"掛四和弦加大六度,沒有七音也沒有三音,常當屬和弦的替代色。", d_en:"A sus4 chord plus a major 6th — no 7th, no 3rd, often used as a dominant substitute color."},
   {id:"7sus2", sym:"7sus2",  zh:"屬七掛留二",   en:"Dominant 7 sus2",  g:"無三度和弦", t:["1","2","5","♭7"],       alias:[], lv:1, st:"pop", d:"用二音取代三音的屬七,聲響比 7sus4 更開闊,吉他刷和弦常見。", d_en:"A dominant 7th with the 2nd replacing the 3rd — an even more open sound than 7sus4, common in guitar strumming."},
   {id:"7sus4", sym:"7sus4",  zh:"屬七掛留四",   en:"Dominant 7 sus4",  g:"無三度和弦", t:["1","4","5","♭7"],       alias:["7sus"], lv:2, st:"pop jz bl", d:"屬七和弦沒有三音、改用四音,張力被軟化,常寫成「ii7/V」的形式當作延遲解決。", d_en:"A dominant 7th with no 3rd, using the 4th instead — the tension is softened, often written as a \"ii7/V\" delayed resolution."},
+  {id:"maj7sus2",sym:"maj7sus2",zh:"大七掛留二",en:"Major 7 sus2",     g:"無三度和弦", t:["1","2","5","7"],        alias:["△7sus2"], lv:1, st:"pop film", d:"三音換成二音、保留大七度,沒有三度所以不分大小調,開闊又帶一點透明的摩擦,流行與電影配樂常用的開放聲響。", d_en:"The 3rd is replaced by the 2nd while the major 7th stays. With no 3rd it is neither major nor minor — open, with a slightly glassy friction, a common open sound in pop and film scoring."},
   {id:"maj7sus4",sym:"maj7sus4",zh:"大七掛留四",en:"Major 7 sus4",     g:"無三度和弦", t:["1","4","5","7"],        alias:["△7sus4"], lv:1, st:"jz film", d:"四音與大七度同時存在,是「四度堆疊」聲位的自然結果,現代爵士鋼琴很愛用。", d_en:"The 4th coexists with a major 7th — the natural result of a \"fourths-stacked\" voicing, a favorite of modern jazz piano."},
   {id:"quartal", sym:"7sus4(no5)", zh:"四度和弦", en:"Quartal", g:"無三度和弦", t:["1","4","♭7"], alias:[], lv:1, st:"jz film", d:"兩個完全四度疊起來,是現代爵士鋼琴與配樂的基本聲響,調性歸屬刻意模糊。", d_en:"Two perfect 4ths stacked — the basic sound of modern jazz piano and film scoring, deliberately blurring tonal center."},
   {id:"9sus4", sym:"9sus4",  zh:"屬九掛留四",   en:"9 sus4",           g:"無三度和弦", t:["1","4","5","♭7","9"],    alias:["11"], lv:2, st:"pop jz", d:"實務上就是把 ii 級小七和弦架在 V 的根音上,爵士鋼琴的經典開放聲位。", d_en:"In practice this is just a minor ii7 chord placed over the root of V — a classic open jazz-piano voicing."},
@@ -1940,7 +1941,7 @@ const CHORD_SCALES = {
   "7b9s11":["dimHW"], "7s9b13":["altered"], "7alt":["altered"],
   // ── 新增的和弦 ──
   m69:["dorian","melMinor"], adds11:["lydian"],
-  "7sus2":["mixolydian"], maj7sus4:["ionian"],
+  "7sus2":["mixolydian"], maj7sus2:["ionian","lydian"], maj7sus4:["ionian"],
   maj7b5:["lydian","lydianAug"], dimMaj7:["dimWH"], m7s5:["aeolian","phrygian"],
   "7s5s9":["altered"], "7s5b9":["altered","phrygDom"],
   "9s11":["lydianDom"], maj9s11:["lydian"], "13s11":["lydianDom"],
@@ -4150,7 +4151,7 @@ function buildRootPicker(){
   }
 }
 
-/* 常用和弦快速鍵:最常查的 14 種,不用進清單找。完整的 82 種還是在下面的清單裡 */
+/* 常用和弦快速鍵:最常查的 14 種,不用進清單找。完整的 83 種還是在下面的清單裡 */
 const QUICK_CHORDS = [["maj","maj"],["min","min"],["7","7"],["maj7","maj7"],["m7","m7"],["m7b5","m7♭5"],["dim","dim"],
                       ["aug","aug"],["sus2","sus2"],["sus4","sus4"],["6","6"],["9","9"],["add9","add9"],["13","13"]];
 function buildQuickGrid(){
@@ -4604,7 +4605,7 @@ function intervalSteps(notes){
 }
 
 /* 斜線和弦的低音:和弦內音做成按鈕(D/F♯、C/G、G/B 這類轉位最常用),
-   和弦外的音收在一個下拉(D/C 這種),12 × 82 種組合全部即時算,不另外存條目 */
+   和弦外的音收在一個下拉(D/C 這種),12 × 83 種組合全部即時算,不另外存條目 */
 function bassPickerHtml(def){
   const b = bassInfo();
   const seen = new Set([0]);
@@ -6784,7 +6785,7 @@ document.addEventListener("pointerdown", ev => {
   if (!pop.hidden && !pop.contains(ev.target) && !$("printOpen").contains(ev.target)) togglePrintPop(false);
 });
 document.addEventListener("keydown", ev => { if (ev.key === "Escape" && !$("printPop").hidden) togglePrintPop(false); });
-/* 產生列印版面。吉他指法要窮舉(全部 82 種 × 12 根音要幾秒),每個根音做完讓出一次主執行緒、按鈕上顯示進度 */
+/* 產生列印版面。吉他指法要窮舉(全部 83 種 × 12 根音要幾秒),每個根音做完讓出一次主執行緒、按鈕上顯示進度 */
 /* 分頁自己排(不交給瀏覽器):每一頁是一個固定 A4 內容區大小的框(277mm 高),和弦圖一排的高度用 mm 固定,
    先算好每頁放得下幾排,頁尾放在每一頁框的最下面。原本用 position:fixed 的頁尾:Chrome 第 1 頁沒有、最後多一張空白頁,
    固定在底部又會壓到最後一排;@page 的頁邊文字 iPhone Safari 不支援(實際產生 PDF 逐頁檢查過)。
