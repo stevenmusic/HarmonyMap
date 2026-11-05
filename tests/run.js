@@ -354,7 +354,7 @@ async function openPage(browser, opts = {}){
     report("指法挑選", r.total, r.fails);
   }
 
-  /* ── 3c. 每一個列出來的指法都要按得到(80 種 × 12 根音 × 原位與 11 種低音,清單裡的每一個,不只第一個) ── */
+  /* ── 3c. 每一個列出來的指法都要按得到(82 種 × 12 根音 × 原位與 11 種低音,清單裡的每一個,不只第一個) ── */
   {
     const r = await p.evaluate(() => {
       const fails = []; let total = 0;
@@ -1641,6 +1641,63 @@ async function openPage(browser, opts = {}){
     report("分享連結", total, fails);
   }
 
+  /* ── 補上的條目(m7♭9、7add13、屬音五聲、小六五聲)與世界音階的整理:
+        拼寫、名稱解析、辨識;隱藏同音重複預設打開且會記住;世界音階的分類鈕排在最後、前面有分隔線;
+        選中的重複條目不會從清單消失 ── */
+  {
+    const fails = []; let total = 0;
+    const check = (cond, msg) => { total++; if (!cond) fails.push(msg); };
+    const q = await openPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const r = await q.evaluate(() => {
+      const names = (list, id) => list.find(x => x.id === id).t.map(tk => spell(0, 0, tk).name).join(" ");
+      const out = {
+        m7b9: names(CHORDS, "m7b9"), add13: names(CHORDS, "7add13"),
+        domPent: names(SCALES, "domPent"), m6Pent: names(SCALES, "m6Pent"),
+        parse: ["Cm7b9", "C7add13", "C7(13)", "F#m7b9/A"].map(x => { const pc = parseChordName(x); return pc ? pc.def.id : null; }).join(","),
+        match: matchChords(0, [0, 4, 7, 10, 9]).map(c => c.id).join(","),
+        hide: STATE.hideDup
+      };
+      STATE.tab = "scale"; STATE.group.scale = ""; render();
+      const kids = [...$("groupTabs").children];
+      const si = kids.findIndex(e => e.classList.contains("group-sep"));
+      const label = e => e.children[0] ? e.children[0].textContent : "";
+      out.sep = si;
+      out.before = kids.slice(0, si).map(label).filter(x => WORLD_GROUPS.has(x));
+      out.after = kids.slice(si + 1).map(label).filter(x => !WORLD_GROUPS.has(x));
+      out.lastIds = SCALES.slice(-3).map(x => x.g);
+      out.hiddenNow = filteredItems().some(x => x.id === "kafi");
+      STATE.scaleId = "kafi"; render();
+      out.keepSel = filteredItems().some(x => x.id === "kafi");
+      STATE.scaleId = "ionian"; render();
+      return out;
+    });
+    check(r.m7b9 === "C E♭ G B♭ D♭", "Cm7♭9 拼寫: " + r.m7b9);
+    check(r.add13 === "C E G B♭ A", "C7add13 拼寫: " + r.add13);
+    check(r.domPent === "C D E G B♭", "C 屬音五聲: " + r.domPent);
+    check(r.m6Pent === "C E♭ F G A", "C 小六五聲: " + r.m6Pent);
+    check(r.parse === "m7b9,7add13,7add13,m7b9", "名稱解析: " + r.parse);
+    check(r.match.split(",").includes("7add13"), "C E G B♭ A 要辨識成 C7add13: " + r.match);
+    check(r.hide === 1, "隱藏同音重複預設要打開: " + r.hide);
+    check(r.sep > 0 && !r.before.length && !r.after.length, "世界音階要排在分隔線之後: " + JSON.stringify(r));
+    check(r.lastIds.every(g => g === "非洲音階"), "SCALES 的最後要是世界音階: " + r.lastIds);
+    check(!r.hiddenNow && r.keepSel, "隱藏重複時,選中的重複條目要留在清單上: " + JSON.stringify(r));
+    // 英文介面的分隔線
+    await q.click("#langToggle");
+    const en = await q.evaluate(() => { STATE.tab = "scale"; render(); const d = document.querySelector("#groupTabs .group-sep"); return d ? d.textContent : ""; });
+    check(en === "World scales", "英文分隔線: " + en);
+    await q.click("#langToggle");
+    // 關掉之後重新整理要記住
+    await q.evaluate(() => { STATE.tab = "scale"; STATE.filtersOpen = true; render(); });
+    await q.click("#dupRow .filter-chip");
+    await q.reload(); await q.waitForTimeout(300);
+    const after = await q.evaluate(() => STATE.hideDup);
+    check(after === 0, "關掉隱藏重複後重新整理要記住: " + after);
+    await q.evaluate(() => { try { localStorage.removeItem("harmonymap.hideDup"); } catch (e) {} });
+    if (q._errors && q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
+    await q.close();
+    report("補上的條目與世界音階", total, fails);
+  }
+
   /* ── 和弦表(列印 / 存成 PDF):張數、每張都有圖、英文沒有中文、只有和弦分頁有按鈕、320 寬不擠壞、列印時只印和弦表 ── */
   {
     const fails = []; let total = 0;
@@ -1655,7 +1712,7 @@ async function openPage(browser, opts = {}){
       total++; if (row.over || row.search < 90 || (w > 380 && row.h > 44))   // ≤380 寬搜尋獨佔一行、按鈕在下面一排(搜尋框不再被擠到 29~99px)
        fails.push("清單上方那排擠壞了(" + w + "): " + JSON.stringify(row));
       await q.click("#printOpen");
-      for (const [inst, lv, want] of [["guitar", "core", 84], ["piano", "other", 73 * 12], ["guitar", "all", 80 * 12]]) {
+      for (const [inst, lv, want] of [["guitar", "core", 84], ["piano", "other", 75 * 12], ["guitar", "all", 82 * 12]]) {
         await q.click('#printPop [data-g="inst"][data-v="' + inst + '"]'); await q.click('#printPop [data-g="set"][data-v="' + lv + '"]');
         await q.click('#printPop [data-g="roots"][data-v="all"]');
         await q.click("#printGo"); await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
