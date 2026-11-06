@@ -24,6 +24,8 @@ const results = [];   // { group, total, fails: [] }
 let lastT = Date.now();
 function report(group, total, fails){ results.push({ group, total, fails, ms: Date.now() - lastT }); lastT = Date.now(); }
 
+/* 換樂器:右上角的樂器鈕是切換鈕,不是目前要的樂器才按 */
+async function setInst(q, inst){ if ((await q.evaluate(() => STATE.inst)) !== inst) await q.click("#instToggle"); }
 async function openPage(browser, opts = {}){
   const p = await browser.newPage(Object.assign({ viewport: { width: 1200, height: 900 } }, opts));
   p._errors = [];
@@ -596,7 +598,7 @@ async function openPage(browser, opts = {}){
   /* ── 5. 互動:鋼琴只讓組成音發聲、摘要列音名單獨發聲、吉他撥弦與刷弦 ── */
   {
     const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
-    await q.click("#instPiano");
+    await setInst(q, "piano");
     await q.evaluate(() => {
       STATE.tab = "chord"; STATE.letter = 0; STATE.acc = 0; STATE.chordId = "maj7"; render();
       window._log = [];
@@ -749,7 +751,7 @@ async function openPage(browser, opts = {}){
     total++; if (await q.evaluate(() => !!rootSlashState())) fails.push("換分頁回來 / 應該取消");
     await q.evaluate(() => { STATE.letter = 0; STATE.acc = 0; STATE.chordId = "maj7"; STATE.bassIv = null; render(); }); await take();
 
-    await q.click("#instGuitar");
+    await setInst(q, "guitar");
     await q.evaluate(() => { STATE.chordId = "maj"; render(); });
     // 吉他和弦分頁:上方是這個和弦的每種指法排在一起(不是長指板)
     const gal = await q.evaluate(() => ({ n: document.querySelectorAll("#gtrDiagrams .gd").length, list: currentVoicingSet().list.length,
@@ -851,7 +853,7 @@ async function openPage(browser, opts = {}){
     });
     total++; if (sp2.bad.length || sp2.blues !== 5 || sp2.box1 !== "5-8") fails.push("吉他音階把位全檢: " + JSON.stringify(sp2));
     // 鋼琴音階只顯示一個八度(從 C 或 F 開始)
-    await q.click("#instPiano");
+    await setInst(q, "piano");
     const po = await q.evaluate(() => { STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; render(); const c = KB_WHITE_KEYS.length; STATE.letter = 4; render(); const g = [KB_LOW % 12, KB_WHITE_KEYS.length]; STATE.tab = "chord"; STATE.letter = 0; render(); return [c, g]; });
     total++; if (po[0] !== 8 || po[1][0] !== 5 || po[1][1] !== 9) fails.push("鋼琴音階一個八度: " + JSON.stringify(po));
     // 每個音階的公式都在一個八度內、由低到高,鋼琴上剛好是主音到高八度主音(新增音階時別超過)
@@ -860,7 +862,7 @@ async function openPage(browser, opts = {}){
         if (Math.max(...se) >= 12 || !se.every((x, i) => !i || x > se[i - 1]) || Math.max(...d) - Math.min(...d) !== 12) bad.push(sc.id); }
       STATE.tab = "chord"; STATE.inst = "guitar"; render(); return bad; });
     total++; if (over.length) fails.push("音階超過一個八度: " + over.join(", "));
-    await q.click("#instGuitar");
+    await setInst(q, "guitar");
     // 音階分頁仍然是長指板
     await q.click("#tabScale");
     total++; if (await q.evaluate(() => $("keyboardCanvas").getBoundingClientRect().height === 0 || !$("gtrDiagrams").hidden)) fails.push("音階分頁應該用長指板");
@@ -911,12 +913,12 @@ async function openPage(browser, opts = {}){
     const vis = () => q.evaluate(() => !$("audioStatus").hidden);
     await q.evaluate(() => { setInstrument("guitar"); setAudioStatus("loadingGuitar"); });
     if (!await vis()) fails.push("吉他畫面沒有顯示載入提示");
-    await q.click("#instPiano");
+    await setInst(q, "piano");
     if (await vis()) fails.push("換到鋼琴後還顯示「載入吉他音色中」");
-    await q.click("#instGuitar");
+    await setInst(q, "guitar");
     if (!await vis()) fails.push("吉他音色還在載入,換回吉他時提示沒有回來");
     await q.evaluate(() => setAudioStatus("loadingPiano"));
-    await q.click("#instPiano");
+    await setInst(q, "piano");
     if (!await vis()) fails.push("鋼琴音色的載入提示被誤藏");
     await q.close();
     report("音色載入提示跟著樂器", 4, fails);
@@ -925,7 +927,7 @@ async function openPage(browser, opts = {}){
   /* ── 5c. 換和弦練習:輸入板排進行、上方換成「現在 / 下一個」兩張圖、節拍器實際換和弦 ── */
   {
     const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
-    await q.click("#instPiano");
+    await setInst(q, "piano");
     await q.click("#tabProg");
     const fails = [];
     let total = 0;
@@ -1070,12 +1072,12 @@ async function openPage(browser, opts = {}){
     check((await steps()) === "C D/F♯", "Backspace 沒有刪除最後一個: " + await steps());
     await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");
     // 吉他:下一個和弦的圖就是指板上會用的指法
-    await q.click("#instGuitar"); await q.click("#tabProg").catch(() => {});
+    await setInst(q, "guitar"); await q.click("#tabProg").catch(() => {});
     const nt = await q.evaluate(() => { const lab = document.querySelectorAll("#practiceStage svg.dg")[1].getAttribute("aria-label");
       const st = PRACTICE.steps[1]; const b = st.bass == null ? null : pcOf(LETTER_PC[st.letter] + st.acc + st.bass);
       const vs = chordVoicingsFor(pcOf(LETTER_PC[st.letter] + st.acc), chordById(st.id), b); return [lab, gtrTabText(vs.list[vs.best].frets)]; });
     check(nt[0] === nt[1], "下一個和弦的吉他圖不是指板上會用的指法: " + nt.join(" / "));
-    await q.click("#instPiano"); await q.click("#tabProg").catch(() => {});
+    await setInst(q, "piano"); await q.click("#tabProg").catch(() => {});
     // 速度 − / +、卡片高度
     await q.click("#prFaster"); await q.click("#prFaster"); await q.click("#prSlower");
     check((await q.evaluate(() => PRACTICE.bpm)) === 75, "速度加減不對");
@@ -1218,7 +1220,7 @@ async function openPage(browser, opts = {}){
     // 換語言時上方分頁與樂器按鈕不能移位、文字不能被切掉(使用者要求)
     for (const w of [320, 390, 1280]) {
       const z = await openPage(browser, { viewport: { width: w, height: 700 } });
-      const pos = () => z.evaluate(() => ["tabChord", "tabScale", "tabFind", "instPiano", "instGuitar"].map(id => { const e = document.getElementById(id), r = e.getBoundingClientRect();
+      const pos = () => z.evaluate(() => ["tabChord", "tabScale", "tabFind", "tabProg", "instToggle"].map(id => { const e = document.getElementById(id), r = e.getBoundingClientRect();
         return [Math.round(r.left), Math.round(r.width), Math.round(r.top), Math.round(r.height), e.scrollWidth > e.clientWidth + 1 ? "cut" : ""].join("/"); }).join(" "));
       const a1 = await pos(); await z.click("#langToggle"); const a2 = await pos();
       total++; if (a1 !== a2 || /cut/.test(a1 + a2)) fails.push("換語言分頁移位或文字被切(" + w + "px): " + a1 + " → " + a2);
@@ -1256,7 +1258,7 @@ async function openPage(browser, opts = {}){
     for (const [w, h, shouldUnstick] of sizes) for (const inst of ["piano", "guitar"]) {
       total++;
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
-      await q.click(inst === "guitar" ? "#instGuitar" : "#instPiano");
+      await setInst(q, inst);
       await q.waitForTimeout(150);
       const m = await q.evaluate(() => {
         const sum = $("kbSummary");
@@ -1284,7 +1286,7 @@ async function openPage(browser, opts = {}){
         await q.click("#tab" + tab);
         const m = {};
         for (const inst of ["Piano", "Guitar"]) {
-          await q.click("#inst" + inst); await q.waitForTimeout(60);
+          await setInst(q, inst.toLowerCase()); await q.waitForTimeout(60);
           m[inst] = await q.evaluate(() => { const c = $("rootCard").hidden ? $("findCard") : $("rootCard");
             return Math.round(document.querySelector(".kb-wrap").getBoundingClientRect().height) + "/" + Math.round(c.getBoundingClientRect().top); });
         }
@@ -1298,7 +1300,7 @@ async function openPage(browser, opts = {}){
       const got = [];
       for (const inst of ["Piano", "Guitar"]) for (const tab of ["Chord", "Scale", "ScaleB"]) {
         got.push(await q.evaluate(([t, i]) => { if (t === "ScaleB") { $("tabScale").click(); STATE.letter = 6; STATE.acc = 0; render(); } else $("tab" + t).click();
-          $("inst" + i).click(); scrollTo(0, 0);
+          setInstrument(i.toLowerCase()); scrollTo(0, 0);
           return Math.round($("kbSummary").getBoundingClientRect().top - document.querySelector(".kb-wrap").getBoundingClientRect().top); }, [tab, inst]));
       }
       total++; if (new Set(got).size !== 1) fails.push("和弦/音階顯示區不同高(" + w + "×" + h + "): " + got.join(","));
@@ -1311,7 +1313,7 @@ async function openPage(browser, opts = {}){
       for (const tab of ["Chord", "Scale", "Find"]) {
         const got = {};
         for (const inst of ["Guitar", "Piano"]) {
-          await q.evaluate(([t, i]) => { $("tab" + t).click(); $("inst" + i).click(); scrollTo(0, 0); }, [tab, inst]);
+          await q.evaluate(([t, i]) => { $("tab" + t).click(); setInstrument(i.toLowerCase()); scrollTo(0, 0); }, [tab, inst]);
           await q.waitForTimeout(80);
           got[inst] = await q.evaluate(() => { const c = [$("rootCard"), $("findCard")].find(x => !x.hidden).getBoundingClientRect();
             return [Math.round(c.bottom), Math.round(document.querySelector(".kb-wrap").getBoundingClientRect().bottom), Math.round(document.querySelector(".lower").getBoundingClientRect().top)]; });
@@ -1322,10 +1324,10 @@ async function openPage(browser, opts = {}){
       }
       // 比例:和弦圖最多放大 GD_MAX_K(2.2)倍,而圖裡的字(數字/格數/×)照螢幕像素限制在 16px 以內,才不會比介面的字大一截(使用者回報過);鋼琴白鍵最寬 56px(一個八度不會變方磚)
       const prop = await q.evaluate(() => {
-        $("tabChord").click(); $("instGuitar").click();
+        $("tabChord").click(); setInstrument("guitar");
         const sv = document.querySelector("#gtrDiagrams svg"), bb = sv.getBoundingClientRect(), vb = sv.viewBox.baseVal;
         const k = Math.min(bb.width / vb.width, bb.height / vb.height);
-        $("tabScale").click(); $("instPiano").click();
+        $("tabScale").click(); setInstrument("piano");
         const key = $("keyboardCanvas").getBoundingClientRect().width / Math.max(KB_WHITE_KEYS.length, 1);
         $("tabChord").click();
         const big = Math.max(...[...sv.querySelectorAll("text.fn, text.frl, text.mx")].map(t => parseFloat(t.getAttribute("font-size")) * k));
@@ -1339,14 +1341,14 @@ async function openPage(browser, opts = {}){
     // 模擬成「resize 完全沒幫上忙」(在 App 之前攔掉),轉向後大小要跟直接用橫向打開一樣
     for (const inst of ["Piano", "Guitar"]) {
       const ref = await openPage(browser, { viewport: { width: 932, height: 430 }, hasTouch: true, isMobile: true });
-      await ref.click("#inst" + inst); await ref.waitForTimeout(100);
+      await setInst(ref, inst.toLowerCase()); await ref.waitForTimeout(100);
       const want = await ref.evaluate(() => [$("keyboardCanvas"), $("gtrDiagrams")].map(e => Math.round(e.getBoundingClientRect().height)).join("/"));
       await ref.close();
       const q = await browser.newPage({ viewport: { width: 430, height: 932 }, hasTouch: true, isMobile: true });
       await q.route(/^https?:\/\//, r => r.abort());
       await q.addInitScript(() => { window.addEventListener("resize", e => e.stopImmediatePropagation()); });
       await q.goto(PAGE);
-      await q.click("#inst" + inst); await q.waitForTimeout(100);
+      await setInst(q, inst.toLowerCase()); await q.waitForTimeout(100);
       await q.setViewportSize({ width: 932, height: 430 }); await q.waitForTimeout(300);
       const got = await q.evaluate(() => [$("keyboardCanvas"), $("gtrDiagrams")].map(e => Math.round(e.getBoundingClientRect().height)).join("/"));
       total++; if (got !== want) fails.push("轉橫向後大小不對(" + inst + "):" + got + ",直接橫向打開是 " + want);
@@ -1356,7 +1358,7 @@ async function openPage(browser, opts = {}){
     // 模擬標籤變高,圖與標籤都要還在格子裡
     for (const [w, h] of [[320, 568], [390, 844], [430, 932], [932, 430]]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: true, isMobile: true });
-      await q.click("#instGuitar"); await q.waitForTimeout(100);
+      await setInst(q, "guitar"); await q.waitForTimeout(100);
       await q.addStyleTag({ content: ".gtr-dgs .gd-lab{font-size:19px !important;line-height:2.4 !important}" });
       await q.waitForTimeout(250);
       const bad = await q.evaluate(() => [...document.querySelectorAll("#gtrDiagrams .gd")].map(d => {
@@ -1425,7 +1427,7 @@ async function openPage(browser, opts = {}){
     for (const [w, h] of [[320, 568], [390, 844], [430, 932], [844, 390], [1280, 860]]) for (const lang of ["en", "zh"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
       if (lang === "en") await q.click("#langToggle");
-      await q.click("#instGuitar"); await q.waitForTimeout(200);
+      await setInst(q, "guitar"); await q.waitForTimeout(200);
       const r = await q.evaluate(() => [...document.querySelectorAll("#gtrDiagrams .gd")].map(c => { const cr = c.getBoundingClientRect();
         return [...c.querySelectorAll("text.slab")].map(t => { const b = t.getBoundingClientRect(); return t.textContent + (b.left < cr.left - 0.5 || b.right > cr.right + 0.5 ? "被切" : ""); }).join("/"); }));
       const want = lang === "zh" ? "粗/細" : w >= 430 ? "low/high" : "L/H";
@@ -1489,7 +1491,7 @@ async function openPage(browser, opts = {}){
     // 鍵盤設定面板:整個放得進鍵盤區(overflow:hidden 會切掉)、不能蓋住齒輪、再點齒輪要關得掉(點在圖示上也一樣)
     for (const [w, h] of [[320, 568], [844, 390], [390, 844], [1280, 860]]) for (const inst of ["Piano", "Guitar"]) {
       const q = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
-      await q.click("#inst" + inst);
+      await setInst(q, inst.toLowerCase());
       await q.click("#kbGear svg");
       const r = await q.evaluate(() => { const g = $("kbGear").getBoundingClientRect(), pp = $("kbPopover").getBoundingClientRect(), wr = document.querySelector(".kb-wrap").getBoundingClientRect();
         return { open: !$("kbPopover").hidden, overlap: !(pp.right <= g.left || pp.left >= g.right || pp.bottom <= g.top || pp.top >= g.bottom),
@@ -1526,7 +1528,7 @@ async function openPage(browser, opts = {}){
       total++; if (fit.over || !fit.same) fails.push("練習的現在/下一個:長名稱被切或兩格字級不同 " + JSON.stringify(fit));
       await q.click("#tabChord");
       // 矮螢幕往下捲之後換分頁,分頁鈕要留在原地:吉他音階時釘住區是釘著的,換到辨識會改成不釘
-      await q.click("#instGuitar"); await q.click("#tabScale");
+      await setInst(q, "guitar"); await q.click("#tabScale");
       await q.evaluate(() => scrollTo(0, 300));
       const y0 = await q.evaluate(() => Math.round($("tabFind").getBoundingClientRect().top));
       await q.evaluate(() => $("tabFind").click());   // 不用 q.click:它會先把按鈕捲進畫面
@@ -1801,7 +1803,7 @@ async function openPage(browser, opts = {}){
       const zh = await pos();
       await z.click("#langToggle");
       const en = await pos();
-      const clip = await z.evaluate(() => ["tabChord", "tabScale", "tabFind", "tabProg", "instGuitar", "instPiano"].filter(id => { const b = $(id); return b.scrollWidth > b.clientWidth + 1 || b.getBoundingClientRect().width < 28; }));
+      const clip = await z.evaluate(() => ["tabChord", "tabScale", "tabFind", "tabProg", "instToggle"].filter(id => { const b = $(id); return b.scrollWidth > b.clientWidth + 1 || b.getBoundingClientRect().width < 28; }));
       const over = await z.evaluate(() => document.documentElement.scrollWidth > innerWidth);
       check(zh === en, "換語言分頁位置要一樣(" + w + "): " + zh + " → " + en);
       check(!clip.length && !over, "英文分頁/樂器切換被截斷或太小(" + w + "): " + clip.join(","));
@@ -1813,6 +1815,35 @@ async function openPage(browser, opts = {}){
       await z.click("#tabChord");
       const back = await z.evaluate(() => ({ running: PRACTICE.running, open: PRACTICE.open, list: !$("typeCard").hidden, lib: $("libCard").hidden, sel: $("tabChord").getAttribute("aria-selected") }));
       check(!back.running && !back.open && back.list && back.lib && back.sel === "true", "從進行回到和弦要停止、顯示清單(" + w + "): " + JSON.stringify(back));
+      if (z._errors && z._errors.length) fails.push("頁面錯誤(" + w + ") " + z._errors.join("; "));
+      await z.close();
+    }
+    // 上方「現在/下一個」下面的整組和弦名稱:全部列出、目前的亮、停止時點了跳過去;12 個和弦時高度不變、目前那個捲進畫面
+    for (const [w, h] of [[280, 653], [390, 844], [1280, 800]]) {
+      const z = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      await z.click("#tabProg");
+      await z.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; render(); });
+      await z.click('#libCard [data-lib="0"]');
+      const a1 = await z.evaluate(() => ({ names: [...document.querySelectorAll("#prStrip .ps-chip")].map(c => c.textContent).join(" "), cur: document.querySelector("#prStrip .cur").textContent, nxt: document.querySelector("#prStrip .nxt").textContent, h: Math.round($("practiceStage").getBoundingClientRect().height) }));
+      check(a1.names === "C G Am F" && a1.cur === "C" && a1.nxt === "G", "整組和弦名稱(" + w + "): " + JSON.stringify(a1));
+      await z.click('#prStrip .ps-chip >> nth=2');
+      const a2 = await z.evaluate(() => [PRACTICE.step, STATE.chordId, document.querySelector("#prStrip .cur").textContent, $("prNow").textContent].join(" "));
+      check(a2 === "2 min Am Am", "點和弦名稱要跳過去(" + w + "): " + a2);
+      // 12 個和弦(藍調):一列、高度不變,目前那個在可見範圍裡
+      await z.click('#libCard [data-cat="blues"]'); await z.click('#libCard [data-lib="17"]');
+      await z.evaluate(() => { PRACTICE.step = 10; practiceTick(); });
+      const a3 = await z.evaluate(() => { const st = $("prStrip"), c = st.querySelector(".cur"), r = st.getBoundingClientRect(), cr = c.getBoundingClientRect();
+        return { n: st.children.length, h: Math.round($("practiceStage").getBoundingClientRect().height), vis: cr.left >= r.left - 1 && cr.right <= r.right + 1, rows: new Set([...st.children].map(x => Math.round(x.getBoundingClientRect().top))).size }; });
+      check(a3.n === 12 && a3.rows === 1 && a3.h === a1.h && a3.vis, "藍調 12 個和弦的名稱列(" + w + "): " + JSON.stringify(a3) + " 原本高 " + a1.h);
+      // 右上角四顆圓鈕不能跟品牌名重疊,也不能超出畫面
+      const hd = await z.evaluate(() => { const b = document.querySelector("header h1").getBoundingClientRect(), bs = [...document.querySelectorAll(".header-right .btn")].map(x => x.getBoundingClientRect());
+        return { n: bs.length, overlap: bs.some(r => r.left < b.right - 1), out: bs.some(r => r.right > innerWidth + 1), small: bs.some(r => r.width < 28 || r.height < 28), rows: new Set(bs.map(r => Math.round(r.top))).size }; });
+      check(hd.n === 4 && !hd.overlap && !hd.out && !hd.small && hd.rows === 1, "右上角按鈕(" + w + "): " + JSON.stringify(hd));
+      // 樂器鈕:點一下換樂器,圖示與說明跟著換
+      const i1 = await z.evaluate(() => STATE.inst + "|" + $("instToggle").title);
+      await z.click("#instToggle");
+      const i2 = await z.evaluate(() => STATE.inst + "|" + $("instToggle").title + "|" + !!$("instIcon").querySelector("rect"));
+      check(i1.startsWith("guitar|") && /^piano\|.*鋼琴.*吉他.*\|true$/.test(i2), "樂器鈕切換(" + w + "): " + i1 + " → " + i2);
       if (z._errors && z._errors.length) fails.push("頁面錯誤(" + w + ") " + z._errors.join("; "));
       await z.close();
     }
@@ -1865,7 +1896,7 @@ async function openPage(browser, opts = {}){
       // 第一次打開(沒有存過樂器)預設是吉他(使用者要求)
       total++;
       { const z = await openPage(browser, { viewport: { width: 390, height: 844 } });
-        if (!(await z.evaluate(() => STATE.inst === "guitar" && $("instGuitar").getAttribute("aria-pressed") === "true"))) fails.push("第一次打開應該預設吉他");
+        if (!(await z.evaluate(() => STATE.inst === "guitar" && $("instToggle").getAttribute("aria-pressed") === "true" && /吉他|Guitar/.test($("instToggle").title)))) fails.push("第一次打開應該預設吉他");
         await z.close(); }
       // 使用者指正過的指法(和弦表與網頁用同一個 gtrFingering)
       total++;
@@ -1903,9 +1934,9 @@ async function openPage(browser, opts = {}){
       total++;
       { const f = await q.evaluate(() => { const vs = chordVoicingsFor(5, chordById("maj")); return vs.list.map(v => gtrTabText(v.frets)); });
         if (f[0] !== "× × 3 2 1 1" || !f.includes("1 3 3 2 1 1")) fails.push("F 的按法順序: " + f.join(" | ")); }
-      // 樂器切換鈕與和弦表的樂器選項同一個順序:吉他在左、鋼琴在右
+      // 樂器鈕在右上角,跟 ? ◐ 語言同一組;分頁那排只剩四個分頁
       total++;
-      if (await q.evaluate(() => [...document.querySelectorAll(".inst-switch button")].map(b => b.id).join() !== "instGuitar,instPiano")) fails.push("樂器切換鈕應該吉他在左、鋼琴在右");
+      if (await q.evaluate(() => !$("instToggle").closest(".header-right") || document.querySelectorAll(".tab-row button").length !== 4)) fails.push("樂器鈕應該在右上角、分頁那排只有四個分頁");
       // 只有目前的根音、基本 7 種:照「大三 小三 maj7 m7 7 m7♭5 dim7」排
       await q.click('#printPop [data-g="set"][data-v="core"]'); await q.click('#printPop [data-g="roots"][data-v="cur"]'); await q.click("#printGo");
       await q.waitForFunction(() => !PRINT.busy, null, { timeout: 60000 });
