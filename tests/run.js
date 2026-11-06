@@ -772,7 +772,7 @@ async function openPage(browser, opts = {}){
     // 結果面板:「+ 加入練習」把目前的和弦(含斜線低音)排進練習,練習按鈕上的數字跟著加
     await q.evaluate(() => { PRACTICE.steps = []; STATE.chordId = "maj"; STATE.bassIv = 4; STATE.bassFor = "maj"; render(); });
     await q.click("#addToPractice");
-    const ap = await q.evaluate(() => [PRACTICE.steps.map(stepName).join(" "), $("practiceCount").textContent]);
+    const ap = await q.evaluate(() => [PRACTICE.steps.map(stepName).join(" "), ($("addToPractice").textContent.match(/\d+/) || [""])[0]]);   // 個數寫在按鈕上(「已加入(共 1 個)」)
     total++; if (ap[0] !== "C/E" || ap[1] !== "1") fails.push("加入練習: " + ap.join(" / "));
     // 低音列不再有「其他音…」下拉(交給根音卡片的 /);組成音是一列小晶片
     total++; if (await q.locator("#bassOther").count()) fails.push("低音列還有「其他音」下拉");
@@ -926,7 +926,7 @@ async function openPage(browser, opts = {}){
   {
     const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
     await q.click("#instPiano");
-    await q.click("#practiceOpen");
+    await q.click("#tabProg");
     const fails = [];
     let total = 0;
     const check = (cond, msg) => { total++; if (!cond) fails.push(msg); };
@@ -1038,28 +1038,25 @@ async function openPage(browser, opts = {}){
     check((await steps()) === "C D/F♯ Em", "移調回來: " + await steps());
     check((await q.evaluate(() => localStorage.getItem("harmonymap.practice"))) === "C D/F♯ Em", "目前的進行沒有存在裝置上");
     await q.click("#prSave");
-    // 存的進行在「進行庫」面板的「我存的」分類
-    const savedItems = async () => { await q.click("#prLibBtn"); await q.click('#libPop [data-cat="saved"]'); const n = await q.locator("#libPop [data-saved]").count(); return n; };
+    // 存的進行在「進行」分頁進行庫的「我存的」分類
+    const savedItems = async () => { await q.click('#libCard [data-cat="saved"]'); return q.locator("#libCard [data-saved]").count(); };
     check((await q.getAttribute("#prSave", "aria-pressed")) === "true" && (await savedItems()) === 1, "儲存後應該出現在「我存的」");
-    await q.click("#libClose");
+    check((await q.getAttribute("#libCard [data-saved]", "aria-current")) === "true", "目前這一組在「我存的」要框起來");
     await q.click("#prClearSteps");
-    await q.click("#prLibBtn"); await q.click("#libPop [data-saved]");
-    check((await steps()) === "C D/F♯ Em" && await q.evaluate(() => $("libPop").hidden), "載入已存的進行(面板要關起來): " + await steps());
+    await q.click("#libCard [data-saved]");
+    check((await steps()) === "C D/F♯ Em", "載入已存的進行: " + await steps());
     await q.click("#prSave");
-    check((await savedItems()) === 0 && (await q.locator("#libPop .lib-empty").count()) === 1, "取消儲存後「我存的」應該是空的");
-    // 常用進行:分類「流行」第一條,以輸入板的根音 C 為主音;Esc 關面板
-    await q.click('#libPop [data-cat="pop"]');
-    await q.keyboard.press("Escape");
-    check(await q.evaluate(() => $("libPop").hidden), "Esc 要關掉進行庫");
-    await q.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; renderPractice(); });
-    await q.click("#prLibBtn"); await q.click("#libPop [data-lib] >> nth=0");
+    check((await savedItems()) === 0 && (await q.locator("#libCard .lib-empty").count()) === 1, "取消儲存後「我存的」應該是空的");
+    // 常用進行:分類「流行」第一條,以輸入板的根音 C 為主音;載入後那一張要框起來
+    await q.click('#libCard [data-cat="pop"]');
+    await q.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; render(); });
+    await q.click("#libCard [data-lib] >> nth=0");
     check((await steps()) === "C G Am F", "進行庫:流行歌萬用進行(C): " + await steps());
-    // 點面板外面要關;面板開著時按字母不能偷換輸入板根音
-    await q.click("#prLibBtn");
-    await q.keyboard.press("g");
-    check(await q.evaluate(() => PRACTICE.pad.letter === 0 && !$("libPop").hidden), "面板開著時字母鍵不能換根音");
-    await q.mouse.click(5, 5);
-    check(await q.evaluate(() => $("libPop").hidden), "點面板外面要關掉");
+    check((await q.getAttribute("#libCard [data-lib] >> nth=0", "aria-current")) === "true", "載入的那一條要框起來");
+    // 換輸入板的根音 → 進行庫跟著換調
+    await q.evaluate(() => { PRACTICE.pad = { letter: 4, acc: 0 }; render(); });
+    check((await q.textContent("#libCard [data-lib] >> nth=0")).includes("G D Em C"), "換根音 G 後進行庫要寫 G D Em C");
+    await q.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; render(); });
     await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");   // 換回原本那一組,後面的快捷鍵測試接著用
     // 快捷鍵:字母 = 輸入板根音、- = ♭、Backspace = 刪除最後一個
     await q.locator("#practiceStage").click({ position: { x: 2, y: 2 } }).catch(() => {});
@@ -1073,12 +1070,12 @@ async function openPage(browser, opts = {}){
     check((await steps()) === "C D/F♯", "Backspace 沒有刪除最後一個: " + await steps());
     await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");
     // 吉他:下一個和弦的圖就是指板上會用的指法
-    await q.click("#instGuitar"); await q.click("#practiceOpen").catch(() => {});
+    await q.click("#instGuitar"); await q.click("#tabProg").catch(() => {});
     const nt = await q.evaluate(() => { const lab = document.querySelectorAll("#practiceStage svg.dg")[1].getAttribute("aria-label");
       const st = PRACTICE.steps[1]; const b = st.bass == null ? null : pcOf(LETTER_PC[st.letter] + st.acc + st.bass);
       const vs = chordVoicingsFor(pcOf(LETTER_PC[st.letter] + st.acc), chordById(st.id), b); return [lab, gtrTabText(vs.list[vs.best].frets)]; });
     check(nt[0] === nt[1], "下一個和弦的吉他圖不是指板上會用的指法: " + nt.join(" / "));
-    await q.click("#instPiano"); await q.click("#practiceOpen").catch(() => {});
+    await q.click("#instPiano"); await q.click("#tabProg").catch(() => {});
     // 速度 − / +、卡片高度
     await q.click("#prFaster"); await q.click("#prFaster"); await q.click("#prSlower");
     check((await q.evaluate(() => PRACTICE.bpm)) === 75, "速度加減不對");
@@ -1114,7 +1111,7 @@ async function openPage(browser, opts = {}){
     await q.click("#prGo");
     const stopped = await q.evaluate(() => { const n = window._plays; return new Promise(r => setTimeout(() => r(window._plays === n && !PRACTICE.running), 900)); });
     check(stopped, "按停止後還在換和弦");
-    await q.click("#prClose");
+    await q.click("#tabChord");
     check(await q.evaluate(() => $("practiceCard").hidden && !$("typeCard").hidden && document.querySelector(".kb-wrap").getBoundingClientRect().height > 0 && $("practiceStage").hidden), "結束練習後沒有回到原本的畫面");
     check(!q._errors.length, "頁面錯誤: " + q._errors.join("; "));
     // 級數輸入:先寫調,再寫羅馬數字;根音照級數拼(F♯ 大調的 vii° 是 E♯dim)
@@ -1510,7 +1507,7 @@ async function openPage(browser, opts = {}){
       const small = await q.evaluate(() => { PRACTICE.open = true; render(); const r = [...document.querySelectorAll("input,select,textarea")].filter(e => parseFloat(getComputedStyle(e).fontSize) < 16).map(e => e.id); PRACTICE.open = false; render(); return r; });
       total++; if (small.length) fails.push("觸控裝置輸入框字級 < 16px(iOS 會自動放大): " + small.join(","));
       // 練習:加第一個和弦、移調時,輸入板與設定列不能跳
-      await q.click("#practiceOpen");
+      await q.click("#tabProg");
       const pos = () => q.evaluate(() => ["prLetters", "prUp"].map(id => Math.round($(id).getBoundingClientRect().top + scrollY)).join("/"));
       const p0 = await pos();
       await q.locator("#prLetters .key-btn", { hasText: /^C$/ }).click(); await q.locator("#prQuick .quick-btn", { hasText: /^maj$/ }).click();
@@ -1527,7 +1524,7 @@ async function openPage(browser, opts = {}){
         PRACTICE.steps = keep; render(); return r;
       });
       total++; if (fit.over || !fit.same) fails.push("練習的現在/下一個:長名稱被切或兩格字級不同 " + JSON.stringify(fit));
-      await q.click("#prClose");
+      await q.click("#tabChord");
       // 矮螢幕往下捲之後換分頁,分頁鈕要留在原地:吉他音階時釘住區是釘著的,換到辨識會改成不釘
       await q.click("#instGuitar"); await q.click("#tabScale");
       await q.evaluate(() => scrollTo(0, 300));
@@ -1644,7 +1641,7 @@ async function openPage(browser, opts = {}){
     await q.close();
     // 全螢幕練習:橫式才有按鈕;按下去一次四個和弦(現在 + 後面三個,循環),離開鈕、轉直向都會關
     { const z = await openPage(browser, { viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true });
-      await z.click("#practiceOpen");
+      await z.click("#tabProg");
       await z.evaluate(() => { PRACTICE.steps = practiceParseCustom("Fm C Am G").steps; PRACTICE.step = 3; render(); scrollTo(0, 0); });
       await z.click("#prFs");
       const r = await z.evaluate(() => ({ open: !$("prFull").hidden, names: [...document.querySelectorAll(".pf-card b")].map(x => x.textContent).join(" "), now: document.querySelector(".pf-card.now b").textContent }));
@@ -1793,6 +1790,41 @@ async function openPage(browser, opts = {}){
     check(nea === "chord Amaj7", "A♭ 拿坡里點下去: " + nea);
     if (q._errors && q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
     await q.close();
+    // 第四個分頁「進行」:選中狀態、離開時停止;換語言時分頁位置不動;各尺寸英文不被截斷
+    for (const [w, h] of [[280, 653], [320, 568], [390, 844], [1280, 800]]) {
+      const z = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      const pos = () => z.evaluate(() => ["tabChord", "tabScale", "tabFind", "tabProg"].map(id => { const r = $(id).getBoundingClientRect(); return Math.round(r.left) + "/" + Math.round(r.width); }).join(" "));
+      const zh = await pos();
+      await z.click("#langToggle");
+      const en = await pos();
+      const clip = await z.evaluate(() => ["tabChord", "tabScale", "tabFind", "tabProg", "instGuitar", "instPiano"].filter(id => { const b = $(id); return b.scrollWidth > b.clientWidth + 1 || b.getBoundingClientRect().width < 28; }));
+      const over = await z.evaluate(() => document.documentElement.scrollWidth > innerWidth);
+      check(zh === en, "換語言分頁位置要一樣(" + w + "): " + zh + " → " + en);
+      check(!clip.length && !over, "英文分頁/樂器切換被截斷或太小(" + w + "): " + clip.join(","));
+      await z.click("#tabProg");
+      const st = await z.evaluate(() => ({ prog: $("tabProg").getAttribute("aria-selected"), chord: $("tabChord").getAttribute("aria-selected"), lib: !$("libCard").hidden, list: $("typeCard").hidden, n: document.querySelectorAll("#libCard .lib-item").length }));
+      check(st.prog === "true" && st.chord === "false" && st.lib && st.list && st.n === 8, "進行分頁(" + w + "): " + JSON.stringify(st));
+      await z.click("#libCard [data-lib] >> nth=0");
+      await z.evaluate(() => practiceStart());
+      await z.click("#tabChord");
+      const back = await z.evaluate(() => ({ running: PRACTICE.running, open: PRACTICE.open, list: !$("typeCard").hidden, lib: $("libCard").hidden, sel: $("tabChord").getAttribute("aria-selected") }));
+      check(!back.running && !back.open && back.list && back.lib && back.sel === "true", "從進行回到和弦要停止、顯示清單(" + w + "): " + JSON.stringify(back));
+      if (z._errors && z._errors.length) fails.push("頁面錯誤(" + w + ") " + z._errors.join("; "));
+      await z.close();
+    }
+    // 中英文排版要一致(使用者要求):進行分頁的分類、卡片、設定列、空白提示,中英文位置與大小相同(說明段落不算)
+    for (const [w, h] of [[280, 653], [320, 568], [390, 844], [768, 1024], [1280, 800]]) {
+      const z = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
+      const box = () => z.evaluate(() => ["#libCard .lib-key", "#libCard .group-tab", "#libCard .lib-item", "#practiceCard .pr-set", ".pr-empty > span", "#practiceCard .pr-custom"]
+        .flatMap(sel => [...document.querySelectorAll(sel)].filter(e => e.offsetParent).map((e, i) => { const r = e.getBoundingClientRect(); return sel + i + ":" + [r.left, r.top + scrollY, r.width, r.height].map(Math.round).join(","); })));
+      await z.click("#tabProg"); await z.waitForTimeout(150);
+      const zh = await box();
+      await z.click("#langToggle"); await z.waitForTimeout(150);
+      const en = await box();
+      const diff = zh.filter((x, i) => x !== en[i]);
+      check(zh.length === en.length && !diff.length, "進行分頁中英文排版不一致(" + w + "): " + diff.slice(0, 3).join(" ; ") + " → " + en.filter((x, i) => x !== zh[i]).slice(0, 3).join(" ; "));
+      await z.close();
+    }
     report("進行庫與次屬/借用和弦", total, fails);
   }
 
