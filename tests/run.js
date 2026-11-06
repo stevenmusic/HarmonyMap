@@ -1735,6 +1735,8 @@ async function openPage(browser, opts = {}){
       out.label = progLibChords(byId("blues"), { letter: 0, acc: 0 });
       out.walk = names(byId("walkdown"), 0, 0);
       out.cliche = names(byId("cliche"), 5, 0);
+      out.cycle = names(byId("cycle"), 0, 0);
+      out.lens = PROG_LIB.filter(x => ![2, 4, 8, 12].includes(x.r.split(" ").length)).map(x => x.id).join(",");
       out.cats = LIB_CATS.filter(c => c[0] !== "saved").map(c => c[0] + ":" + PROG_LIB.filter(x => x.cat === c[0]).length).join(" ");
       out.slashBad = ["C: V/8", "C: V/x"].map(x => practiceParseCustom(x).bad.length === 1 ? "" : x).join("");
       out.noRoman = PROG_LIB.every(x => !/(^|[\s(])[♭#]?[ivIV]{1,3}([\s)–-]|$)/.test(x.zh + " " + x.en));
@@ -1756,7 +1758,9 @@ async function openPage(browser, opts = {}){
     check(r.label === "C7×4 F7×2 C7×2 G7 F7 C7 G7", "進行庫選單的和弦: " + r.label);
     check(r.noRoman, "進行庫名稱不要用級數或術語縮寫");
     check(r.walk === "C G/B Am G F C/E Dm G", "低音一路往下走(斜線級數): " + r.walk);
-    check(r.cliche === "Am Am/G♯ Am/G Am/F♯ F", "A 小調低音半音下行: " + r.cliche);
+    check(r.cliche === "Am Am/G♯ Am/G Am/F♯ F F E7 E7", "A 小調低音半音下行: " + r.cliche);
+    check(r.lens === "", "進行長度要是 2/4/8/12 個和弦: " + r.lens);
+    check(r.cycle === "Dm7 G7 Cmaj7 Fmaj7 Bm7♭5 E7 Am7 Am7", "爵士五度循環(C): " + r.cycle);
     check(r.cats === "pop:8 classic:5 jazz:4 blues:5", "進行庫分類數量: " + r.cats);
     check(r.slashBad === "", "斜線級數寫錯要算錯字,不能悄悄變成別的: " + r.slashBad);
     check(r.anda === "Am G F E", "A 小調安達魯西亞: " + r.anda);

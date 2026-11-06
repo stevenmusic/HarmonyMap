@@ -5421,12 +5421,13 @@ const PROG_LIB = [
   // 照「風格」分類(cat),不照大小調分:分類的軸只能有一種,小調進行照它常出現的風格分進各組。
   // 2026-11 重新檢查:王道進行(= 4536251 的前半)、小調流行歌(= 從小和弦開始的流行歌,只是從關係大調看)、
   // 加次屬和弦的爵士循環(I–vi–ii–V 的變化,次屬和弦有自己的表)三條是重複的,刪掉。
+  // 長度一律 2 / 4 / 8 / 12 個和弦(一句的長度),循環播放時才不會卡一拍(測試會檢查)。
   // 斜線低音寫在 / 後面,用「相對主音的大調級數」(I/3 = C/E、i/♭7 = Cm/B♭),跟音階的級數記法同一套
   { id: "pop",      cat: "pop",     zh: "流行歌萬用進行",           en: "Most common pop",                  r: "I V vi IV" },
   { id: "minstart", cat: "pop",     zh: "從小和弦開始的流行歌",     en: "Pop starting on minor",            r: "vi IV I V" },
   { id: "fifties",  cat: "pop",     zh: "50 年代老歌",              en: "1950s oldies",                     r: "I vi IV V" },
   { id: "canon",    cat: "pop",     zh: "卡農(婚禮常用)",           en: "Canon (wedding classic)", r: "I V vi iii IV I IV V" },
-  { id: "mando",    cat: "pop",     zh: "華語流行歌萬用進行",       en: "Mandopop go-to",                   r: "IV V iii vi ii V I" },
+  { id: "mando",    cat: "pop",     zh: "華語流行歌萬用進行",       en: "Mandopop go-to",                   r: "IV V iii vi ii V I I" },
   { id: "anime",    cat: "pop",     zh: "動漫歌常用進行",           en: "Anime-song favorite",              r: "vi IV V I" },
   { id: "walkdown", cat: "pop",     zh: "低音一路往下走",           en: "Bass walking down",                r: "I V/7 vi V IV I/3 ii V" },
   { id: "majmin",   cat: "pop",     zh: "大和弦變小和弦(感傷一下)", en: "Major turns minor (sad)", r: "I IV iv I" },
@@ -5434,11 +5435,11 @@ const PROG_LIB = [
   { id: "minbasic", cat: "classic", zh: "小調最基本的進行",         en: "Basic minor key",                  r: "i iv V7 i", minor: true },
   { id: "epic",     cat: "classic", zh: "壯闊收尾(電影、遊戲)",     en: "Epic film/game ending",            r: "I ♭VI ♭VII I" },
   { id: "flamenco", cat: "classic", zh: "佛朗明哥下行",             en: "Flamenco descent",                 r: "i VII VI V", minor: true },
-  { id: "cliche",   cat: "classic", zh: "小調低音半音下行",         en: "Sliding bass in minor",            r: "i i/7 i/♭7 i/6 VI", minor: true },
+  { id: "cliche",   cat: "classic", zh: "小調低音半音下行",         en: "Sliding bass in minor",            r: "i i/7 i/♭7 i/6 VI VI V7 V7", minor: true },
   { id: "ii-v-i",   cat: "jazz",    zh: "爵士最基本的結尾",         en: "Basic jazz ending",                r: "ii7 V7 Imaj7 Imaj7" },
   { id: "minjazz",  cat: "jazz",    zh: "爵士小調結尾",             en: "Jazz minor ending",                r: "iiø7 V7 i7 i7", minor: true },
   { id: "turn",     cat: "jazz",    zh: "爵士循環(繞回開頭)",       en: "Jazz loop to the top",             r: "Imaj7 vi7 ii7 V7" },
-  { id: "cycle",    cat: "jazz",    zh: "爵士五度循環",             en: "Jazz circle of fifths",            r: "Imaj7 IVmaj7 viiø7 III7 vi7 vi7" },
+  { id: "cycle",    cat: "jazz",    zh: "爵士五度循環",             en: "Jazz circle of fifths",            r: "ii7 V7 Imaj7 IVmaj7 viiø7 III7 vi7 vi7" },
   { id: "blues",    cat: "blues",   zh: "藍調 12 小節",             en: "12-bar blues",                     r: "I7 I7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7" },
   { id: "minblues", cat: "blues",   zh: "小調藍調",                 en: "Minor blues",                      r: "i7 i7 i7 i7 iv7 iv7 i7 i7 V7 iv7 i7 V7", minor: true },
   { id: "rock",     cat: "blues",   zh: "搖滾味(降七級大和弦)",     en: "Rock flavor (flat-7)",             r: "I ♭VII IV I" },
