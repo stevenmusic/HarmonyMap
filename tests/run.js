@@ -1038,16 +1038,28 @@ async function openPage(browser, opts = {}){
     check((await steps()) === "C D/F♯ Em", "移調回來: " + await steps());
     check((await q.evaluate(() => localStorage.getItem("harmonymap.practice"))) === "C D/F♯ Em", "目前的進行沒有存在裝置上");
     await q.click("#prSave");
-    check((await q.getAttribute("#prSave", "aria-pressed")) === "true" && await q.locator("#prSaved option:not([value^='l']):not([value=''])").count() === 1, "儲存後應該出現在已存清單");
+    // 存的進行在「進行庫」面板的「我存的」分類
+    const savedItems = async () => { await q.click("#prLibBtn"); await q.click('#libPop [data-cat="saved"]'); const n = await q.locator("#libPop [data-saved]").count(); return n; };
+    check((await q.getAttribute("#prSave", "aria-pressed")) === "true" && (await savedItems()) === 1, "儲存後應該出現在「我存的」");
+    await q.click("#libClose");
     await q.click("#prClearSteps");
-    await q.selectOption("#prSaved", "0");
-    check((await steps()) === "C D/F♯ Em", "載入已存的進行: " + await steps());
+    await q.click("#prLibBtn"); await q.click("#libPop [data-saved]");
+    check((await steps()) === "C D/F♯ Em" && await q.evaluate(() => $("libPop").hidden), "載入已存的進行(面板要關起來): " + await steps());
     await q.click("#prSave");
-    check(await q.locator("#prSaved option:not([value^='l']):not([value=''])").count() === 0, "取消儲存後清單應該是空的");
-    // 進行庫跟已存的進行同一個選單:選「流行四和弦」→ 以輸入板的根音 C 為主音
+    check((await savedItems()) === 0 && (await q.locator("#libPop .lib-empty").count()) === 1, "取消儲存後「我存的」應該是空的");
+    // 常用進行:分類「流行」第一條,以輸入板的根音 C 為主音;Esc 關面板
+    await q.click('#libPop [data-cat="pop"]');
+    await q.keyboard.press("Escape");
+    check(await q.evaluate(() => $("libPop").hidden), "Esc 要關掉進行庫");
     await q.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; renderPractice(); });
-    await q.selectOption("#prSaved", "l0");
-    check((await steps()) === "C G Am F", "進行庫:流行四和弦(C): " + await steps());
+    await q.click("#prLibBtn"); await q.click("#libPop [data-lib] >> nth=0");
+    check((await steps()) === "C G Am F", "進行庫:流行歌萬用進行(C): " + await steps());
+    // 點面板外面要關;面板開著時按字母不能偷換輸入板根音
+    await q.click("#prLibBtn");
+    await q.keyboard.press("g");
+    check(await q.evaluate(() => PRACTICE.pad.letter === 0 && !$("libPop").hidden), "面板開著時字母鍵不能換根音");
+    await q.mouse.click(5, 5);
+    check(await q.evaluate(() => $("libPop").hidden), "點面板外面要關掉");
     await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");   // 換回原本那一組,後面的快捷鍵測試接著用
     // 快捷鍵:字母 = 輸入板根音、- = ♭、Backspace = 刪除最後一個
     await q.locator("#practiceStage").click({ position: { x: 2, y: 2 } }).catch(() => {});
@@ -1724,6 +1736,10 @@ async function openPage(browser, opts = {}){
       out.minii = names(byId("minjazz"), 3, 0);
       // 選單文字:名稱 + 目前主音的實際和弦(不是級數),連續相同的合成 ×n
       out.label = progLibChords(byId("blues"), { letter: 0, acc: 0 });
+      out.walk = names(byId("walkdown"), 0, 0);
+      out.cliche = names(byId("cliche"), 5, 0);
+      out.cats = LIB_CATS.filter(c => c[0] !== "saved").map(c => c[0] + ":" + PROG_LIB.filter(x => x.cat === c[0]).length).join(" ");
+      out.slashBad = ["C: V/8", "C: V/x"].map(x => practiceParseCustom(x).bad.length === 1 ? "" : x).join("");
       out.noRoman = PROG_LIB.every(x => !/(^|[\s(])[♭#]?[ivIV]{1,3}([\s)–-]|$)/.test(x.zh + " " + x.en));
       STATE.letter = 0; STATE.acc = 0;
       out.secC = secondaryDominants(scaleById("ionian")).map(x => x.roman + "=" + x.name).join(" ");
@@ -1742,6 +1758,10 @@ async function openPage(browser, opts = {}){
     check(r.canon === "G D Em Bm C G C D", "G 卡農: " + r.canon);
     check(r.label === "C7×4 F7×2 C7×2 G7 F7 C7 G7", "進行庫選單的和弦: " + r.label);
     check(r.noRoman, "進行庫名稱不要用級數或術語縮寫");
+    check(r.walk === "C G/B Am G F C/E Dm G", "低音一路往下走(斜線級數): " + r.walk);
+    check(r.cliche === "Am Am/G♯ Am/G Am/F♯ F", "A 小調低音半音下行: " + r.cliche);
+    check(r.cats === "pop:8 classic:5 jazz:4 blues:5", "進行庫分類數量: " + r.cats);
+    check(r.slashBad === "", "斜線級數寫錯要算錯字,不能悄悄變成別的: " + r.slashBad);
     check(r.anda === "Am G F E", "A 小調安達魯西亞: " + r.anda);
     check(r.blues === "B♭7 B♭7 B♭7 B♭7 E♭7 E♭7 B♭7 B♭7 F7 E♭7 B♭7 F7", "B♭ 藍調: " + r.blues);
     check(r.minii === "Gm7♭5 C7 Fm7 Fm7", "F 小調 ii–V–i: " + r.minii);
