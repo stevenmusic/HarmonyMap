@@ -924,7 +924,7 @@ async function openPage(browser, opts = {}){
     report("音色載入提示跟著樂器", 4, fails);
   }
 
-  /* ── 5c. 換和弦練習:輸入板排進行、上方換成「現在 / 下一個」兩張圖、節拍器實際換和弦 ── */
+  /* ── 5c. 換和弦練習:和弦譜(一行 4 小節)、按 + 用輸入板排進行、點一格改它、節拍器實際換和弦 ── */
   {
     const q = await openPage(browser, { viewport: { width: 390, height: 844 } });
     await setInst(q, "piano");
@@ -932,14 +932,16 @@ async function openPage(browser, opts = {}){
     const fails = [];
     let total = 0;
     const check = (cond, msg) => { total++; if (!cond) fails.push(msg); };
-    const steps = () => q.evaluate(() => [...document.querySelectorAll("#prSteps span:not(.pr-steps-empty)")].map(x => x.textContent).join(" "));
+    const steps = () => q.evaluate(() => [...document.querySelectorAll("#prChart .pc-cell[data-i]")].map(x => x.dataset.name).join(" "));
     // 沒有範例進行、沒有調性選單;一開始是空的,開始鈕不在
     check(await q.evaluate(() => !document.querySelector("#prPreset, #prKey, #prPresets")), "還有範例進行或調性選單");
     check((await steps()) === "", "一開始進行應該是空的");
-    check(await q.locator("#prGo").count() === 0, "進行是空的時不該有開始鈕");
+    check(await q.evaluate(() => $("prGo").disabled), "進行是空的時開始鈕要停用");
+    check(await q.locator("#prLetters").count() === 0 && await q.locator("#prAdd").count() === 1, "沒按 + 之前不該有輸入板,要有 + 格");
     // 練習時上方指板/鍵盤換成兩張和弦圖
     check(await q.evaluate(() => document.querySelector(".kb-wrap").getBoundingClientRect().height === 0 && $("practiceStage").getBoundingClientRect().height > 0), "練習時上方應該是和弦圖、不是指板/鍵盤");
-    check(await q.evaluate(() => $("practiceStage").closest(".topbar") !== null), "和弦圖要在釘住的上方區塊裡");
+    check(await q.evaluate(() => $("practiceStage").closest(".topbar") !== null && getComputedStyle(document.querySelector(".topbar")).position === "static"), "和弦譜在上方區塊、進行分頁不釘住");
+    await q.click("#prAdd");
     // 輸入板:根音 + 和弦種類 → 立刻加進去
     const pad = async (letter, acc, quick) => {
       await q.locator("#prLetters .key-btn", { hasText: new RegExp("^" + letter + "$") }).click();
@@ -948,7 +950,7 @@ async function openPage(browser, opts = {}){
     };
     await pad("C", 0, "maj"); await pad("G", 0, "maj"); await pad("A", 0, "min"); await pad("F", 0, "maj");
     check((await steps()) === "C G Am F", "輸入板排出來的進行: " + await steps());
-    check(await q.locator("#prSteps span.new").count() === 1, "新加的和弦要閃一下");
+    check(await q.locator("#prChart .pc-cell.new").count() === 1, "新加的和弦要閃一下");
     // 沒有 ♮:輸入板只有 ♭ ♯ /,按字母就是本位音,♭ ♯ 再按一次取消
     check(await q.evaluate(() => [...document.querySelectorAll("#prAcc .key-btn")].map(b => b.textContent).join("") === "♭♯/"), "輸入板的記號鈕應該是 ♭ ♯ /");
     // 斜線:按 / 再按低音,改的是最後一個和弦;♭ 是開關;按和弦種類就離開斜線模式
@@ -976,11 +978,12 @@ async function openPage(browser, opts = {}){
     await q.locator("#prLetters .key-btn", { hasText: /^B$/ }).click();
     check(await q.evaluate(() => PRACTICE.pad.acc === 0), "按字母應該回到本位音");
     await q.click("#prUndo");
-    const st = await q.evaluate(() => ({ now: $("prNow").textContent, next: $("prNext").textContent,
-      fs: [...document.querySelectorAll(".pr-now b")].map(b => getComputedStyle(b).fontSize), dg: document.querySelectorAll("#practiceStage svg.dg").length }));
-    check(st.now === "C" && st.next === "G", "現在/下一個: " + st.now + " / " + st.next);
-    check(st.fs[0] === st.fs[1], "現在/下一個字級不同: " + st.fs.join(" / "));
-    check(st.dg === 2, "兩個和弦的按法要同時顯示(" + st.dg + ")");
+    const st = await q.evaluate(() => ({ now: document.querySelector("#prChart .pc-cell.cur").dataset.name, next: document.querySelector("#prChart .pc-cell.nxt").dataset.name,
+      fs: [...document.querySelectorAll("#prChart .pc-cell[data-i] .pc-name")].map(b => getComputedStyle(b).fontSize), dg: document.querySelectorAll("#prChart .pc-cell[data-i] svg.dg").length,
+      rows: new Set([...document.querySelectorAll("#prChart .pc-cell[data-i]")].map(c => Math.round(c.getBoundingClientRect().top))).size }));
+    check(st.now === "C" && st.next === "G", "和弦譜的目前/下一個: " + st.now + " / " + st.next);
+    check(new Set(st.fs).size === 1, "和弦譜每格字級要一樣: " + st.fs.join(" / "));
+    check(st.dg === 4 && st.rows === 1, "四個和弦的按法都要顯示、排成一行(" + st.dg + " 張、" + st.rows + " 行)");
     // 鋼琴小鍵盤:從 C 或 F 開始,整組進行同一個大小:全部放得進 8 個白鍵就畫 8、否則 11、否則 15(使用者要求:鍵太小)
     const kbCount = prog => q.evaluate(p => { const saved = PRACTICE.steps; PRACTICE.steps = practiceParseCustom(p).steps;
       const r = PRACTICE.steps.map(st => (stepDiagram(st).match(/<rect x="[\d.]+" y="0" width="13.2"/g) || []).length); PRACTICE.steps = saved; return r; }, prog);
@@ -1019,8 +1022,28 @@ async function openPage(browser, opts = {}){
       check(r.a === 5 && r.hasCtl && r.bk && r.beats === 3 && r.sync, "上方/全螢幕的速度拍子調整: " + JSON.stringify(r)); }
     const firstKey = await q.evaluate(() => withStep(PRACTICE.steps[2], () => { let lo = Math.min(...displayNotes().map(n => n.midi)); while (![0, 5].includes(pcOf(lo))) lo--; return simpleName(pcOf(lo), "sharp"); }));
     check(firstKey === "F", "Am 的小鍵盤應該從 F 開始,實際從 " + firstKey);
-    const wh = await q.evaluate(() => [...document.querySelectorAll("#practiceStage svg.dg")].map(x => Math.round(x.getBoundingClientRect().width) + "x" + Math.round(x.getBoundingClientRect().height)));
-    check(wh[0] === wh[1], "現在/下一個的小鍵盤大小不同: " + wh.join(" / "));
+    const wh = await q.evaluate(() => [...document.querySelectorAll("#prChart .pc-cell[data-i] svg.dg")].map(x => Math.round(x.getBoundingClientRect().width) + "x" + Math.round(x.getBoundingClientRect().height)));
+    check(new Set(wh).size === 1, "和弦譜的小鍵盤大小不同: " + wh.join(" / "));
+    // 點一格 = 選它、譜下面出現輸入板;按根音 + 種類換掉那一格(長度不變);「長度」切換拍數;刪除這格;完成收起輸入板
+    await q.click("#prChart .pc-cell[data-i] >> nth=1");
+    check(await q.evaluate(() => PRACTICE.sel === 1 && !!$("prLetters") && !!$("prDel") && PRACTICE.step === 1), "點一格要選它並出現輸入板");
+    await q.locator("#prLetters .key-btn", { hasText: /^D$/ }).click(); await q.locator("#prQuick .quick-btn", { hasText: /^min$/ }).click();
+    check((await steps()) === "C Dm Am F" && await q.evaluate(() => PRACTICE.sel === 1), "改第二格: " + await steps());
+    await q.click("#prLen");
+    check(await q.evaluate(() => PRACTICE.steps[1].beats === 1 && /1/.test($("prLen").textContent)), "長度切換");
+    await q.click("#prLen"); await q.click("#prLen"); await q.click("#prLen");
+    check(await q.evaluate(() => !PRACTICE.steps[1].beats), "長度轉一圈回到整小節");
+    await q.click("#prDel");
+    check((await steps()) === "C Am F" && await q.evaluate(() => PRACTICE.sel === null && !$("prLetters")), "刪除這格: " + await steps());
+    await q.click("#prAddChip");
+    await q.locator("#prLetters .key-btn", { hasText: /^G$/ }).click(); await q.locator("#prQuick .quick-btn", { hasText: /^maj$/ }).click();
+    await q.locator("#prLetters .key-btn", { hasText: /^F$/ }).click(); await q.locator("#prQuick .quick-btn", { hasText: /^maj$/ }).click();
+    await q.click("#prUndo");
+    check((await steps()) === "C Am F G", "+ 新增加在最後: " + await steps());
+    await q.evaluate(() => { PRACTICE.steps = practiceParseCustom("C G Am F").steps; PRACTICE.step = 0; PRACTICE.custom = "C G Am F"; render(); });
+    await q.click("#prDone");
+    check(await q.locator("#prLetters").count() === 0, "完成要收起輸入板");
+    await q.click("#prAddChip");
     // 刪除最後一個、文字框同步、斜線和弦、打錯提示
     await q.click("#prUndo");
     check((await steps()) === "C G Am", "刪除最後一個: " + await steps());
@@ -1073,7 +1096,7 @@ async function openPage(browser, opts = {}){
     await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");
     // 吉他:下一個和弦的圖就是指板上會用的指法
     await setInst(q, "guitar"); await q.click("#tabProg").catch(() => {});
-    const nt = await q.evaluate(() => { const lab = document.querySelectorAll("#practiceStage svg.dg")[1].getAttribute("aria-label");
+    const nt = await q.evaluate(() => { const lab = document.querySelectorAll("#prChart .pc-cell[data-i] svg.dg")[1].getAttribute("aria-label");
       const st = PRACTICE.steps[1]; const b = st.bass == null ? null : pcOf(LETTER_PC[st.letter] + st.acc + st.bass);
       const vs = chordVoicingsFor(pcOf(LETTER_PC[st.letter] + st.acc), chordById(st.id), b); return [lab, gtrTabText(vs.list[vs.best].frets)]; });
     check(nt[0] === nt[1], "下一個和弦的吉他圖不是指板上會用的指法: " + nt.join(" / "));
@@ -1103,13 +1126,11 @@ async function openPage(browser, opts = {}){
     await q.click("#prGo");
     await q.waitForTimeout(1600);
     // 進行中:現在這個和弦的邊框跟著拍子發光(使用者要求)
-    const glow = await q.evaluate(() => { const c = document.querySelector("#prSteps span.cur"); return c && getComputedStyle(c).animationName; });
-    check(glow === "prGlow", "練習中現在的和弦沒有光暈動畫: " + glow);
-    const glowCard = await q.evaluate(() => getComputedStyle(document.querySelector("#practiceStage .now")).animationName);
-    check(glowCard === "prGlowCard", "練習中上方「現在」那張圖沒有光暈動畫: " + glowCard);
-    const run = await q.evaluate(() => ({ plays: window._plays, now: $("prNow").textContent, step: PRACTICE.steps[PRACTICE.step], running: PRACTICE.running }));
+    const glowCard = await q.evaluate(() => getComputedStyle(document.querySelector("#prChart .pc-cell.cur")).animationName);
+    check(glowCard === "prGlowCard", "練習中和弦譜目前那格沒有光暈動畫: " + glowCard);
+    const run = await q.evaluate(() => ({ plays: window._plays, now: document.querySelector("#prChart .pc-cell.cur").dataset.name, step: PRACTICE.steps[PRACTICE.step], running: PRACTICE.running }));
     check(run.running && run.plays >= 2, "節拍器沒有在換和弦: 換了 " + run.plays + " 次");
-    check(run.now === await q.evaluate(() => stepName(PRACTICE.steps[PRACTICE.step])), "「現在」不是目前這一步");
+    check(run.now === await q.evaluate(() => stepName(PRACTICE.steps[PRACTICE.step])), "和弦譜亮的不是目前這一步");
     await q.click("#prGo");
     const stopped = await q.evaluate(() => { const n = window._plays; return new Promise(r => setTimeout(() => r(window._plays === n && !PRACTICE.running), 900)); });
     check(stopped, "按停止後還在換和弦");
@@ -1164,7 +1185,9 @@ async function openPage(browser, opts = {}){
       const tl = p => { PRACTICE.steps = practiceParseCustom(p).steps; const x = practiceTimeline(); return x.start.join() + "/" + x.dur.join() + "/" + x.bars; };
       const r = { a: tl("C*1 G Am F"), b: tl("C*3 G*3 Am") };
       PRACTICE.steps = practiceParseCustom("C G").steps; PRACTICE.open = true; render();
-      const seq = []; for (let k = 0; k < 4; k++) { $("prSteps").children[0].click(); seq.push(PRACTICE.steps[0].beats || 0); }
+      PRACTICE.sel = 0; render();
+      const seq = []; for (let k = 0; k < 4; k++) { $("prLen").click(); seq.push(PRACTICE.steps[0].beats || 0); }
+      PRACTICE.sel = null;
       r.seq = seq.join(); r.bars = $("prBars") && $("prBars").textContent;
       PRACTICE.steps = keep; PRACTICE.beats = b0; render(); return r; });
     total++; if (fill.a !== "0,1,4,8/1,3,4,4/3" || fill.b !== "0,3,6/3,3,2/2" || fill.seq !== "1,2,3,0" || !/2/.test(fill.bars || "")) fails.push("拍數與小節數: " + JSON.stringify(fill));
@@ -1511,6 +1534,7 @@ async function openPage(browser, opts = {}){
       // 練習:加第一個和弦、移調時,輸入板與設定列不能跳
       await q.click("#tabProg");
       const pos = () => q.evaluate(() => ["prLetters", "prUp"].map(id => Math.round($(id).getBoundingClientRect().top + scrollY)).join("/"));
+      await q.click("#prAdd");
       const p0 = await pos();
       await q.locator("#prLetters .key-btn", { hasText: /^C$/ }).click(); await q.locator("#prQuick .quick-btn", { hasText: /^maj$/ }).click();
       const p1 = await pos();
@@ -1518,14 +1542,16 @@ async function openPage(browser, opts = {}){
       for (const [r, k] of [["A", "min"], ["F", "maj"], ["G", "7"], ["E", "m7"]]) { await q.locator("#prLetters .key-btn", { hasText: new RegExp("^" + r + "$") }).click(); await q.locator("#prQuick .quick-btn", { hasText: new RegExp("^" + k + "$") }).click(); }
       const p2 = await pos(); await q.click("#prUp"); await q.click("#prUp"); const p3 = await pos();
       total++; if (p2 !== p3) fails.push("練習移調時設定列移位: " + p2 + " → " + p3);
-      // 長和弦名稱(A♭m7♭5/C♭)在 320px 要放得下,兩格字級一樣
+      // 和弦譜:320 一行 4 格、280 以下一行 2 格;格子不超出卡片
       const fit = await q.evaluate(() => {
-        const keep = PRACTICE.steps; PRACTICE.steps = [{ letter: 0, acc: 0, id: "maj7", bass: null }, { letter: 5, acc: -1, id: "m7b5", bass: 3 }]; PRACTICE.step = 0; render();
-        const a = $("prNow"), b = $("prNext");
-        const r = { over: b.scrollWidth > b.clientWidth + 1 || a.scrollWidth > a.clientWidth + 1, same: getComputedStyle(a).fontSize === getComputedStyle(b).fontSize };
+        const keep = PRACTICE.steps; PRACTICE.steps = practiceParseCustom("C G Am F C G Abm7b5/Cb F").steps; PRACTICE.step = 0; PRACTICE.sel = null; render(); fitChartNames();
+        const cs = [...document.querySelectorAll("#prChart .pc-cell[data-i]")], st = $("practiceStage").getBoundingClientRect();
+        const ns = cs.map(c => c.querySelector(".pc-name"));
+        const r = { rows: new Set(cs.map(c => Math.round(c.getBoundingClientRect().top))).size, out: cs.some(c => c.getBoundingClientRect().right > st.right + 1),
+                    cut: ns.some(n => n.scrollWidth > n.clientWidth + 1), same: new Set(ns.map(n => getComputedStyle(n).fontSize)).size === 1 };
         PRACTICE.steps = keep; render(); return r;
       });
-      total++; if (fit.over || !fit.same) fails.push("練習的現在/下一個:長名稱被切或兩格字級不同 " + JSON.stringify(fit));
+      total++; if (fit.rows !== 4 || fit.out || fit.cut) fails.push("320 寬(≤340)和弦譜應該一行 2 格(8 個和弦四行)、長名稱不能被切: " + JSON.stringify(fit));
       await q.click("#tabChord");
       // 矮螢幕往下捲之後換分頁,分頁鈕要留在原地:吉他音階時釘住區是釘著的,換到辨識會改成不釘
       await setInst(q, "guitar"); await q.click("#tabScale");
@@ -1818,23 +1844,32 @@ async function openPage(browser, opts = {}){
       if (z._errors && z._errors.length) fails.push("頁面錯誤(" + w + ") " + z._errors.join("; "));
       await z.close();
     }
-    // 上方「現在/下一個」下面的整組和弦名稱:全部列出、目前的亮、停止時點了跳過去;12 個和弦時高度不變、目前那個捲進畫面
+    // 和弦譜:整組列出(一行 4 格、≤340 一行 2 格)、目前的亮;點一格選它並跳過去;12 小節藍調 = 三行;播放中目前那格跑出畫面要捲回來
     for (const [w, h] of [[280, 653], [390, 844], [1280, 800]]) {
       const z = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
       await z.click("#tabProg");
       await z.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; render(); });
       await z.click('#libCard [data-lib="0"]');
-      const a1 = await z.evaluate(() => ({ names: [...document.querySelectorAll("#prStrip .ps-chip")].map(c => c.textContent).join(" "), cur: document.querySelector("#prStrip .cur").textContent, nxt: document.querySelector("#prStrip .nxt").textContent, h: Math.round($("practiceStage").getBoundingClientRect().height) }));
-      check(a1.names === "C G Am F" && a1.cur === "C" && a1.nxt === "G", "整組和弦名稱(" + w + "): " + JSON.stringify(a1));
-      await z.click('#prStrip .ps-chip >> nth=2');
-      const a2 = await z.evaluate(() => [PRACTICE.step, STATE.chordId, document.querySelector("#prStrip .cur").textContent, $("prNow").textContent].join(" "));
-      check(a2 === "2 min Am Am", "點和弦名稱要跳過去(" + w + "): " + a2);
-      // 12 個和弦(藍調):一列、高度不變,目前那個在可見範圍裡
+      const cells = () => z.evaluate(() => { const cs = [...document.querySelectorAll("#prChart .pc-cell[data-i]")];
+        return { names: cs.map(c => c.dataset.name).join(" "), cur: document.querySelector("#prChart .cur").dataset.name,
+                 nxt: document.querySelector("#prChart .nxt").dataset.name, rows: new Set(cs.map(c => Math.round(c.getBoundingClientRect().top))).size,
+                 add: !!$("prAdd"), chip: !!$("prAddChip") }; });
+      const a1 = await cells();
+      const perRow = w <= 340 ? 2 : 4;
+      check(a1.names === "C G Am F" && a1.cur === "C" && a1.nxt === "G" && a1.rows === 4 / perRow && !a1.add && a1.chip, "和弦譜(" + w + "): " + JSON.stringify(a1));
+      await z.click('#prChart .pc-cell[data-i] >> nth=2');
+      const a2 = await z.evaluate(() => [PRACTICE.step, PRACTICE.sel, STATE.chordId, document.querySelector("#prChart .cur").dataset.name].join(" "));
+      check(a2 === "2 2 min Am", "點一格要選它並跳過去(" + w + "): " + a2);
+      await z.click('#prChart .pc-cell[data-i] >> nth=2');
+      check(await z.evaluate(() => PRACTICE.sel === null && !$("prLetters")), "再點一次選中的格子要收起輸入板(" + w + ")");
       await z.click('#libCard [data-cat="blues"]'); await z.click('#libCard [data-lib="17"]');
-      await z.evaluate(() => { PRACTICE.step = 10; practiceTick(); });
-      const a3 = await z.evaluate(() => { const st = $("prStrip"), c = st.querySelector(".cur"), r = st.getBoundingClientRect(), cr = c.getBoundingClientRect();
-        return { n: st.children.length, h: Math.round($("practiceStage").getBoundingClientRect().height), vis: cr.left >= r.left - 1 && cr.right <= r.right + 1, rows: new Set([...st.children].map(x => Math.round(x.getBoundingClientRect().top))).size }; });
-      check(a3.n === 12 && a3.rows === 1 && a3.h === a1.h && a3.vis, "藍調 12 個和弦的名稱列(" + w + "): " + JSON.stringify(a3) + " 原本高 " + a1.h);
+      const a3 = await cells();
+      check(a3.rows === 12 / perRow, "藍調 12 小節應該 " + (12 / perRow) + " 行(" + w + "): " + a3.rows);
+      // 播放中:目前那格跑出畫面就捲回來
+      await z.evaluate(() => { scrollTo(0, 0); PRACTICE.running = true; PRACTICE.step = 11; practiceTick(); });
+      await z.waitForTimeout(400);
+      const vis = await z.evaluate(() => { const r = document.querySelector("#prChart .cur").getBoundingClientRect(); PRACTICE.running = false; return r.top >= -1 && r.bottom <= innerHeight + 1; });
+      check(vis, "播放中目前那格要在畫面裡(" + w + ")");
       // 右上角四顆圓鈕不能跟品牌名重疊,也不能超出畫面
       const hd = await z.evaluate(() => { const b = document.querySelector("header h1").getBoundingClientRect(), bs = [...document.querySelectorAll(".header-right .btn")].map(x => x.getBoundingClientRect());
         return { n: bs.length, overlap: bs.some(r => r.left < b.right - 1), out: bs.some(r => r.right > innerWidth + 1), small: bs.some(r => r.width < 28 || r.height < 28), rows: new Set(bs.map(r => Math.round(r.top))).size }; });
@@ -2036,8 +2071,9 @@ async function openPage(browser, opts = {}){
       PRACTICE.open = true; STATE.tab = "chord"; PRACTICE.step = 0; render();
       const go = $("prGo"), inp = $("prCustom"); inp.focus();
       PRACTICE.step = 1; practiceApply(); practiceTick();
-      const r = { sameGo: $("prGo") === go, focus: document.activeElement && document.activeElement.id, now: $("prNow").textContent === stepName(PRACTICE.steps[1]) ? "E" : $("prNow").textContent,
-                  cur: [...$("prSteps").children].findIndex(x => x.classList.contains("cur")) };
+      const cur = document.querySelector("#prChart .pc-cell.cur").dataset.name;
+      const r = { sameGo: $("prGo") === go, focus: document.activeElement && document.activeElement.id, now: cur === stepName(PRACTICE.steps[1]) ? "E" : cur,
+                  cur: [...document.querySelectorAll("#prChart .pc-cell[data-i]")].findIndex(x => x.classList.contains("cur")) };
       PRACTICE.open = false; render(); return r;
     });
     total++; if (!tick.sameGo || tick.focus !== "prCustom" || tick.now !== "E" || tick.cur !== 1) fails.push("練習換小節時重建了整張卡片: " + JSON.stringify(tick));
