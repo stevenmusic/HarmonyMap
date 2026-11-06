@@ -1923,6 +1923,25 @@ async function openPage(browser, opts = {}){
       check(small === 0, "還有小於 28px 的圖示鈕: " + small);
       if (z._errors && z._errors.length) fails.push("頁面錯誤 " + z._errors.join("; "));
       await z.close(); }
+    // 版面(使用者要求緊湊、參考 PianoDrill):類型一排 5 個分段鈕;速度與開始鈕各佔一半;鋼琴每格只畫自己那段(多半 8 個白鍵),一行 4 格
+    { const z = await openPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+      await setInst(z, "piano"); await z.click("#tabProg");
+      await z.click('#libCard [data-lib="0"]');
+      const r = await z.evaluate(() => {
+        const seg = [...document.querySelectorAll("#libCard .lib-seg button")];
+        const go = $("prGo").getBoundingClientRect(), tp = document.querySelector(".pr-tempo").getBoundingClientRect();
+        const cells = [...document.querySelectorAll("#prChart .pc-cell[data-i]")];
+        const whites = cells.map(c => (c.querySelector("svg.dg").outerHTML.match(/<rect x="[\d.]+" y="0" width="13.2"/g) || []).length);
+        return { seg: seg.length, segRows: new Set(seg.map(b => Math.round(b.getBoundingClientRect().top))).size,
+                 half: Math.abs(go.width - tp.width) <= 2, sameRow: Math.abs(go.top + go.height / 2 - (tp.top + tp.height / 2)) <= 2,
+                 rows: new Set(cells.map(c => Math.round(c.getBoundingClientRect().top))).size, whites: whites.join(","),
+                 keyIn: !!$("prUp").closest("#libCard") && !!$("prDown").closest("#libCard") };
+      });
+      check(r.seg === 5 && r.segRows === 1, "類型要一排 5 個: " + JSON.stringify(r));
+      check(r.half && r.sameRow, "速度與開始鈕要各佔一半、同一行: " + JSON.stringify(r));
+      check(r.rows === 1 && r.whites === "8,8,8,8", "鋼琴和弦譜:C G Am F 一行 4 格、每格一個八度: " + JSON.stringify(r));
+      check(r.keyIn, "主音的 − / + 要在進行庫裡");
+      await z.close(); }
     // 辨識的「試試看」:手機也排三欄
     { const z = await openPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
       await z.click("#tabFind");

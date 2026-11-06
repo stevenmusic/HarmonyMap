@@ -60,6 +60,7 @@
   --fs-2xl:calc(26px * var(--ui));
   --surface-glass:rgba(32,26,15,.88);
   --surface-inset:rgba(22,18,9,.55);
+  --fill-btn:rgba(242,185,75,.14);   /* 次要按鈕的淡金底(跟 PianoDrill 同一個值) */
   --seg-track:rgba(255,255,255,.07);--seg-sep:rgba(242,185,75,.28);   /* 分段鈕的軌道、沒選的格子之間的分隔線 */
   --card-tint:rgba(255,255,255,.035);
   --stage-glow:#171208;
@@ -84,6 +85,7 @@ body.light{
   --shadow-lg:0 18px 44px rgba(90,72,30,.18);
   --surface-glass:rgba(252,249,241,.92);
   --surface-inset:rgba(255,255,255,.7);
+  --fill-btn:rgba(122,92,22,.10);
   --seg-track:rgba(60,45,10,.08);--seg-sep:rgba(122,92,22,.3);
   --card-tint:rgba(133,100,24,.05);
   --stage-glow:#FFFDF6;
@@ -499,10 +501,24 @@ html[data-lang="en"] .chip i{white-space:normal}
 .pr-set output{min-width:4.2em;text-align:center;font-variant-numeric:tabular-nums;color:var(--ivory);font-size:var(--fs-sm)}
 .pr-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px}
 .pr-row .filter-label{min-width:4em}
+/* PianoDrill 的次要按鈕:無框、淡金底的圓角方鈕(速度、主音的 − / +) */
+.btn-round{flex:none;width:44px;height:44px;padding:0;border:0;border-radius:var(--radius-btn);background:var(--fill-btn);color:var(--gold);
+  display:inline-flex;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation}
+.btn-round:active{background:var(--gold-fill);color:var(--on-fill)}
+@media (max-width:380px){ .btn-round{width:40px;height:40px} }
+/* 和弦譜下面:速度 | 開始,各佔一半(使用者要求;≤340 太窄,上下排) */
+.kb-stage .pr-gorow{display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:center}
+@media (max-width:340px){ .kb-stage .pr-gorow{grid-template-columns:1fr} }
+.kb-stage .pr-gorow .pr-go{width:100%;height:44px;min-height:0}
+.pr-tempo{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+.pt-num{display:flex;flex-direction:column;align-items:center;line-height:1;cursor:pointer;user-select:none;-webkit-user-select:none;min-width:0}
+.pt-num b{font-size:22px;font-weight:700;color:var(--ivory);font-variant-numeric:tabular-nums;line-height:24px}
+.pt-num small{font-size:var(--fs-2xs);color:var(--muted-bright);line-height:14px}
 /* 和弦譜:一行 4 小節(≤340 一行 2 格),格子等寬;名稱在上、和弦圖在下 */
 body.prog .topbar{position:static}
 .pr-chart{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin:0 0 6px}
 @media (max-width:340px){ .pr-chart{grid-template-columns:repeat(2,minmax(0,1fr))} }
+
 .pc-cell{position:relative;display:flex;flex-direction:column;align-items:stretch;min-width:0;padding:6px 6px 8px;text-align:left;
   background:var(--surface-inset);border:1px solid var(--line);border-radius:var(--radius-sm,8px);color:var(--ivory);font:inherit;cursor:pointer}
 .pc-top{display:block;min-width:0;height:40px}   /* 固定兩行:和弦名稱 + (斜線低音、拍數);每格一樣高 */
@@ -513,7 +529,7 @@ body.prog .topbar{position:static}
 .pc-len.auto{color:var(--muted)}
 .pc-cell .dg{display:block;width:100%;max-width:96px;height:auto;margin:4px auto 0}   /* 上限 96px:折疊機一行 2 格時圖不要撐滿整格(8 個和弦會捲很長) */
 .pc-cell .dg.kb{max-width:none}
-.pc-cell .dg.kb{aspect-ratio:154 / 56}
+.pc-cell .dg.kb{aspect-ratio:112 / 56}   /* 框是一個八度(8 個白鍵)的比例:多半剛好填滿;要 11 / 15 鍵的和弦等比例縮進來 */
 .pc-cell.nxt{border-color:rgba(242,185,75,.55)}
 .pc-cell.cur{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),0 0 12px 1px rgba(242,185,75,.35)}
 .pc-cell.cur .pc-name{color:var(--gold)}
@@ -939,11 +955,24 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 .print-pop{width:min(380px, calc(100vw - 24px));background:var(--panel)}
 /* 進行庫面板:上面分類按鈕(跟清單的分類鈕同一套)、下面一張張卡片(名稱 + 目前調的和弦),點了就載入並關掉 */
 #libCard[hidden]{display:none}
-#libCard .lib-key{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:var(--fs-xs);color:var(--muted);margin:-4px 0 10px;line-height:17px}
-#libCard .lib-key .filter-chip{min-height:30px;font-weight:700;color:var(--gold)}
-#libCard .lib-key-note{flex-basis:100%}   /* 說明固定獨佔第二行:中英文、各寬度都是兩行,不會一邊折一邊不折 */
-#libCard .lib-keys{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;margin:0 0 10px}   /* 12 個調:兩行六個 */
-#libCard .lib-keys .key-btn{min-height:36px;font-size:var(--fs-sm)}
+#libCard .lib-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px 8px;margin:0 0 10px}
+#libCard .lib-head .card-title{margin:0;white-space:nowrap}
+#libCard .lib-key{margin-left:auto}
+@media (max-width:380px){ #libCard .lib-key{flex-basis:100%;justify-content:flex-end} }   /* 窄的時候主音整組固定在第二行(中英文一樣),不把標題擠成直排 */
+#libCard .lib-key{display:flex;align-items:center;gap:6px}
+#libCard .lk-label{font-size:var(--fs-xs);color:var(--muted-bright);line-height:17px;margin-right:2px;white-space:nowrap;min-width:32px;text-align:right}   /* 寬度固定:主音 / Key 換語言不移位 */
+#libCard .lk-val{min-width:58px;height:44px;padding:0 8px;border:0;border-radius:var(--radius-btn);background:var(--surface-inset);color:var(--ivory);
+  font-family:"Noto Serif TC",serif;font-size:20px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:4px;cursor:pointer}
+#libCard .lk-val small{font-family:inherit;font-size:var(--fs-2xs);color:var(--muted);font-weight:400}
+#libCard .lk-val[aria-expanded="true"]{outline:2px solid var(--gold);outline-offset:-2px}
+.lib-seg{display:flex;gap:0;padding:2px;border-radius:10px;background:var(--seg-track);margin:0 0 10px}
+.lib-seg button{flex:1 1 0;min-width:0;min-height:36px;border:0;border-radius:8px;background:transparent;color:var(--muted-bright);
+  font-family:inherit;font-size:var(--fs-sm);line-height:18px;white-space:nowrap;cursor:pointer;padding:0 2px}
+.lib-seg button + button:not([aria-pressed="true"]){background:linear-gradient(var(--seg-sep),var(--seg-sep)) no-repeat left center / 1px 50%}
+.lib-seg button[aria-pressed="true"] + button{background:transparent}
+.lib-seg button[aria-pressed="true"]{background:var(--gold-fill);color:var(--on-fill);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.35)}
+#libCard .lib-keys{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin:0 0 10px}   /* 12 個調:兩行六個 */
+#libCard .lib-keys .key-btn{min-height:44px;font-size:var(--fs-md)}
 /* 行高寫死:中文字的行框比英文高 2~3px,不寫死的話換語言整張卡片會上下差幾 px(跟頂部分頁同一個處理) */
 #libCard .card-title{line-height:18px}
 #libCard .group-tab > span:first-child{line-height:18px}
@@ -955,11 +984,11 @@ footer a:hover,footer a:focus-visible{color:var(--gold-bright)}
 #libCard .group-tab{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;padding:7px 2px;min-height:44px}   /* 名稱在上、數字在下(所有寬度都一樣);左右內距 2px:280 寬英文「Classic/Film」放得下(Classical/Film 要 71px、格子只有 68px) */
 #libCard .group-tab .cnt{margin-left:0}
 /* 卡片:窄螢幕一欄,寬的時候自動排成兩三欄(一組最多 8 條,不用捲很長) */
-.lib-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:6px}
-.lib-item{display:block;width:100%;text-align:left;padding:8px 10px;min-height:44px;border:1px solid var(--line);
-  border-radius:var(--radius-sm, 8px);background:transparent;color:var(--ivory);font:inherit;cursor:pointer}
+.lib-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr));gap:4px}
+.lib-item{display:block;width:100%;text-align:left;padding:6px 12px;min-height:44px;border:0;
+  border-radius:var(--radius-btn);background:var(--fill-btn);color:var(--ivory);font:inherit;cursor:pointer}   /* PianoDrill 的次要按鈕:無框淡金底 */
 .lib-item:hover{border-color:var(--gold)}
-.lib-item[aria-current="true"]{border-color:var(--gold);background:var(--gold-fill-soft, transparent)}
+.lib-item[aria-current="true"]{outline:2px solid var(--gold);outline-offset:-2px}
 .lib-item b{display:block;font-size:var(--fs-sm);font-weight:700}
 .lib-item span{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:2px;overflow-wrap:anywhere}
 .lib-empty{font-size:var(--fs-sm);color:var(--muted);line-height:1.5}   /* 不透明:半透明時底下的琴鍵與字會透上來 */
@@ -1416,7 +1445,7 @@ const I18N = {
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
-    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceVoice: "就近轉位", practiceVoiceTitle: "每個和弦用跟前一個最接近的轉位(手幾乎不用移動);關掉 = 照名稱的原位", practiceFullscreen: "全螢幕(一次看四到八個和弦)", practiceFullscreenExit: "離開全螢幕", practiceBeatsShort: "{n}拍", practiceHalfBar: "點一下換拍數:整小節 → 1 拍 → 2 拍 → …(沒設拍數的和弦會自動填滿到小節線)", practiceBars: "共 {n} 小節", practiceRamp: "逐漸加速", practiceRampOff: "固定速度", practiceRampOpt: "每 {k} 輪 +{n}", practiceRampOpt1: "每輪 +{n}", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", practiceTransposeShort: "移調", practiceHaptic: "震動", practiceHapticTitle: "每一拍震一下(第一拍比較重)", chartAdd: "新增和弦", chartAddShort: "新增", chartWholeBar: "整小節", chartLen: "長度:{x}", chartDelete: "刪除這格", chartDone: "完成", chartHintEmpty: "從下方進行庫挑一組,或按 + 自己填", chartHintEdit: "點一格可以修改", chartHintCell: "按根音與和弦種類換掉這一格", chartHintAdd: "按根音與和弦種類加在最後", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行", practiceProgs: "進行庫", libTitle: "進行庫", libKeyLabel: "主音", libKeyNote: "選了會把目前的進行一起移調", libCatPop: "流行", libCatClassic: "古典與電影", libCatJazz: "爵士", libCatBlues: "藍調與搖滾", libCatSaved: "我存的", libSavedEmpty: "還沒有存過進行。排好一組後按「儲存」,就會出現在這裡。", libClose: "關閉",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceVoice: "就近轉位", practiceVoiceTitle: "每個和弦用跟前一個最接近的轉位(手幾乎不用移動);關掉 = 照名稱的原位", practiceFullscreen: "全螢幕(一次看四到八個和弦)", practiceFullscreenExit: "離開全螢幕", practiceBeatsShort: "{n}拍", practiceHalfBar: "點一下換拍數:整小節 → 1 拍 → 2 拍 → …(沒設拍數的和弦會自動填滿到小節線)", practiceBars: "共 {n} 小節", practiceRamp: "逐漸加速", practiceRampOff: "固定速度", practiceRampOpt: "每 {k} 輪 +{n}", practiceRampOpt1: "每輪 +{n}", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", practiceTransposeShort: "移調", practiceHaptic: "震動", practiceHapticTitle: "每一拍震一下(第一拍比較重)", chartAdd: "新增和弦", chartAddShort: "新增", chartWholeBar: "整小節", chartLen: "長度:{x}", chartDelete: "刪除這格", chartDone: "完成", chartHintEmpty: "從下方進行庫挑一組,或按 + 自己填", chartHintEdit: "點一格可以修改", chartHintCell: "按根音與和弦種類換掉這一格", chartHintAdd: "按根音與和弦種類加在最後", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行", practiceProgs: "進行庫", libTitle: "進行庫", libKeyLabel: "主音", libKeyNote: "換主音(目前的進行一起移調)", libCatPop: "流行", libCatClassic: "古典", libCatJazz: "爵士", libCatBlues: "藍調", libCatSaved: "我存的", libCatPopFull: "流行", libCatClassicFull: "古典與電影", libCatJazzFull: "爵士", libCatBluesFull: "藍調、搖滾、放克", libCatSavedFull: "我存的進行", libSavedEmpty: "還沒有存過進行。排好一組後按「儲存」,就會出現在這裡。", libClose: "關閉",
     practiceEmpty: "從下方進行庫挑一組\n或用輸入板自己排",
     practiceStepsEmpty: "還沒有和弦",
     printBtnShort: "和弦表", printBtn: "下載和弦表 PDF", printTitle: "下載和弦表 PDF", printInst: "樂器", printLevel: "範圍", printCore: "基本 {n} 種", printOther: "其他 {n} 種", printAll: "全部 {n} 種", printRoots: "根音", printRoots12: "12 個根音", printRootsCur: "只有 {x}", printGo: "下載 PDF", printBusyPdf: "製作 PDF… {n}/{m}", printFile: "HarmonyMap-和弦表", printBusy: "製作中… {n}/{m}", printHint: "按「下載 PDF」直接存成檔案,不會出現網址、日期。每種和弦只列一個按法(最推薦的那個)。", printCount: "共 {n} 個和弦圖", printPages: "共 {n} 頁", printCont: "(續)", printSheetTitle: "HarmonyMap 和弦表", printColors: "金 = 根音、青 = 其他組成音", printLegend: "T 拇指　1 食指　2 中指　3 無名指　4 小指 · 左 6 弦(粗)→ 右 1 弦(細)", printStrings: "左 = 粗弦(6 弦)、右 = 細弦(1 弦)", printAlgoNote: "部分罕用和弦沒有公開資料可查,按法由程式依樂理推算", printNone: "(沒有好按的指法)", printFoot: "HarmonyMap · steventsaimusic@gmail.com", printCopy: "© {y} Steven Tsai · 歡迎教學與個人練習使用", practiceTitle: "換和弦練習", practiceClose: "結束練習",
@@ -1526,7 +1555,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceVoice: "Voice leading", practiceVoiceTitle: "Play each chord in the inversion closest to the previous one; off = root position as written", practiceFullscreen: "Full screen (four to eight chords at a time)", practiceFullscreenExit: "Exit full screen", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to change the length: whole bar → 1 beat → 2 beats → … (chords without a length fill up to the bar line)", practiceBars: "{n} bars total", practiceRamp: "Speed up gradually", practiceRampOff: "Steady", practiceRampOpt: "+{n} / {k} loops", practiceRampOpt1: "+{n} / loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", practiceTransposeShort: "Key", practiceHaptic: "Vibrate", practiceHapticTitle: "Vibrate on every beat (stronger on beat 1)", chartAdd: "Add a chord", chartAddShort: "Add", chartWholeBar: "Whole bar", chartLen: "Length: {x}", chartDelete: "Delete", chartDone: "Done", chartHintEmpty: "Pick from the library or tap +", chartHintEdit: "Tap a bar to edit it", chartHintCell: "Tap a root and a type to replace it", chartHintAdd: "Tap a root and a type to add", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions", practiceProgs: "Library", libTitle: "Progression library", libKeyLabel: "Key", libKeyNote: "Transposes the chart too", libCatPop: "Pop", libCatClassic: "Classic/Film", libCatJazz: "Jazz", libCatBlues: "Blues/Rock", libCatSaved: "Saved", libSavedEmpty: "Nothing saved yet. Build a progression and tap Save to keep it here.", libClose: "Close",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceVoice: "Voice leading", practiceVoiceTitle: "Play each chord in the inversion closest to the previous one; off = root position as written", practiceFullscreen: "Full screen (four to eight chords at a time)", practiceFullscreenExit: "Exit full screen", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to change the length: whole bar → 1 beat → 2 beats → … (chords without a length fill up to the bar line)", practiceBars: "{n} bars total", practiceRamp: "Speed up gradually", practiceRampOff: "Steady", practiceRampOpt: "+{n} / {k} loops", practiceRampOpt1: "+{n} / loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", practiceTransposeShort: "Key", practiceHaptic: "Vibrate", practiceHapticTitle: "Vibrate on every beat (stronger on beat 1)", chartAdd: "Add a chord", chartAddShort: "Add", chartWholeBar: "Whole bar", chartLen: "Length: {x}", chartDelete: "Delete", chartDone: "Done", chartHintEmpty: "Pick from the library or tap +", chartHintEdit: "Tap a bar to edit it", chartHintCell: "Tap a root and a type to replace it", chartHintAdd: "Tap a root and a type to add", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions", practiceProgs: "Library", libTitle: "Progressions", libKeyLabel: "Key", libKeyNote: "Change key (moves the chart too)", libCatPop: "Pop", libCatClassic: "Classic", libCatJazz: "Jazz", libCatBlues: "Blues", libCatSaved: "Saved", libCatPopFull: "Pop", libCatClassicFull: "Classical & film", libCatJazzFull: "Jazz", libCatBluesFull: "Blues, rock & funk", libCatSavedFull: "Saved progressions", libSavedEmpty: "Nothing saved yet. Build a progression and tap Save to keep it here.", libClose: "Close",
     practiceEmpty: "Choose from the library\nor build your own",
     practiceStepsEmpty: "No chords yet",
     printBtnShort: "Chart", printBtn: "Download chord chart PDF", printTitle: "Download chord chart (PDF)", printInst: "Instrument", printLevel: "Range", printCore: "Basic {n}", printOther: "Others ({n})", printAll: "All {n}", printRoots: "Roots", printRoots12: "All 12 roots", printRootsCur: "Only {x}", printGo: "Download PDF", printBusyPdf: "Making PDF… {n}/{m}", printFile: "HarmonyMap-chord-chart", printBusy: "Building… {n}/{m}", printHint: "\"Download PDF\" saves a file directly, with no web address or date on it. One shape per chord (the recommended one).", printCount: "{n} chord diagrams", printPages: "{n} pages", printCont: "(cont.)", printSheetTitle: "HarmonyMap Chord Chart", printColors: "gold = root, teal = other chord tones", printLegend: "T thumb  1 index  2 middle  3 ring  4 pinky · left: 6th (low) → right: 1st (high)", printStrings: "left = low (6th) string, right = high (1st) string", printAlgoNote: "Some rare chords have no published shapes; those are worked out from theory", printNone: "(no playable shape)", printFoot: "HarmonyMap · steventsaimusic@gmail.com", printCopy: "© {y} Steven Tsai · Free for teaching and personal practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
@@ -5472,6 +5501,15 @@ function progLibChords(item, pad){
   }
   return out.map(x => x.n + (x.k > 1 ? "×" + x.k : "")).join(" ");
 }
+/* 主音移半音:進行庫換調,目前的進行一起移 */
+function practiceShiftKey(d){
+  const P = PRACTICE;
+  if (!P.key) P.key = { letter: 0, acc: 0 };
+  const [l, a] = PC_SPELL[pcOf(LETTER_PC[P.key.letter] + P.key.acc + d)];
+  P.key = { letter: l, acc: a };
+  if (P.steps.length) { practiceTranspose(d); P.slash = null; practiceEdited(-1); withStep(P.steps[P.step], () => playCurrent()); }
+  else render();
+}
 /* 進行庫面板 */
 function renderLibCard(){
   const P = PRACTICE, card = $("libCard"), saved = loadSavedProgs();
@@ -5480,15 +5518,16 @@ function renderLibCard(){
   const key = LETTERS[P.key.letter] + accText(P.key.acc);
   const cur = P.steps.map(stepText).join(" ");
   const kpc = pcOf(LETTER_PC[P.key.letter] + P.key.acc);
-  let h = '<div class="card-title">' + t("libTitle") + '</div>' +
-          '<div class="lib-key"><span>' + t("libKeyLabel") + '</span><button class="filter-chip" id="libKeyBtn" aria-expanded="' + !!P.keyOpen + '">' + key + ' ▾</button>' +
-          '<span class="lib-key-note">' + t("libKeyNote") + '</span></div>' +
+  const sv = d => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="' + d + '"/></svg>';
+  let h = '<div class="lib-head"><div class="card-title">' + t("libTitle") + '</div>' +
+          '<div class="lib-key" role="group" aria-label="' + t("libKeyLabel") + '"><span class="lk-label">' + t("libKeyLabel") + '</span>' +
+          '<button class="btn-round" id="prDown" aria-label="' + t("practiceTranspose") + ' -1" title="' + t("libKeyNote") + '">' + sv("M5 12h14") + '</button>' +
+          '<button class="lk-val" id="libKeyBtn" aria-expanded="' + !!P.keyOpen + '" title="' + t("libKeyNote") + '">' + key + '<small>▾</small></button>' +
+          '<button class="btn-round" id="prUp" aria-label="' + t("practiceTranspose") + ' +1" title="' + t("libKeyNote") + '">' + sv("M12 5v14M5 12h14") + '</button></div></div>' +
           (P.keyOpen ? '<div class="lib-keys">' + PC_SPELL.map(([l, a], pc) => '<button class="key-btn" data-key="' + pc + '" aria-pressed="' + (pc === kpc) + '">' + LETTERS[l] + accText(a) + '</button>').join("") + '</div>' : '') +
-          '<div class="group-tabs lib-tabs">';
-  for (const [c, k] of LIB_CATS) {
-    const n = c === "saved" ? saved.length : PROG_LIB.filter(it => it.cat === c).length;
-    h += '<button class="group-tab" data-cat="' + c + '" aria-pressed="' + (P.libCat === c) + '"><span>' + t(k) + '</span><span class="cnt">' + n + '</span></button>';
-  }
+          '<div class="lib-seg" role="tablist">';
+  // 類型:一排分段鈕(跟頂部分頁同一種),名稱短、不放數字
+  for (const [c, k] of LIB_CATS) h += '<button data-cat="' + c + '" aria-pressed="' + (P.libCat === c) + '" title="' + t(k + "Full") + '">' + t(k) + '</button>';
   h += '</div><div class="lib-list">';
   if (P.libCat === "saved") {
     if (!saved.length) h += '<div class="lib-empty">' + t("libSavedEmpty") + '</div>';
@@ -5506,6 +5545,8 @@ function renderLibCard(){
   card.querySelectorAll("[data-saved]").forEach(b => { b.querySelector("b").textContent = saved[+b.dataset.saved]; });
   card.querySelectorAll("[data-cat]").forEach(b => b.onclick = () => { P.libCat = b.dataset.cat; renderLibCard(); });
   $("libKeyBtn").onclick = () => { P.keyOpen = !P.keyOpen; renderLibCard(); };
+  $("prDown").onclick = () => practiceShiftKey(-1);
+  $("prUp").onclick = () => practiceShiftKey(1);
   // 選主音:進行庫換成這個調;目前已經有進行的話整組一起移過去(差幾個半音就移幾個,走最近的方向)
   card.querySelectorAll("[data-key]").forEach(b => b.onclick = () => {
     const pc = +b.dataset.key, d = ((pc - kpc) % 12 + 18) % 12 - 6;
@@ -6186,10 +6227,10 @@ function practiceChartHTML(){
     const d = tl.dur[i];
     const len = d !== P.beats ? '<small class="pc-len' + (st.beats ? '' : ' auto') + '">' + t("practiceBeatsShort", { n: d }) + '</small>' : '';
     return '<div class="pc-cell' + (i === P.step ? ' cur' : '') + (n > 1 && i === (P.step + 1) % n ? ' nxt' : '') + (P.sel === i ? ' sel' : '') + (i === P.flash ? ' new' : '') +
-      '" role="button" tabindex="0" data-i="' + i + '"><span class="pc-top"><b class="pc-name"></b><span class="pc-sub"><span class="pc-bass"></span>' + len + '</span></span>' + stepDiagram(st) + '</div>';
+      '" role="button" tabindex="0" data-i="' + i + '"><span class="pc-top"><b class="pc-name"></b><span class="pc-sub"><span class="pc-bass"></span>' + len + '</span></span>' + chartDiagram(st) + '</div>';
   }).join("");
   // 「+」那一格裡放一張看不見的圖撐住高度:跟和弦格子一樣高,加第一個和弦時下面的輸入板不跳
-  const ghost = stepDiagram(n ? P.steps[n - 1] : { letter: 0, acc: 0, id: "maj", bass: null });
+  const ghost = chartDiagram(n ? P.steps[n - 1] : { letter: 0, acc: 0, id: "maj", bass: null });
   // 「+」格只在空的時候、或正在新增時出現(新的和弦會放在那裡);平常用提示列右邊的「+ 新增」,不然 8 個和弦會為了一顆 + 多出一整行
   if (n && P.sel !== "add") return '<div class="pr-chart" id="prChart">' + cells + '</div>';
   return '<div class="pr-chart" id="prChart">' + cells +
@@ -6255,6 +6296,21 @@ function syncPracticeChart(follow){
     if (r.top < 0 || r.bottom > innerHeight) c.scrollIntoView({ block: "nearest", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
   }
 }
+/* 和弦譜每一格的圖。鋼琴:每格只畫這個和弦需要的那一段(多半一個八度、8 個白鍵),不用整組共用的那段——
+   一行 4 格時共用 15 個白鍵每個鍵只有 4.5px(使用者回報太小,一行改 2 格又看不到後面的),自己那段鍵寬約兩倍。
+   一樣從 C 或 F 開始(黑鍵分組完整才認得出是哪個鍵);全螢幕仍用整組共用的那段(stepDiagram) */
+function chartDiagram(st){
+  if (STATE.inst === "guitar") return stepDiagram(st);
+  return withStep(st, () => {
+    const notes = displayNotes();
+    if (!notes.length) return "";
+    const lo = kbWindowLo(notes), top = Math.max(...notes.map(n => n.midi));
+    const k = KB_PRACTICE_SIZES.find(c => kbWindowHi(lo, c) >= top);
+    let hi;
+    if (k) hi = kbWindowHi(lo, k); else { hi = top; while (![4, 11].includes(pcOf(hi))) hi++; }
+    return pianoDiagramSVG({ lo, hi });
+  });
+}
 /* 輸入板改的是哪一格:選了某一格就是那一格,否則(「+」新增)是最後一個 */
 function padTarget(){
   const P = PRACTICE;
@@ -6263,7 +6319,7 @@ function padTarget(){
 /* ── 速度/拍子的快速調整:練習卡片、上方「現在/下一個」、全螢幕三個地方都有,改哪一個都同步(使用者要求:全螢幕也要能調) ── */
 function updateBpmUI(bpm){
   const v = bpm == null ? PRACTICE.bpm : bpm;
-  document.querySelectorAll("[data-bpm-out]").forEach(o => { o.textContent = v + " BPM"; });
+  document.querySelectorAll("[data-bpm-out]").forEach(o => { const b = o.querySelector("b"); if (b) b.textContent = v; else o.textContent = v + " BPM"; });
   document.querySelectorAll(".pt-range").forEach(r => { if (+r.value !== v) r.value = v; });
 }
 function practiceSetBpm(v){
@@ -6288,6 +6344,14 @@ function bindRepeat(btn, fn){
 }
 function tempoCtlHTML(withRange, ids){
   const P = PRACTICE, svg = d => '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="' + d + '"/></svg>';
+  /* 和弦譜下面那組:PianoDrill 的速度樣式(兩顆 44px 淡金底方鈕夾著大數字,數字下面小字 BPM;連點數字打拍子) */
+  if (ids) {
+    const sv = d => '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="' + d + '"/></svg>';
+    return '<div class="pr-tempo" role="group" aria-label="' + t("practiceTempo") + '">' +
+      '<button class="btn-round pt-slower" id="prSlower" aria-label="-5 BPM">' + sv("M5 12h14") + '</button>' +
+      '<div class="pt-out pt-num" id="prBpmOut" data-bpm-out title="' + t("practiceTapTempo") + '"><b>' + P.bpm + '</b><small> BPM</small></div>' +
+      '<button class="btn-round pt-faster" id="prFaster" aria-label="+5 BPM">' + sv("M12 5v14M5 12h14") + '</button></div>';
+  }
   return '<span class="pr-bpm pt" role="group" aria-label="' + t("practiceTempo") + '">' +
     '<button class="kb-gear pt-slower"' + (ids ? ' id="prSlower"' : '') + ' aria-label="-5 BPM">' + svg("M5 12h14") + '</button>' +
     (withRange ? '<input type="range" class="pt-range" min="40" max="200" step="1" value="' + P.bpm + '" aria-label="' + t("practiceTempo") + '">' : '') +
@@ -6449,12 +6513,9 @@ function renderPractice(){
     '<div class="pr-set">' +
       '<select class="mini" id="prBeats" aria-label="' + t("practiceBeats") + '">' + beatOpts + '</select>' +
 
-      '<span class="pr-bpm" role="group" aria-label="' + t("practiceTranspose") + '">' +
-        '<button class="kb-gear" id="prDown" aria-label="' + t("practiceTranspose") + ' -1"' + (P.steps.length ? "" : " disabled") + '>' + svg("M5 12h14") + '</button>' +
-        '<output class="tr">' + t("practiceTransposeShort") + (P.shift ? " " + (P.shift > 0 ? "+" : "−") + Math.abs(P.shift) : "") + '</output>' +
-        '<button class="kb-gear" id="prUp" aria-label="' + t("practiceTranspose") + ' +1"' + (P.steps.length ? "" : " disabled") + '>' + svg("M12 5v14M5 12h14") + '</button></span>' +
-      '<i class="pr-br"></i>' +
+
       '<button class="filter-chip" id="prAccomp" aria-pressed="' + P.accomp + '">' + t("practiceAccompShort") + '</button>' +
+      '<i class="pr-br"></i>' +
       '<button class="filter-chip" id="prCountIn" aria-pressed="' + P.countIn + '" title="' + t("practiceCountInTitle") + '">' + t("practiceCountIn") + '</button>' +
       (STATE.inst === "piano" ? '<button class="filter-chip" id="prVoice" aria-pressed="' + (P.voicing === "near") + '" title="' + t("practiceVoiceTitle") + '">' + t("practiceVoice") + '</button>' : '') +
       (STATE.inst === "guitar" ? practiceCapoSelect() : '') +
@@ -6513,9 +6574,7 @@ function renderPractice(){
     if (nb >= P.beats) delete st.beats; else st.beats = nb;
     practiceEdited(P.sel);
   };
-  const shiftKey = d => { if (!P.key) P.key = { letter: 0, acc: 0 }; const [l, a] = PC_SPELL[pcOf(LETTER_PC[P.key.letter] + P.key.acc + d)]; P.key = { letter: l, acc: a }; };
-  $("prDown").onclick = () => { practiceTranspose(-1); shiftKey(-1); afterEdit(); withStep(P.steps[P.step], () => playCurrent()); };
-  $("prUp").onclick = () => { practiceTranspose(1); shiftKey(1); afterEdit(); withStep(P.steps[P.step], () => playCurrent()); };
+
   $("prSave").onclick = () => {
     const list = loadSavedProgs(), name = P.steps.map(stepText).join(" ");
     storeSavedProgs(list.includes(name) ? list.filter(x => x !== name) : list.concat(name));
