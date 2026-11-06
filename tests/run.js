@@ -1842,7 +1842,7 @@ async function openPage(browser, opts = {}){
       // 樂器鈕:點一下換樂器,圖示與說明跟著換
       const i1 = await z.evaluate(() => STATE.inst + "|" + $("instToggle").title);
       await z.click("#instToggle");
-      const i2 = await z.evaluate(() => STATE.inst + "|" + $("instToggle").title + "|" + !!$("instIcon").querySelector("rect"));
+      const i2 = await z.evaluate(() => STATE.inst + "|" + $("instToggle").title + "|" + ($("instText").textContent === "鋼琴"));
       check(i1.startsWith("guitar|") && /^piano\|.*鋼琴.*吉他.*\|true$/.test(i2), "樂器鈕切換(" + w + "): " + i1 + " → " + i2);
       if (z._errors && z._errors.length) fails.push("頁面錯誤(" + w + ") " + z._errors.join("; "));
       await z.close();

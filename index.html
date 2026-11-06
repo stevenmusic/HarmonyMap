@@ -223,7 +223,10 @@ main{
 .tabs button[aria-selected="true"]{background:var(--gold-fill);color:var(--on-fill);font-weight:700;box-shadow:0 1px 3px rgba(0,0,0,.35),0 0 0 .5px rgba(0,0,0,.08)}
 /* 樂器切換跟分頁同一列、同一種軌道,但字小一階:它是「換顯示方式」,不是主要導覽 */
 .tab-row{display:flex;gap:6px;min-width:0}
-#instToggle{color:var(--teal)}
+#instToggle{color:var(--teal);border-color:var(--teal)}
+#instText{font-size:var(--fs-sm);font-weight:700;letter-spacing:0;line-height:1}
+#instToggle{aspect-ratio:1;padding:0}   /* 跟語言鈕一樣正圓(寬 = 高) */
+@media (max-width:340px){ #instToggle{aspect-ratio:auto;padding:0;width:38px} }   /* 280 折疊機:正圓 44px 會蓋到品牌名,改成固定 38px(不照字寬:換中英文會移位),離品牌名 4px */
 /* 四個分頁:寬度比例固定(跟語言無關,換中英文整排不移位),英文最長的「Identify」多給一點 */
 .tabs #tabFind{flex-grow:1.4}
 .tabs #tabProg{flex-grow:1.1}
@@ -1159,8 +1162,9 @@ body.light{background:
       </svg>
     </button>
     <!-- 吉他/鋼琴(使用者要求從分頁那排搬上來:分頁是「做什麼」,樂器跟主題、語言一樣是全站設定)。
-         圖示是目前的樂器,點一下換另一個;線稿照 ScrollScore 同一套規格 -->
-    <button class="btn" id="instToggle" aria-pressed="false"><svg id="instIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg></button>
+         圓鈕裡直接寫目前的樂器(吉他/鋼琴、Gtr/Pno),青綠色,點一下換另一個。
+         原本畫線稿圖示,15px 的吉他看不出是吉他(使用者選了寫字的版本,跟語言鈕同一種做法) -->
+    <button class="btn" id="instToggle" aria-pressed="false"><span id="instText"></span></button>
     <button class="btn" id="langToggle" aria-pressed="false" data-i18n-attr="aria-label:langToggleLabel,title:langToggleTitle" data-i18n="langToggleText">EN</button>
   </div>
 </header>
@@ -1396,7 +1400,7 @@ const I18N = {
     octavePrefix: "起始 ",
     findPickNotes: "選音", findNoMatch: "沒有完全符合的和弦", findTapStart: "點琴鍵開始",
     kbGearLabel: "鍵盤設定", kbGearTitle: "起始八度、琴鍵標示、播放方式、吉他音色",
-    instLabel: "樂器", instPiano: "鋼琴", instGuitar: "吉他", instNow: "樂器:{a}(點一下換{b})",
+    instLabel: "樂器", instPiano: "鋼琴", instGuitar: "吉他", instNow: "樂器:{a}(點一下換{b})", instGuitarShort: "吉他", instPianoShort: "鋼琴",
     findCardDescGuitar: "點指板上的格子選音,每條弦一個音;沒點的高音弦自動算空弦,低音弦要空弦就點左邊的 ○。最低的音當低音,不是根音時寫成斜線和弦。",
     findTapStartGuitar: "點指板開始",
     voicingPrev: "上一個指法", voicingNext: "下一個指法",
@@ -1506,7 +1510,7 @@ const I18N = {
     octavePrefix: "Start ",
     findPickNotes: "Pick notes", findNoMatch: "No exact chord match", findTapStart: "Tap a key to start",
     kbGearLabel: "Keyboard settings", kbGearTitle: "Start octave, key labels, playback, guitar tone",
-    instLabel: "Instrument", instPiano: "Piano", instGuitar: "Guitar", instNow: "Instrument: {a} (tap for {b})",
+    instLabel: "Instrument", instPiano: "Piano", instGuitar: "Guitar", instNow: "Instrument: {a} (tap for {b})", instGuitarShort: "Gtr", instPianoShort: "Pno",
     findCardDescGuitar: "Tap the fretboard to pick notes, one per string; untouched higher strings ring open — tap ○ left of the nut for a low open string. The lowest note is the bass; if it isn't the root, the name becomes a slash chord.",
     findTapStartGuitar: "Tap the fretboard to start",
     voicingPrev: "Previous voicing", voicingNext: "Next voicing",
@@ -6837,14 +6841,10 @@ function guitarScaleUpMidis(){
 function syncFindFromFrets(){
   STATE.findSel = new Set(gtrFindFrets().map((f, s) => f >= 0 ? gm(s, f) : null).filter(m => m != null));
 }
-/* 右上角的樂器鈕:圖示 = 目前的樂器,aria-label / title 寫「目前是 X,點一下換 Y」 */
-const INST_ICON = {
-  guitar: '<path d="M14 10l6-6"/><path d="M18.5 2.5l3 3"/><path d="M11.6 8.4a3.6 3.6 0 0 0-5 .9 3.2 3.2 0 0 0-2.4 5l4.5 4.5a3.2 3.2 0 0 0 5-2.4 3.6 3.6 0 0 0 .9-5z"/><circle cx="9.5" cy="14.5" r="1.2"/>',
-  piano: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M9 12v7M15 12v7"/><path d="M7.5 5v7h3V5M13.5 5v7h3V5"/>'
-};
+/* 右上角的樂器鈕:寫目前的樂器,aria-label / title 寫「樂器:吉他(點一下換鋼琴)」 */
 function syncInstToggle(gtr){
   const b = $("instToggle");
-  $("instIcon").innerHTML = INST_ICON[gtr ? "guitar" : "piano"];
+  $("instText").textContent = t(gtr ? "instGuitarShort" : "instPianoShort");
   const lbl = t("instNow", { a: t(gtr ? "instGuitar" : "instPiano"), b: t(gtr ? "instPiano" : "instGuitar") });
   b.setAttribute("aria-label", lbl); b.title = lbl;
   b.setAttribute("aria-pressed", String(gtr));
