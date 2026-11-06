@@ -942,42 +942,62 @@ async function openPage(browser, opts = {}){
     check(await q.evaluate(() => document.querySelector(".kb-wrap").getBoundingClientRect().height === 0 && $("practiceStage").getBoundingClientRect().height > 0), "練習時上方應該是和弦圖、不是指板/鍵盤");
     check(await q.evaluate(() => $("practiceStage").closest(".topbar") !== null && getComputedStyle(document.querySelector(".topbar")).position === "static"), "和弦譜在上方區塊、進行分頁不釘住");
     await q.click("#prAdd");
-    // 輸入板:根音 + 和弦種類 → 立刻加進去
-    const pad = async (letter, acc, quick) => {
-      await q.locator("#prLetters .key-btn", { hasText: new RegExp("^" + letter + "$") }).click();
-      if (acc) await q.locator("#prAcc .key-btn").nth(acc < 0 ? 0 : 1).click();
-      await q.locator("#prQuick .quick-btn", { hasText: new RegExp("^" + quick + "$") }).click();
-    };
-    await pad("C", 0, "maj"); await pad("G", 0, "maj"); await pad("A", 0, "min"); await pad("F", 0, "maj");
-    check((await steps()) === "C G Am F", "輸入板排出來的進行: " + await steps());
+    // 輸入板(使用者要求):字母 = 立刻加一個大三和弦;種類 = 改目前這個,不多一格;♭ ♯ = 改目前這個的根音
+    const L = x => q.locator("#prLetters .key-btn", { hasText: new RegExp("^" + x + "$") }).click();
+    const K = x => q.locator("#prQuick .quick-btn", { hasText: new RegExp("^" + x + "$") }).click();
+    const FLAT = () => q.locator("#prAcc .key-btn").nth(0).click(), SHARP = () => q.locator("#prAcc .key-btn").nth(1).click();
+    await L("C");
+    check((await steps()) === "C", "按 C 就加一個 C 大三和弦: " + await steps());
+    await K("min");
+    check((await steps()) === "Cm", "再按 min 改成 Cm、不多一格: " + await steps());
+    await K("7");
+    check((await steps()) === "C7", "再按 7 改成 C7: " + await steps());
+    await K("maj");
+    await L("G"); await L("A"); await K("min"); await L("F");
+    check((await steps()) === "C G Am F", "C G A min F: " + await steps());
     check(await q.locator("#prChart .pc-cell.new").count() === 1, "新加的和弦要閃一下");
-    // 沒有 ♮:輸入板只有 ♭ ♯ /,按字母就是本位音,♭ ♯ 再按一次取消
+    check(await q.evaluate(() => document.querySelectorAll("#prChart .pc-cell.sel").length === 1 && document.querySelector("#prChart .pc-cell.sel").dataset.name === "F"), "目前這個(剛加的 F)要標出來");
+    check(await q.evaluate(() => document.querySelector("#prQuick .quick-btn[aria-pressed=true]").textContent === "maj"), "種類鈕要亮目前這個和弦的種類");
+    // 沒有 ♮:輸入板只有 ♭ ♯ /,♭ ♯ 改目前這個的根音,再按一次取消
     check(await q.evaluate(() => [...document.querySelectorAll("#prAcc .key-btn")].map(b => b.textContent).join("") === "♭♯/"), "輸入板的記號鈕應該是 ♭ ♯ /");
-    // 斜線:按 / 再按低音,改的是最後一個和弦;♭ 是開關;按和弦種類就離開斜線模式
-    await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^C$/ }).click();
+    await SHARP();
+    check((await steps()) === "C G Am F♯", "♯ 改目前這個: " + await steps());
+    await SHARP();
+    check((await steps()) === "C G Am F", "♯ 再按一次取消: " + await steps());
+    // 斜線:按 / 再按低音,改的是目前這個;♭ 是開關
+    await q.click("#prSlash"); await L("C");
     check((await steps()) === "C G Am F/C", "/ + C: " + await steps());
-    await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^E$/ }).click(); await q.locator("#prAcc .key-btn").nth(0).click();
+    await q.click("#prSlash"); await L("E"); await FLAT();
     check((await steps()) === "C G Am F/E♭", "/ + E + ♭: " + await steps());
-    await q.locator("#prAcc .key-btn").nth(0).click();
+    await FLAT();
     check((await steps()) === "C G Am F/E", "♭ 再按一次取消: " + await steps());
-    await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^F$/ }).click();
+    await q.click("#prSlash"); await L("F");
     check((await steps()) === "C G Am F", "低音 = 根音就是原位: " + await steps());
-    // 低音選好之後再按字母 = 下一個和弦的根音,不能再改到低音
-    await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^A$/ }).click();
-    await q.locator("#prLetters .key-btn", { hasText: /^G$/ }).click();
-    check((await steps()) === "C G Am F/A" && await q.evaluate(() => !PRACTICE.slash && PRACTICE.pad.letter === 4), "選好低音後按字母應該是下一個根音: " + await steps());
-    // 根音 / 低音:還沒按種類就按 / = 大三和弦(G / F 三下就是 G/F,使用者嫌 G maj / F 太麻煩)
-    await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^F$/ }).click();
+    // 低音選好之後再按字母 = 下一個和弦(不能再改到低音)
+    await q.click("#prSlash"); await L("A");
+    await L("G");
+    check((await steps()) === "C G Am F/A G" && await q.evaluate(() => !PRACTICE.slash), "選好低音後按字母應該加下一個和弦: " + await steps());
+    await q.click("#prSlash"); await L("F");
     check((await steps()) === "C G Am F/A G/F", "G / F 應該是 G/F: " + await steps());
+    // 選好低音後的 ♭ ♯ 還是改低音;按種類離開斜線模式後,♯ 改根音、斜線低音維持原本那個音
+    await SHARP();
+    check((await steps()) === "C G Am F/A G/F♯", "選好低音後 ♯ 改的是低音: " + await steps());
+    await SHARP();
+    await K("maj"); await SHARP();
+    check((await steps()) === "C G Am F/A G♯/E♯", "G/F 改成 G♯ 時低音還是同一個音(照 G♯ 的級數拼成 E♯): " + await steps());
     await q.click("#prUndo");
-    await q.click("#prSlash"); await q.locator("#prLetters .key-btn", { hasText: /^F$/ }).click();
-    check((await steps()) === "C G Am F", "低音選回根音: " + await steps());
-    await q.click("#prSlash"); await q.locator("#prQuick .quick-btn", { hasText: /^min$/ }).click(); await q.click("#prUndo");
-    await pad("B", -1, "maj");
-    check((await steps()) === "C G Am F B♭" && await q.evaluate(() => !PRACTICE.slash), "按和弦種類要離開斜線模式、新加一個: " + await steps());
-    await q.locator("#prLetters .key-btn", { hasText: /^B$/ }).click();
-    check(await q.evaluate(() => PRACTICE.pad.acc === 0), "按字母應該回到本位音");
+    check((await steps()) === "C G Am F/A", "倒退鍵刪目前這個: " + await steps());
+    // 倒退之後沒有「目前這個」:按種類就用輸入板的根音加一個新的
+    await K("min");
+    check((await steps()) === "C G Am F/A G♯m", "沒有目前這個時按種類 = 用最後的根音新加一個: " + await steps());
     await q.click("#prUndo");
+    // 在 F/A 這格:點它、按 F 換掉(變回原位的 F 大三和弦)
+    await q.click("#prChart .pc-cell[data-i] >> nth=3");
+    await L("F");
+    check((await steps()) === "C G Am F", "點格子再按字母 = 換掉那一格: " + await steps());
+    await q.click("#prDone");
+    await q.evaluate(() => { PRACTICE.step = 0; render(); });
+    await q.click("#prAddChip");
     const st = await q.evaluate(() => ({ now: document.querySelector("#prChart .pc-cell.cur").dataset.name, next: document.querySelector("#prChart .pc-cell.nxt").dataset.name,
       fs: [...document.querySelectorAll("#prChart .pc-cell[data-i] .pc-name")].map(b => getComputedStyle(b).fontSize), dg: document.querySelectorAll("#prChart .pc-cell[data-i] svg.dg").length,
       rows: new Set([...document.querySelectorAll("#prChart .pc-cell[data-i]")].map(c => Math.round(c.getBoundingClientRect().top))).size }));
@@ -1087,12 +1107,12 @@ async function openPage(browser, opts = {}){
     await q.locator("#practiceStage").click({ position: { x: 2, y: 2 } }).catch(() => {});
     await q.evaluate(() => document.activeElement && document.activeElement.blur());
     await q.keyboard.press("g"); await q.keyboard.press("-");
-    check(await q.evaluate(() => PRACTICE.pad.letter === 4 && PRACTICE.pad.acc === -1), "快捷鍵 g、- 沒有設定輸入板根音");
+    check((await steps()) === "C D/F♯ Em G♭", "快捷鍵 g、- 應該加一個 G♭: " + await steps());
     await q.keyboard.press("c"); await q.keyboard.press("/"); await q.keyboard.press("e");
-    check((await steps()) === "C D/F♯ Em C/E", "快捷鍵 c / e: " + await steps());
+    check((await steps()) === "C D/F♯ Em G♭ C/E", "快捷鍵 c / e: " + await steps());
     await q.keyboard.press("Backspace");
     await q.keyboard.press("Backspace");
-    check((await steps()) === "C D/F♯", "Backspace 沒有刪除最後一個: " + await steps());
+    check((await steps()) === "C D/F♯ Em", "Backspace 刪掉剛加的兩個: " + await steps());
     await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");
     // 吉他:下一個和弦的圖就是指板上會用的指法
     await setInst(q, "guitar"); await q.click("#tabProg").catch(() => {});
