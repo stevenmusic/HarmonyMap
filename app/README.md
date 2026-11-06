@@ -32,6 +32,10 @@ npx cap open ios                    # 開 Xcode
 ```bash
 cd app && npm run sync   # 重新複製 index.html 並同步到 ios/
 ```
+**原生外掛**:`@capacitor/haptics`(換和弦練習的「震動」:每一拍震一下、第一拍比較重)。
+加了外掛之後第一次要先 `npm install` 再 `npm run sync`,Xcode 專案才會帶進去。
+網頁那邊是看 `window.Capacitor.Plugins.Haptics` 在不在:在 App 裡用原生震動,
+Android 瀏覽器用 `navigator.vibrate`,iPhone 的 Safari 沒有震動 API,那裡不顯示這個開關。
 然後把版本號(Xcode 的 Version / Build)加一,重新 Archive。
 
 ## 上架前自測(實機)

@@ -1074,14 +1074,14 @@ async function openPage(browser, opts = {}){
     check((await savedItems()) === 0 && (await q.locator("#libCard .lib-empty").count()) === 1, "取消儲存後「我存的」應該是空的");
     // 常用進行:分類「流行」第一條,以輸入板的根音 C 為主音;載入後那一張要框起來
     await q.click('#libCard [data-cat="pop"]');
-    await q.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; render(); });
+    await q.evaluate(() => { PRACTICE.key = { letter: 0, acc: 0 }; render(); });
     await q.click("#libCard [data-lib] >> nth=0");
     check((await steps()) === "C G Am F", "進行庫:流行歌萬用進行(C): " + await steps());
     check((await q.getAttribute("#libCard [data-lib] >> nth=0", "aria-current")) === "true", "載入的那一條要框起來");
     // 換輸入板的根音 → 進行庫跟著換調
-    await q.evaluate(() => { PRACTICE.pad = { letter: 4, acc: 0 }; render(); });
-    check((await q.textContent("#libCard [data-lib] >> nth=0")).includes("G D Em C"), "換根音 G 後進行庫要寫 G D Em C");
-    await q.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; render(); });
+    await q.evaluate(() => { PRACTICE.key = { letter: 4, acc: 0 }; render(); });
+    check((await q.textContent("#libCard [data-lib] >> nth=0")).includes("G D Em C"), "主音 G 時進行庫要寫 G D Em C");
+    await q.evaluate(() => { PRACTICE.key = { letter: 0, acc: 0 }; render(); });
     await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");   // 換回原本那一組,後面的快捷鍵測試接著用
     // 快捷鍵:字母 = 輸入板根音、- = ♭、Backspace = 刪除最後一個
     await q.locator("#practiceStage").click({ position: { x: 2, y: 2 } }).catch(() => {});
@@ -1848,7 +1848,7 @@ async function openPage(browser, opts = {}){
     for (const [w, h] of [[280, 653], [390, 844], [1280, 800]]) {
       const z = await openPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 900, isMobile: w < 900 });
       await z.click("#tabProg");
-      await z.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; render(); });
+      await z.evaluate(() => { PRACTICE.key = { letter: 0, acc: 0 }; render(); });
       await z.click('#libCard [data-lib="0"]');
       const cells = () => z.evaluate(() => { const cs = [...document.querySelectorAll("#prChart .pc-cell[data-i]")];
         return { names: cs.map(c => c.dataset.name).join(" "), cur: document.querySelector("#prChart .cur").dataset.name,
@@ -1895,6 +1895,40 @@ async function openPage(browser, opts = {}){
       check(zh.length === en.length && !diff.length, "進行分頁中英文排版不一致(" + w + "): " + diff.slice(0, 3).join(" ; ") + " → " + en.filter((x, i) => x !== zh[i]).slice(0, 3).join(" ; "));
       await z.close();
     }
+    // 進行庫的主音:按「主音 C ▾」選調;已經有進行的話整組一起移過去;移調 − / + 時主音跟著走
+    { const z = await openPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+      await z.click("#tabProg");
+      await z.click('#libCard [data-lib="0"]');
+      await z.click("#libKeyBtn");
+      check(await z.locator("#libCard .lib-keys .key-btn").count() === 12, "主音選單要有 12 個調");
+      await z.click('#libCard [data-key="2"]');
+      const k = await z.evaluate(() => ({ chart: [...document.querySelectorAll("#prChart .pc-cell[data-i]")].map(c => c.dataset.name).join(" "), btn: $("libKeyBtn").textContent, lib: document.querySelector('#libCard [data-lib="0"] span').textContent, open: !!document.querySelector(".lib-keys") }));
+      check(k.chart === "D A Bm G" && /^D/.test(k.btn) && k.lib === "D A Bm G" && !k.open, "選主音 D: " + JSON.stringify(k));
+      await z.click("#prUp");
+      const k2 = await z.evaluate(() => $("libKeyBtn").textContent + "|" + [...document.querySelectorAll("#prChart .pc-cell[data-i]")].map(c => c.dataset.name).join(" "));
+      check(/^E♭/.test(k2) && k2.endsWith("E♭ B♭ Cm A♭"), "移調 + 時主音跟著走: " + k2);
+      // 速度只有一組(上方);震動開關在觸控裝置出現,打開後每一拍震一下、第一拍比較重
+      check(await z.locator("#prSlower").count() === 1 && await z.locator("#practiceCard .pr-bpm.pt, #practiceCard [data-bpm-out]").count() === 0, "速度控制只該在上方出現一組");
+      await z.evaluate(() => { window._vib = []; navigator.vibrate = ms => { window._vib.push(ms); return true; }; });
+      check(await z.locator("#prHaptic").count() === 1, "觸控裝置要有震動開關");
+      await z.click("#prHaptic");
+      await z.evaluate(() => { window._vib = []; PRACTICE.bpm = 200; PRACTICE.beats = 4; });
+      await z.click("#prGo"); await z.waitForTimeout(1500); await z.click("#prGo");
+      const vib = await z.evaluate(() => window._vib.slice());
+      check(vib.length >= 3 && vib.includes(35) && vib.includes(12), "震動:每拍一次、第一拍比較重: " + vib.join(","));
+      await z.click("#prHaptic");
+      check(await z.evaluate(() => localStorage.getItem("harmonymap.haptic")) === "0", "關掉震動要記住");
+      // 小圖示鈕至少 28×28
+      const small = await z.evaluate(() => [...document.querySelectorAll(".kb-gear")].filter(e => e.offsetParent).map(e => e.getBoundingClientRect()).filter(r => r.width < 28 || r.height < 28).length);
+      check(small === 0, "還有小於 28px 的圖示鈕: " + small);
+      if (z._errors && z._errors.length) fails.push("頁面錯誤 " + z._errors.join("; "));
+      await z.close(); }
+    // 辨識的「試試看」:手機也排三欄
+    { const z = await openPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+      await z.click("#tabFind");
+      const cols = await z.evaluate(() => { const it = [...document.querySelectorAll(".find-list.try .find-item")].slice(0, 3).map(e => Math.round(e.getBoundingClientRect().top)); return new Set(it).size; });
+      check(cols === 1, "試試看在手機上應該一行三個");
+      await z.close(); }
     report("進行庫與次屬/借用和弦", total, fails);
   }
 
