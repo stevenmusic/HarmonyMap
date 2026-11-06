@@ -5368,26 +5368,37 @@ function practiceParseCustom(text){
    所以換根音就換調;套用後跟自己打的一樣,可以移調、存起來。
    新增條目時,tests/run.js 會把每一條在 12 個主音上都解析一次,不能有看不懂的字 */
 const PROG_LIB = [
-  { zh: "流行四和弦",       en: "Pop axis",                 r: "I V vi IV" },
-  { zh: "卡農",             en: "Pachelbel's Canon",        r: "I V vi iii IV I IV V" },
-  { zh: "50 年代(Doo-wop)", en: "'50s doo-wop",            r: "I vi IV V" },
-  { zh: "感傷進行",         en: "Sensitive (vi–IV–I–V)",    r: "vi IV I V" },
-  { zh: "王道進行(J-pop)",  en: "Royal road (J-pop)",       r: "IVmaj7 V7 iii7 vi" },
-  { zh: "古典正格終止",     en: "Authentic cadence",        r: "I IV V7 I" },
-  { zh: "爵士 ii–V–I",      en: "Jazz ii–V–I",              r: "ii7 V7 Imaj7 Imaj7" },
-  { zh: "爵士回轉(I–vi–ii–V)", en: "Jazz turnaround (I–vi–ii–V)", r: "Imaj7 vi7 ii7 V7" },
-  { zh: "次屬回轉(I–VI7–ii–V)", en: "Secondary-dominant turnaround", r: "Imaj7 VI7 ii7 V7" },
-  { zh: "12 小節藍調",      en: "12-bar blues",             r: "I7 I7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7" },
-  { zh: "搖滾 ♭VII(米索利地安)", en: "Rock ♭VII (Mixolydian)", r: "I ♭VII IV I" },
-  { zh: "借用 ♭VI–♭VII–I",  en: "Borrowed ♭VI–♭VII–I",      r: "I ♭VI ♭VII I" },
-  { zh: "小調 i–iv–V",      en: "Minor i–iv–V",             r: "i iv V7 i", minor: true },
-  { zh: "小調 ii–V–i",      en: "Minor ii–V–i",             r: "iiø7 V7 i7 i7", minor: true },
-  { zh: "安達魯西亞終止",   en: "Andalusian cadence",       r: "i VII VI V", minor: true },
-  { zh: "小調流行(i–VI–III–VII)", en: "Minor pop (i–VI–III–VII)", r: "i VI III VII", minor: true }
+  // 名稱要一看就懂(使用者要求):寫「聽起來像什麼、用在哪裡」,不寫術語;術語放在括號後面給查得到的人。
+  // 選單上名稱後面接的是目前主音的實際和弦(不是級數),id 給測試與程式用,不會顯示
+  { id: "pop",      zh: "流行歌萬用進行",           en: "Most common pop progression",      r: "I V vi IV" },
+  { id: "canon",    zh: "卡農(婚禮常用)",           en: "Pachelbel's Canon (wedding classic)",r: "I V vi iii IV I IV V" },
+  { id: "fifties",  zh: "50 年代老歌",              en: "1950s oldies",                     r: "I vi IV V" },
+  { id: "minstart", zh: "從小和弦開始的流行歌",     en: "Pop that starts on a minor chord", r: "vi IV I V" },
+  { id: "jpop",     zh: "日本流行歌王道進行",       en: "J-pop \"royal road\"",             r: "IVmaj7 V7 iii7 vi" },
+  { id: "cadence",  zh: "古典曲子的結尾",           en: "Classical ending",                 r: "I IV V7 I" },
+  { id: "ii-v-i",   zh: "爵士最基本的結尾",         en: "Basic jazz ending",                r: "ii7 V7 Imaj7 Imaj7" },
+  { id: "turn",     zh: "爵士循環(繞回開頭)",       en: "Jazz loop back to the top",        r: "Imaj7 vi7 ii7 V7" },
+  { id: "turn2",    zh: "爵士循環(加次屬和弦)",     en: "Jazz loop with a secondary dominant", r: "Imaj7 VI7 ii7 V7" },
+  { id: "blues",    zh: "藍調 12 小節",             en: "12-bar blues",                     r: "I7 I7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7" },
+  { id: "rock",     zh: "搖滾味(降七級大和弦)",     en: "Rock flavor (flat-7 chord)",       r: "I ♭VII IV I" },
+  { id: "epic",     zh: "壯闊收尾(電影、遊戲)",     en: "Epic ending (film, games)",        r: "I ♭VI ♭VII I" },
+  { id: "minbasic", zh: "小調最基本的進行",         en: "Basic minor-key progression",      r: "i iv V7 i", minor: true },
+  { id: "minjazz",  zh: "爵士小調結尾",             en: "Jazz minor ending",                r: "iiø7 V7 i7 i7", minor: true },
+  { id: "flamenco", zh: "佛朗明哥下行",             en: "Flamenco descent",                 r: "i VII VI V", minor: true },
+  { id: "minpop",   zh: "小調流行歌",               en: "Minor-key pop",                    r: "i VI III VII", minor: true }
 ];
 /* 進行庫的一條 → 文字框的寫法(G: I V vi IV / Am: i iv V7 i) */
 function progLibText(item, pad){
   return LETTERS[pad.letter] + accText(pad.acc) + (item.minor ? "m" : "") + ": " + item.r;
+}
+/* 選單上顯示的實際和弦:連續相同的寫成 ×n(藍調 C7×4 F7×2 C7×2 G7 F7 C7 G7),不然一行放不下 */
+function progLibChords(item, pad){
+  const names = practiceParseCustom(progLibText(item, pad)).steps.map(stepName), out = [];
+  for (const n of names) {
+    const last = out[out.length - 1];
+    if (last && last.n === n) last.k++; else out.push({ n, k: 1 });
+  }
+  return out.map(x => x.n + (x.k > 1 ? "×" + x.k : "")).join(" ");
 }
 /* 進行存在這台裝置上:目前這一組(重新整理還在)+ 另外存起來的幾組(文字,跟文字框同一種寫法) */
 const PROG_KEY = "harmonymap.progs", PRCUR_KEY = "harmonymap.practice", COUNTIN_KEY = "harmonymap.countin", RAMP_KEY = "harmonymap.ramp", VOICE_KEY = "harmonymap.voicing";
@@ -6261,7 +6272,7 @@ function renderPractice(){
   // 選單的文字用 textContent 填(存的內容是使用者打的字,不直接拼進 HTML)
   [...$("prSaved").options].slice(1).forEach(o => {
     const v = o.value;
-    if (v[0] === "l") { const it = PROG_LIB[+v.slice(1)]; o.textContent = (LANG === "en" ? it.en : it.zh) + " · " + it.r.replace(/ /g, "–"); }
+    if (v[0] === "l") { const it = PROG_LIB[+v.slice(1)]; o.textContent = (LANG === "en" ? it.en : it.zh) + " · " + progLibChords(it, P.pad); }
     else o.textContent = saved[+v];
   });
   $("prCustom").value = P.custom;

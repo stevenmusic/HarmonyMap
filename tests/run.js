@@ -1717,11 +1717,14 @@ async function openPage(browser, opts = {}){
         if (res.bad.length || res.steps.length !== it.r.split(" ").length) out.lib.push(progLibText(it, { letter: l, acc: a }) + " → " + res.bad.join(","));
       }
       const names = (it, l, a) => practiceParseCustom(progLibText(it, { letter: l, acc: a })).steps.map(stepName).join(" ");
-      const byZh = zh => PROG_LIB.find(x => x.zh.startsWith(zh));
-      out.canon = names(byZh("卡農"), 4, 0);
-      out.anda = names(byZh("安達魯西亞"), 5, 0);
-      out.blues = names(byZh("12 小節"), 6, -1);
-      out.minii = names(byZh("小調 ii"), 3, 0);
+      const byId = id => PROG_LIB.find(x => x.id === id);
+      out.canon = names(byId("canon"), 4, 0);
+      out.anda = names(byId("flamenco"), 5, 0);
+      out.blues = names(byId("blues"), 6, -1);
+      out.minii = names(byId("minjazz"), 3, 0);
+      // 選單文字:名稱 + 目前主音的實際和弦(不是級數),連續相同的合成 ×n
+      out.label = progLibChords(byId("blues"), { letter: 0, acc: 0 });
+      out.noRoman = PROG_LIB.every(x => !/(^|[\s(])[♭#]?[ivIV]{1,3}([\s)–-]|$)/.test(x.zh + " " + x.en));
       STATE.letter = 0; STATE.acc = 0;
       out.secC = secondaryDominants(scaleById("ionian")).map(x => x.roman + "=" + x.name).join(" ");
       out.borC = borrowedChords(scaleById("ionian")).map(x => x.roman + "=" + x.triad).join(" ");
@@ -1737,6 +1740,8 @@ async function openPage(browser, opts = {}){
     });
     check(!r.lib.length, "進行庫有看不懂的: " + r.lib.slice(0, 5).join(" ; "));
     check(r.canon === "G D Em Bm C G C D", "G 卡農: " + r.canon);
+    check(r.label === "C7×4 F7×2 C7×2 G7 F7 C7 G7", "進行庫選單的和弦: " + r.label);
+    check(r.noRoman, "進行庫名稱不要用級數或術語縮寫");
     check(r.anda === "Am G F E", "A 小調安達魯西亞: " + r.anda);
     check(r.blues === "B♭7 B♭7 B♭7 B♭7 E♭7 E♭7 B♭7 B♭7 F7 E♭7 B♭7 F7", "B♭ 藍調: " + r.blues);
     check(r.minii === "Gm7♭5 C7 Fm7 Fm7", "F 小調 ii–V–i: " + r.minii);
