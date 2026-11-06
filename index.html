@@ -1338,6 +1338,11 @@ const I18N = {
     otherScaleNames: "同樣這幾個音的其他名稱",
     noTertianTable: "{n} 個音的音階不是照三度堆疊建構的,沒有標準的順階和弦表。直接看上面的組成音來配和弦即可。",
     diatonicChordsTitle: "順階和弦",
+    secDomTitle: "次屬和弦", colChordName: "和弦", colTarget: "解決到", colSource: "來自",
+    secDomHint: "把某個順階和弦暫時當成主和弦,用它的屬七和弦帶過去(V7/V 讀作「五級的五級」)。歌曲裡不在調內、聽起來卻很順的屬七和弦,大多是這個。點和弦名稱可以跳過去看。",
+    borrowTitle: "借用和弦",
+    borrowHintMaj: "從同一個主音的小調借來的和弦(調式混合)。大調歌曲裡突然變暗的 iv、♭VI、♭VII 多半是這裡來的;♭II 是拿坡里和弦,借自弗里吉安。",
+    borrowHintMin: "小調常借用的和弦:結尾換成大三和弦的 I(皮卡第三度)、多利安的 ii 與 IV,以及和聲小調的 V 與 vii°(導音帶來往主音的拉力)。",
     diatonicChordsTitleFull: "順階和弦(三度堆疊)",
     colDegree: "級數", colTriad: "三和弦", col7th: "七和弦", colTones: "組成音",
     clickSeventhHint: "點七和弦可以直接跳去看它的組成音。",
@@ -1367,7 +1372,7 @@ const I18N = {
     guitarBassNote: "這個指法的最低音不是根音",
     goToChord: "前往這個和弦(Enter)",
     gdOpen: "開放和弦", gd5: "五弦 · 第 {n} 格", gd6: "六弦 · 第 {n} 格", gdPos: "第 {n} 把位",
-    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceVoice: "就近轉位", practiceVoiceTitle: "每個和弦用跟前一個最接近的轉位(手幾乎不用移動);關掉 = 照名稱的原位", practiceFullscreen: "全螢幕(一次看四到八個和弦)", practiceFullscreenExit: "離開全螢幕", practiceBeatsShort: "{n}拍", practiceHalfBar: "點一下換拍數:整小節 → 1 拍 → 2 拍 → …(沒設拍數的和弦會自動填滿到小節線)", practiceBars: "共 {n} 小節", practiceRamp: "逐漸加速", practiceRampOff: "固定速度", practiceRampOpt: "每 {k} 輪 +{n}", practiceRampOpt1: "每輪 +{n}", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行",
+    practiceUndo: "刪除最後一個", practiceClearSteps: "清除", practiceAccompShort: "伴奏", practiceCountIn: "預備拍", practiceVoice: "就近轉位", practiceVoiceTitle: "每個和弦用跟前一個最接近的轉位(手幾乎不用移動);關掉 = 照名稱的原位", practiceFullscreen: "全螢幕(一次看四到八個和弦)", practiceFullscreenExit: "離開全螢幕", practiceBeatsShort: "{n}拍", practiceHalfBar: "點一下換拍數:整小節 → 1 拍 → 2 拍 → …(沒設拍數的和弦會自動填滿到小節線)", practiceBars: "共 {n} 小節", practiceRamp: "逐漸加速", practiceRampOff: "固定速度", practiceRampOpt: "每 {k} 輪 +{n}", practiceRampOpt1: "每輪 +{n}", practiceCountInTitle: "開始前先數一小節", practiceTapTempo: "連點這裡打拍子,設定速度", practiceTranspose: "移調", scalePosLabel: "把位", scalePosAll: "全部", scalePosTitle: "從第 {f} 格開始", addToPractice: "+ 加入練習", addedToPractice: "已加入(共 {n} 個)", slashAltNote: "同一組音也可以寫成 {x},兩種寫法都正確:低音往下走、上面和弦不動時多寫三和弦那種,要看出和弦性質在變時寫七和弦那種。", slashAltBtn: "改用 {x}", rootSlash: "轉位/斜線和弦:按 / 再按低音(例如 / E = C/E)", practiceSlash: "轉位/斜線和弦:根音 / 低音(C / E = C/E;其他種類先按種類,例如 A min / G = Am/G)", practiceSave: "儲存", practiceUnsave: "取消儲存", practiceSaved: "已存的進行", practiceProgs: "進行庫", practiceLibGroup: "常用進行(主音 {k},換根音就換調)",
     practiceEmpty: "用下方的根音與和弦按鈕把和弦加進來,例如 C → maj、G → 7",
     practiceStepsEmpty: "還沒有和弦",
     practiceBtn: "練習", printBtnShort: "和弦表", printBtn: "下載和弦表 PDF", printTitle: "下載和弦表 PDF", printInst: "樂器", printLevel: "範圍", printCore: "基本 {n} 種", printOther: "其他 {n} 種", printAll: "全部 {n} 種", printRoots: "根音", printRoots12: "12 個根音", printRootsCur: "只有 {x}", printGo: "下載 PDF", printBusyPdf: "製作 PDF… {n}/{m}", printFile: "HarmonyMap-和弦表", printBusy: "製作中… {n}/{m}", printHint: "按「下載 PDF」直接存成檔案,不會出現網址、日期。每種和弦只列一個按法(最推薦的那個)。", printCount: "共 {n} 個和弦圖", printPages: "共 {n} 頁", printCont: "(續)", printSheetTitle: "HarmonyMap 和弦表", printColors: "金 = 根音、青 = 其他組成音", printLegend: "T 拇指　1 食指　2 中指　3 無名指　4 小指 · 左 6 弦(粗)→ 右 1 弦(細)", printStrings: "左 = 粗弦(6 弦)、右 = 細弦(1 弦)", printAlgoNote: "部分罕用和弦沒有公開資料可查,按法由程式依樂理推算", printNone: "(沒有好按的指法)", printFoot: "HarmonyMap · steventsaimusic@gmail.com", printCopy: "© {y} Steven Tsai · 歡迎教學與個人練習使用", practiceTitle: "換和弦練習", practiceClose: "結束練習",
@@ -1443,6 +1448,11 @@ const I18N = {
     otherScaleNames: "Other names for the same notes",
     noTertianTable: "This {n}-note scale isn't built in stacked thirds, so there's no standard diatonic chord table. Just use the notes above to build chords.",
     diatonicChordsTitle: "Diatonic Chords",
+    secDomTitle: "Secondary Dominants", colChordName: "Chord", colTarget: "Resolves to", colSource: "From",
+    secDomHint: "Treat a diatonic chord as a temporary tonic and lead into it with its own dominant 7th (V7/V reads \"five of five\"). Most dominant 7ths in songs that sit outside the key yet sound smooth are these. Tap a chord name to open it.",
+    borrowTitle: "Borrowed Chords",
+    borrowHintMaj: "Chords borrowed from the minor key on the same tonic (modal mixture). The sudden darker iv, ♭VI and ♭VII in major-key songs mostly come from here; ♭II is the Neapolitan chord, borrowed from Phrygian.",
+    borrowHintMin: "Chords minor keys often borrow: a major I at the end (Picardy third), ii and IV from Dorian, and V and vii° from harmonic minor (the leading tone pulls toward the tonic).",
     diatonicChordsTitleFull: "Diatonic Chords (tertian)",
     colDegree: "Degree", colTriad: "Triad", col7th: "7th chord", colTones: "Notes",
     clickSeventhHint: "Tap a 7th chord to jump to its notes.",
@@ -1472,7 +1482,7 @@ const I18N = {
     guitarBassNote: "The lowest note of this voicing is not the root",
     goToChord: "Go to this chord (Enter)",
     gdOpen: "Open", gd5: "5th str · fr {n}", gd6: "6th str · fr {n}", gdPos: "Position {n}",
-    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceVoice: "Voice leading", practiceVoiceTitle: "Play each chord in the inversion closest to the previous one; off = root position as written", practiceFullscreen: "Full screen (four to eight chords at a time)", practiceFullscreenExit: "Exit full screen", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to change the length: whole bar → 1 beat → 2 beats → … (chords without a length fill up to the bar line)", practiceBars: "{n} bars total", practiceRamp: "Speed up gradually", practiceRampOff: "Steady tempo", practiceRampOpt: "+{n} every {k} loops", practiceRampOpt1: "+{n} every loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions",
+    practiceUndo: "Delete last", practiceClearSteps: "Clear", practiceAccompShort: "Accomp.", practiceCountIn: "Count-in", practiceVoice: "Voice leading", practiceVoiceTitle: "Play each chord in the inversion closest to the previous one; off = root position as written", practiceFullscreen: "Full screen (four to eight chords at a time)", practiceFullscreenExit: "Exit full screen", practiceBeatsShort: "{n}♩", practiceHalfBar: "Tap to change the length: whole bar → 1 beat → 2 beats → … (chords without a length fill up to the bar line)", practiceBars: "{n} bars total", practiceRamp: "Speed up gradually", practiceRampOff: "Steady tempo", practiceRampOpt: "+{n} every {k} loops", practiceRampOpt1: "+{n} every loop", practiceCountInTitle: "Count one bar before the first chord", practiceTapTempo: "Tap repeatedly to set the tempo", practiceTranspose: "Transpose", scalePosLabel: "Position", scalePosAll: "All", scalePosTitle: "Starts at fret {f}", addToPractice: "+ Add to practice", addedToPractice: "Added ({n} total)", slashAltNote: "Same notes can also be written {x}. Both are correct: the triad form suits a walking bass under a static chord, the seventh-chord form shows the chord quality changing.", slashAltBtn: "Use {x}", rootSlash: "Inversion / slash chord: tap / then the bass note (/ E = C/E)", practiceSlash: "Inversion / slash chord: root / bass (C / E = C/E; for other types tap the type first, e.g. A min / G = Am/G)", practiceSave: "Save", practiceUnsave: "Unsave", practiceSaved: "Saved progressions", practiceProgs: "Progressions", practiceLibGroup: "Common progressions (tonic {k}; tap a root to change key)",
     practiceEmpty: "Add chords with the root and chord buttons below, e.g. C → maj, G → 7",
     practiceStepsEmpty: "No chords yet",
     practiceBtn: "Practice", printBtnShort: "Chart", printBtn: "Download chord chart PDF", printTitle: "Download chord chart (PDF)", printInst: "Instrument", printLevel: "Range", printCore: "Basic {n}", printOther: "Others ({n})", printAll: "All {n}", printRoots: "Roots", printRoots12: "All 12 roots", printRootsCur: "Only {x}", printGo: "Download PDF", printBusyPdf: "Making PDF… {n}/{m}", printFile: "HarmonyMap-chord-chart", printBusy: "Building… {n}/{m}", printHint: "\"Download PDF\" saves a file directly, with no web address or date on it. One shape per chord (the recommended one).", printCount: "{n} chord diagrams", printPages: "{n} pages", printCont: "(cont.)", printSheetTitle: "HarmonyMap Chord Chart", printColors: "gold = root, teal = other chord tones", printLegend: "T thumb  1 index  2 middle  3 ring  4 pinky · left: 6th (low) → right: 1st (high)", printStrings: "left = low (6th) string, right = high (1st) string", printAlgoNote: "Some rare chords have no published shapes; those are worked out from theory", printNone: "(no playable shape)", printFoot: "HarmonyMap · steventsaimusic@gmail.com", printCopy: "© {y} Steven Tsai · Free for teaching and personal practice", practiceTitle: "Chord Change Practice", practiceClose: "End practice",
@@ -4544,6 +4554,47 @@ function chordKeys(rootPc, def){
   }
   return out;
 }
+/* 次屬和弦:把順階的大三/小三和弦暫時當主和弦,它的屬七(完全五度上方)就是 V7/x。
+   減、增三和弦不能當暫時的主和弦,所以大調沒有 V7/vii°、小調沒有 V7/ii°。
+   根音字母照級數推(目標字母 + 4),升降照音高差算——跟 spell() 同一套規則,不查表 */
+function secondaryDominants(scale){
+  const dia = diatonicChords(scale);
+  if (!dia) return [];
+  const dom = chordById("7"), out = [];
+  for (let i = 1; i < 7; i++) {
+    const row = dia[i];
+    if (/[°+]/.test(row.roman)) continue;
+    const tgt = spell(STATE.letter, STATE.acc, scale.t[i]);
+    if (tgt.acc === null) continue;
+    const letter = (tgt.letter + 4) % 7;
+    const abs = LETTER_PC[STATE.letter] + STATE.acc + tgt.semi + 7;
+    const acc = ((abs - LETTER_PC[letter]) % 12 + 18) % 12 - 6;
+    if (acc < -2 || acc > 2) continue;
+    const tones = dom.t.map(tok => spell(letter, acc, tok));
+    if (tones.some(x => x.acc === null)) continue;
+    out.push({ roman: "V7/" + row.roman, name: LETTERS[letter] + accText(acc) + dom.sym, letter, acc, id: dom.id,
+               tones: tones.map(x => x.name).join(" "), target: row.triad });
+  }
+  return out;
+}
+/* 借用和弦(調式混合):從同一個主音的其他調式借來的和弦。只給大調與自然小調——功能和聲是以這兩個調為準的。
+   大調:同主音小調的 ii° ♭III iv v ♭VI ♭VII,再加拿坡里 ♭II(弗里吉安);
+   小調:皮卡第三度 I、多利安的 ii 與 IV、和聲小調的 V 與 vii°。
+   大調的級數照跟大調比的音高差加 ♭(♭VI);小調照慣例不加(III VI VII 本來就以自然小調為準) */
+const BORROW = {
+  ionian:  [["aeolian", 1], ["aeolian", 2], ["aeolian", 3], ["aeolian", 4], ["aeolian", 5], ["aeolian", 6], ["phrygian", 1]],
+  aeolian: [["ionian", 0], ["dorian", 1], ["dorian", 3], ["harmMinor", 4], ["harmMinor", 6]]
+};
+function borrowedChords(scale){
+  const list = BORROW[scale.id];
+  if (!list) return [];
+  return list.map(([sid, i]) => {
+    const src = scaleById(sid), row = diatonicChords(src)[i];
+    const d = tokenSemi(src.t[i]) - tokenSemi(scale.t[i]);
+    const pre = scale.id === "ionian" ? (d < 0 ? "♭" : d > 0 ? "♯" : "") : "";
+    return Object.assign({}, row, { roman: pre + row.roman, src });
+  });
+}
 function diatonicChords(scale){
   if (scale.t.length !== 7) return null;
   const notes = scale.t.map(tok => spell(STATE.letter, STATE.acc, tok));
@@ -4787,7 +4838,7 @@ function renderReadout(){
       const ex1 = dia.find(d => d.enhEx);
       const enhLegend = ex1 ? t("enhNote", { a: ex1.enhEx[0], b: ex1.enhEx[1] }) : dia.some(d => d.enh3 || d.enh7) ? t("enhNoteTri") : "";
       e += '</table></div><div class="desc">' + t("clickSeventhHint") + '</div>' +
-           (enhLegend ? '<div class="desc">' + enhLegend + '</div>' : '') + sameHtml;
+           (enhLegend ? '<div class="desc">' + enhLegend + '</div>' : '') + functionExtrasHTML(def) + sameHtml;
       ex.innerHTML = e;
       ex.hidden = false;
       ex.querySelectorAll("[data-scale]").forEach(b => b.onclick = () => { STATE.scaleId = b.dataset.scale; jumpedTo(); });
@@ -4804,6 +4855,30 @@ function renderReadout(){
       });
     }
   }
+}
+/* 大調與自然小調的順階和弦表下面,再接「次屬和弦」與「借用和弦」兩張表(使用者要求,2026-11)。
+   和弦名稱用跟順階和弦表同一種 button.link,點了跳到和弦分頁(綁定沿用順階表那一段) */
+function functionExtrasHTML(def){
+  if (def.id !== "ionian" && def.id !== "aeolian") return "";
+  // 重升重降的根音(A♭ 大調的拿坡里 B♭♭)名稱照理論拼法寫,點下去跳到常見拼法(根音卡片只有 ♭ ♯)
+  const link = (id, letter, acc, name) => {
+    if (acc < -1 || acc > 1) [letter, acc] = [[0,0],[1,-1],[1,0],[2,-1],[2,0],[3,0],[3,1],[4,0],[5,-1],[5,0],[6,-1],[6,0]][((LETTER_PC[letter] + acc) % 12 + 12) % 12];   // 同 PC_SPELL(它定義在後面,初次 render 時還不能用)
+    return '<button class="link" data-id="' + id + '" data-letter="' + letter + '" data-acc="' + acc + '">' + name + '</button>';
+  };
+  const sec = secondaryDominants(def);
+  let h = '<div class="card-title" style="margin-top:16px">' + t("secDomTitle") + '</div><div class="table-scroll"><table class="dia sec">' +
+          '<tr><th>' + t("colDegree") + '</th><th>' + t("colChordName") + '</th><th>' + t("colTarget") + '</th><th>' + t("colTones") + '</th></tr>';
+  for (const r of sec)
+    h += '<tr><td class="rn">' + r.roman + '</td><td class="sym">' + link(r.id, r.letter, r.acc, r.name) + '</td><td class="sym">' + r.target + '</td><td class="tones">' + r.tones + '</td></tr>';
+  h += '</table></div><div class="desc">' + t("secDomHint") + '</div>';
+  const bor = borrowedChords(def);
+  h += '<div class="card-title" style="margin-top:16px">' + t("borrowTitle") + '</div><div class="table-scroll"><table class="dia bor">' +
+       '<tr><th>' + t("colDegree") + '</th><th>' + t("colTriad") + '</th><th>' + t("col7th") + '</th><th>' + t("colSource") + '</th></tr>';
+  for (const r of bor)
+    h += '<tr><td class="rn">' + r.roman + '</td><td class="sym">' + r.triad + '</td><td class="sym">' +
+         (r.seventhId ? link(r.seventhId, r.seventhLetter, r.seventhAcc, r.seventh) : r.seventh) + '</td><td class="tones">' + localName(r.src).replace(/\s*[((].*$/, "") + '</td></tr>';   // 主音都一樣,不寫;括號別名拿掉,320px 才放得下
+  h += '</table></div><div class="desc">' + t(def.id === "ionian" ? "borrowHintMaj" : "borrowHintMin") + '</div>';
+  return h;
 }
 /* 照某個和弦的級數推算它每個音的拼寫,回傳「音級 → { 音名, 級數 }」。
    反查的音名列與斜線和弦的低音都走這裡,兩邊才不會一邊寫 E♭、另一邊寫 D♯ */
@@ -5287,6 +5362,32 @@ function practiceParseCustom(text){
     if (rs) push(rs); else bad.push(w0);
   }
   return { steps, bad };
+}
+/* 常用進行庫(使用者要求,2026-11):收在「進行庫」下拉裡,不另外佔版面。
+   一律用級數寫,套用時以輸入板目前的根音當主音(小調進行 = 同一個字母的小調),
+   所以換根音就換調;套用後跟自己打的一樣,可以移調、存起來。
+   新增條目時,tests/run.js 會把每一條在 12 個主音上都解析一次,不能有看不懂的字 */
+const PROG_LIB = [
+  { zh: "流行四和弦",       en: "Pop axis",                 r: "I V vi IV" },
+  { zh: "卡農",             en: "Pachelbel's Canon",        r: "I V vi iii IV I IV V" },
+  { zh: "50 年代(Doo-wop)", en: "'50s doo-wop",            r: "I vi IV V" },
+  { zh: "感傷進行",         en: "Sensitive (vi–IV–I–V)",    r: "vi IV I V" },
+  { zh: "王道進行(J-pop)",  en: "Royal road (J-pop)",       r: "IVmaj7 V7 iii7 vi" },
+  { zh: "古典正格終止",     en: "Authentic cadence",        r: "I IV V7 I" },
+  { zh: "爵士 ii–V–I",      en: "Jazz ii–V–I",              r: "ii7 V7 Imaj7 Imaj7" },
+  { zh: "爵士回轉(I–vi–ii–V)", en: "Jazz turnaround (I–vi–ii–V)", r: "Imaj7 vi7 ii7 V7" },
+  { zh: "次屬回轉(I–VI7–ii–V)", en: "Secondary-dominant turnaround", r: "Imaj7 VI7 ii7 V7" },
+  { zh: "12 小節藍調",      en: "12-bar blues",             r: "I7 I7 I7 I7 IV7 IV7 I7 I7 V7 IV7 I7 V7" },
+  { zh: "搖滾 ♭VII(米索利地安)", en: "Rock ♭VII (Mixolydian)", r: "I ♭VII IV I" },
+  { zh: "借用 ♭VI–♭VII–I",  en: "Borrowed ♭VI–♭VII–I",      r: "I ♭VI ♭VII I" },
+  { zh: "小調 i–iv–V",      en: "Minor i–iv–V",             r: "i iv V7 i", minor: true },
+  { zh: "小調 ii–V–i",      en: "Minor ii–V–i",             r: "iiø7 V7 i7 i7", minor: true },
+  { zh: "安達魯西亞終止",   en: "Andalusian cadence",       r: "i VII VI V", minor: true },
+  { zh: "小調流行(i–VI–III–VII)", en: "Minor pop (i–VI–III–VII)", r: "i VI III VII", minor: true }
+];
+/* 進行庫的一條 → 文字框的寫法(G: I V vi IV / Am: i iv V7 i) */
+function progLibText(item, pad){
+  return LETTERS[pad.letter] + accText(pad.acc) + (item.minor ? "m" : "") + ": " + item.r;
 }
 /* 進行存在這台裝置上:目前這一組(重新整理還在)+ 另外存起來的幾組(文字,跟文字框同一種寫法) */
 const PROG_KEY = "harmonymap.progs", PRCUR_KEY = "harmonymap.practice", COUNTIN_KEY = "harmonymap.countin", RAMP_KEY = "harmonymap.ramp", VOICE_KEY = "harmonymap.voicing";
@@ -6116,7 +6217,7 @@ function renderPractice(){
   }
   if (P.fs) renderPracticeFull();
 
-  /* 下方卡片:輸入板 → 進行(刪除/清除)→ 文字框 → 一列設定。沒有範例進行、沒有調性選單 */
+  /* 下方卡片:輸入板 → 進行(刪除/清除)→ 文字框 → 一列設定。範例進行收在「進行庫」下拉(跟已存的進行同一個),沒有調性選單 */
   c.innerHTML =
     '<div class="pr-head"><div class="card-title">' + t("practiceTitle") + '</div>' +
     (P.steps.length ? '<span class="pr-bars" id="prBars">' + t("practiceBars", { n: practiceTimeline().bars }) + '</span>' : '') +
@@ -6131,8 +6232,12 @@ function renderPractice(){
     '<div class="pr-custom"><input id="prCustom" type="text" autocomplete="off" enterkeyhint="done" placeholder="' + t("practiceCustomPh") + '" aria-label="' + t("practiceCustomPh") + '">' +
       // 儲存是開關:這一組已經存過就變成「取消儲存」,不用另外一顆刪除鈕
       '<button class="filter-chip" id="prSave" aria-pressed="' + isSaved + '"' + (P.steps.length ? "" : " disabled") + '>' + t(isSaved ? "practiceUnsave" : "practiceSave") + '</button>' +
-      (saved.length ? '<select class="mini" id="prSaved" aria-label="' + t("practiceSaved") + '"><option value="">' + t("practiceSaved") + ' (' + saved.length + ')</option>' +
-        saved.map((x, i) => '<option value="' + i + '"' + (x === cur0 ? " selected" : "") + '></option>').join("") + '</select>' : '') +
+      // 進行庫與已存的進行合成同一個選單:常用進行永遠在,有存才多一組。值:已存 = 數字、進行庫 = "l" + 編號
+      '<select class="mini" id="prSaved" aria-label="' + t("practiceProgs") + '"><option value="">' + t("practiceProgs") + '</option>' +
+        (saved.length ? '<optgroup label="' + t("practiceSaved") + ' (' + saved.length + ')">' +
+          saved.map((x, i) => '<option value="' + i + '"' + (x === cur0 ? " selected" : "") + '></option>').join("") + '</optgroup>' : '') +
+        '<optgroup label="' + t("practiceLibGroup", { k: LETTERS[P.pad.letter] + accText(P.pad.acc) }) + '">' +
+          PROG_LIB.map((x, i) => '<option value="l' + i + '"></option>').join("") + '</optgroup></select>' +
     '</div>' +
     (P.bad.length ? '<div class="pr-bad">' + t("practiceBad", { x: P.bad.join(" ") }) + '</div>' : '') +
     '<div class="pr-set">' +
@@ -6154,7 +6259,11 @@ function renderPractice(){
           .map(([v, l]) => '<option value="' + v + '"' + (v === P.ramp ? " selected" : "") + '>' + l + '</option>').join("") + '</select>' +
     '</div>';
   // 選單的文字用 textContent 填(存的內容是使用者打的字,不直接拼進 HTML)
-  if ($("prSaved")) [...$("prSaved").options].slice(1).forEach((o, i) => { o.textContent = saved[i]; });
+  [...$("prSaved").options].slice(1).forEach(o => {
+    const v = o.value;
+    if (v[0] === "l") { const it = PROG_LIB[+v.slice(1)]; o.textContent = (LANG === "en" ? it.en : it.zh) + " · " + it.r.replace(/ /g, "–"); }
+    else o.textContent = saved[+v];
+  });
   $("prCustom").value = P.custom;
   const ss = $("prSteps");
   ss.classList.toggle("running", P.running);
@@ -6226,9 +6335,10 @@ function renderPractice(){
     storeSavedProgs(list.includes(name) ? list.filter(x => x !== name) : list.concat(name));
     renderPractice();
   };
-  if ($("prSaved")) $("prSaved").onchange = e => {
-    const x = saved[+e.target.value];
-    if (e.target.value === "" || !x) return;
+  $("prSaved").onchange = e => {
+    const v = e.target.value;
+    const x = v[0] === "l" ? progLibText(PROG_LIB[+v.slice(1)], P.pad) : saved[+v];
+    if (v === "" || !x) return;
     $("prCustom").value = x;
     applyCustom();
   };

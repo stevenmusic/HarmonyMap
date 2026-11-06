@@ -1038,12 +1038,17 @@ async function openPage(browser, opts = {}){
     check((await steps()) === "C D/F♯ Em", "移調回來: " + await steps());
     check((await q.evaluate(() => localStorage.getItem("harmonymap.practice"))) === "C D/F♯ Em", "目前的進行沒有存在裝置上");
     await q.click("#prSave");
-    check((await q.getAttribute("#prSave", "aria-pressed")) === "true" && await q.locator("#prSaved option").count() === 2, "儲存後應該出現在已存清單");
+    check((await q.getAttribute("#prSave", "aria-pressed")) === "true" && await q.locator("#prSaved option:not([value^='l']):not([value=''])").count() === 1, "儲存後應該出現在已存清單");
     await q.click("#prClearSteps");
     await q.selectOption("#prSaved", "0");
     check((await steps()) === "C D/F♯ Em", "載入已存的進行: " + await steps());
     await q.click("#prSave");
-    check(await q.locator("#prSaved").count() === 0, "取消儲存後清單應該是空的");
+    check(await q.locator("#prSaved option:not([value^='l']):not([value=''])").count() === 0, "取消儲存後清單應該是空的");
+    // 進行庫跟已存的進行同一個選單:選「流行四和弦」→ 以輸入板的根音 C 為主音
+    await q.evaluate(() => { PRACTICE.pad = { letter: 0, acc: 0 }; renderPractice(); });
+    await q.selectOption("#prSaved", "l0");
+    check((await steps()) === "C G Am F", "進行庫:流行四和弦(C): " + await steps());
+    await q.fill("#prCustom", "C D/F# Em"); await q.press("#prCustom", "Enter");   // 換回原本那一組,後面的快捷鍵測試接著用
     // 快捷鍵:字母 = 輸入板根音、- = ♭、Backspace = 刪除最後一個
     await q.locator("#practiceStage").click({ position: { x: 2, y: 2 } }).catch(() => {});
     await q.evaluate(() => document.activeElement && document.activeElement.blur());
@@ -1697,6 +1702,73 @@ async function openPage(browser, opts = {}){
     if (q._errors && q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
     await q.close();
     report("補上的條目與世界音階", total, fails);
+  }
+
+  /* ── 常用進行庫與次屬/借用和弦 ── */
+  {
+    const fails = []; let total = 0;
+    const check = (cond, msg) => { total++; if (!cond) fails.push(msg); };
+    const q = await openPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+    const r = await q.evaluate(() => {
+      const out = { lib: [] };
+      // 每一條進行在 12 個主音(含 ♭ ♯ 拼法)上都要整條看得懂
+      for (const it of PROG_LIB) for (const [l, a] of [[0,0],[1,-1],[1,0],[2,-1],[2,0],[3,0],[3,1],[4,0],[5,-1],[5,0],[6,-1],[6,0],[0,1],[4,1]]) {
+        const res = practiceParseCustom(progLibText(it, { letter: l, acc: a }));
+        if (res.bad.length || res.steps.length !== it.r.split(" ").length) out.lib.push(progLibText(it, { letter: l, acc: a }) + " → " + res.bad.join(","));
+      }
+      const names = (it, l, a) => practiceParseCustom(progLibText(it, { letter: l, acc: a })).steps.map(stepName).join(" ");
+      const byZh = zh => PROG_LIB.find(x => x.zh.startsWith(zh));
+      out.canon = names(byZh("卡農"), 4, 0);
+      out.anda = names(byZh("安達魯西亞"), 5, 0);
+      out.blues = names(byZh("12 小節"), 6, -1);
+      out.minii = names(byZh("小調 ii"), 3, 0);
+      STATE.letter = 0; STATE.acc = 0;
+      out.secC = secondaryDominants(scaleById("ionian")).map(x => x.roman + "=" + x.name).join(" ");
+      out.borC = borrowedChords(scaleById("ionian")).map(x => x.roman + "=" + x.triad).join(" ");
+      STATE.letter = 5;
+      out.secAm = secondaryDominants(scaleById("aeolian")).map(x => x.roman + "=" + x.name).join(" ");
+      out.borAm = borrowedChords(scaleById("aeolian")).map(x => x.roman + "=" + x.triad).join(" ");
+      STATE.letter = 2; STATE.acc = -1;   // E♭ 大調:V7/iii = D7(D F♯ A C),拼寫照級數推
+      out.secEb = secondaryDominants(scaleById("ionian")).map(x => x.name + ":" + x.tones).join(" | ");
+      // 其他音階沒有這兩張表
+      out.dorianExtras = functionExtrasHTML(scaleById("dorian"));
+      STATE.letter = 0; STATE.acc = 0;
+      return out;
+    });
+    check(!r.lib.length, "進行庫有看不懂的: " + r.lib.slice(0, 5).join(" ; "));
+    check(r.canon === "G D Em Bm C G C D", "G 卡農: " + r.canon);
+    check(r.anda === "Am G F E", "A 小調安達魯西亞: " + r.anda);
+    check(r.blues === "B♭7 B♭7 B♭7 B♭7 E♭7 E♭7 B♭7 B♭7 F7 E♭7 B♭7 F7", "B♭ 藍調: " + r.blues);
+    check(r.minii === "Gm7♭5 C7 Fm7 Fm7", "F 小調 ii–V–i: " + r.minii);
+    check(r.secC === "V7/ii=A7 V7/iii=B7 V7/IV=C7 V7/V=D7 V7/vi=E7", "C 大調次屬: " + r.secC);
+    check(r.borC === "ii°=Ddim ♭III=E♭ iv=Fm v=Gm ♭VI=A♭ ♭VII=B♭ ♭II=D♭", "C 大調借用: " + r.borC);
+    check(r.secAm === "V7/III=G7 V7/iv=A7 V7/v=B7 V7/VI=C7 V7/VII=D7", "A 小調次屬: " + r.secAm);
+    check(r.borAm === "I=A ii=Bm IV=D V=E vii°=G♯dim", "A 小調借用: " + r.borAm);
+    check(r.secEb.includes("D7:D F♯ A C") && r.secEb.includes("C7:C E G B♭"), "E♭ 大調次屬拼寫: " + r.secEb);
+    check(r.dorianExtras === "", "多利安不該有次屬/借用表");
+    // 畫面:音階分頁選 C 大調,兩張表都在,點次屬和弦跳到和弦分頁
+    const ui = await q.evaluate(() => {
+      STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 0; STATE.acc = 0; render();
+      const o = { sec: document.querySelectorAll("table.dia.sec tr").length - 1, bor: document.querySelectorAll("table.dia.bor tr").length - 1 };
+      const btn = [...document.querySelectorAll("table.dia.sec button.link")].find(b => b.textContent === "D7");
+      btn.click();
+      o.tab = STATE.tab; o.chord = STATE.chordId; o.root = rootName();
+      return o;
+    });
+    check(ui.sec === 5 && ui.bor === 7, "次屬 5 列、借用 7 列: " + JSON.stringify(ui));
+    check(ui.tab === "chord" && ui.chord === "7" && ui.root === "D", "點 D7 要跳到和弦分頁: " + JSON.stringify(ui));
+    // A♭ 大調的拿坡里是 B♭♭(理論拼法),點下去要跳到 A 而不是壞掉
+    const nea = await q.evaluate(() => {
+      STATE.tab = "scale"; STATE.scaleId = "ionian"; STATE.letter = 5; STATE.acc = -1; render();
+      const b = [...document.querySelectorAll("table.dia.bor button.link")].find(x => x.textContent.startsWith("B♭♭"));
+      if (!b) return "沒有 B♭♭";
+      b.click();
+      return STATE.tab + " " + rootName() + STATE.chordId;
+    });
+    check(nea === "chord Amaj7", "A♭ 拿坡里點下去: " + nea);
+    if (q._errors && q._errors.length) fails.push("頁面錯誤 " + q._errors.join("; "));
+    await q.close();
+    report("進行庫與次屬/借用和弦", total, fails);
   }
 
   /* ── 和弦表(列印 / 存成 PDF):張數、每張都有圖、英文沒有中文、只有和弦分頁有按鈕、320 寬不擠壞、列印時只印和弦表 ── */
